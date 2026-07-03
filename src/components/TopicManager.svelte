@@ -1,6 +1,6 @@
 <script lang="ts">
   import { deriveChannels, topicTags, type Topic } from "@/domain/channel";
-  import { slugifyTopicName } from "@/domain/topic-events";
+  import { topicIdForChannels } from "@/domain/topic-events";
   import { t } from "@/lib/i18n/index.svelte";
   import { authStore } from "@/stores/auth.svelte";
   import { filterStore } from "@/stores/filters.svelte";
@@ -57,7 +57,7 @@
     error = false;
     try {
       await timelineController.createTopic(name, primary, secondary);
-      preferencesStore.togglePinnedTopic(slugifyTopicName(name));
+      preferencesStore.togglePinnedTopic(topicIdForChannels([primary, ...secondary]));
       onClose();
     } catch {
       error = true;

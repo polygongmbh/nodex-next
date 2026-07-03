@@ -64,9 +64,12 @@ It must be event-compatible with nodex/mostr on the same relay.
   arrive before their target (capped) and replay on landing. State events
   render as compact timeline rows, never as post cards.
 - **Topics** (kind 30177, addressable — full spec `docs/nip-topics.md`):
-  `d` = lowercase slug of the name, `title` tag, first `t` tag = primary
-  channel, rest secondary. Relay-communal: newest `created_at` per `d` wins
-  ACROSS authors. NIP-09 deletion for own definitions.
+  identified by their CHANNEL SET, not their name — `d` = canonical
+  encoding of the set (deduped lowercase channels, sorted, `+`-joined);
+  `title` tag carries the display name; first `t` tag = primary channel
+  (navigation hint, not identity), rest secondary. Relay-communal: newest
+  `created_at` per channel set wins ACROSS authors (derive identity from
+  the `t` tags, not `d`). NIP-09 deletion for own definitions.
 
 ## Noas auth
 

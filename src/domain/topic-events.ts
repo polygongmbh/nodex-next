@@ -1,17 +1,21 @@
 // Topic event encoding (kind 30177, addressable) — the wire format specified
-// in docs/nip-topics.md. `d` is a slug of the name; the FIRST `t` tag is the
-// primary channel, the rest are secondary. Content may carry a description.
+// in docs/nip-topics.md. A topic is IDENTIFIED by the set of channels it
+// contains: `d` is the canonical encoding of that set (sorted, deduped,
+// lowercase, `+`-joined), so renaming republishes the same address and two
+// definitions of the same combination converge. The FIRST `t` tag is the
+// primary channel (navigation hint, not identity); the rest are secondary.
 
 import { NOSTR_KINDS } from "./nostr-kinds";
 import type { Topic } from "./channel";
 import type { RawNostrEvent } from "./event-to-post";
 
-export function slugifyTopicName(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "");
+/** Canonical topic identity for a channel set — order-insensitive. */
+export function topicIdForChannels(channels: string[]): string {
+  return Array.from(
+    new Set(channels.map((channel) => channel.trim().toLowerCase()).filter(Boolean))
+  )
+    .sort()
+    .join("+");
 }
 
 export function buildTopicEvent(
@@ -27,7 +31,7 @@ export function buildTopicEvent(
     kind: NOSTR_KINDS.topic,
     content: "",
     tags: [
-      ["d", slugifyTopicName(name)],
+      ["d", topicIdForChannels([primaryTag, ...secondaryTags])],
       ["title", name.trim()],
       ["t", primaryTag],
       ...secondaryTags.map((tag) => ["t", tag]),
@@ -36,15 +40,17 @@ export function buildTopicEvent(
 }
 
 export function parseTopicEvent(event: RawNostrEvent): Topic | null {
-  const d = event.tags.find((tag) => tag[0] === "d" && tag[1])?.[1];
   const channels = event.tags
     .filter((tag) => tag[0] === "t" && tag[1]?.trim())
     .map((tag) => tag[1].trim().toLowerCase());
-  if (!d || channels.length === 0) return null;
+  if (channels.length === 0) return null;
+  // Identity comes from the channel set, not from `d` — a client that wrote
+  // a different `d` still groups with equivalent topics here.
+  const id = topicIdForChannels(channels);
   const title = event.tags.find((tag) => tag[0] === "title" && tag[1]?.trim())?.[1];
   return {
-    id: d,
-    name: title?.trim() || d,
+    id,
+    name: title?.trim() || channels.map((channel) => `#${channel}`).join(" "),
     primary: channels[0],
     secondary: Array.from(new Set(channels.slice(1))).filter((tag) => tag !== channels[0]),
     pubkey: event.pubkey,

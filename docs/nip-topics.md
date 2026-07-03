@@ -28,7 +28,7 @@ Event format
   "kind": 30177,
   "content": "<optional human-readable description>",
   "tags": [
-    ["d", "<slug of the name, lowercase>"],
+    ["d", "<canonical channel-set encoding>"],
     ["title", "<display name>"],
     ["t", "<primary channel>"],
     ["t", "<secondary channel>", "..."]
@@ -36,22 +36,32 @@ Event format
 }
 ```
 
-- `d` is a stable, lowercase slug of the topic name (non-alphanumeric runs
-  collapsed to `-`). It makes the event addressable: republishing under the
-  same `d` refines the topic.
-- `title` carries the display name. If absent, clients render the `d` value.
+- **A topic is identified by the set of channels it contains, not by its
+  name.** `d` MUST be the canonical encoding of that set: the deduplicated,
+  lowercase channel names sorted lexicographically and joined with `+`
+  (e.g. `design+nodex+persona`). Republishing the same channel set —
+  regardless of name or `t`-tag order — addresses the same topic, so
+  renaming is just a newer event, and independent authors describing the
+  same combination converge on one topic.
+- `title` carries the display name. If absent, clients render the channel
+  list. Names need not be unique and are not identity.
 - The **first `t` tag is the primary channel**; all further `t` tags are
-  secondary. At least one `t` tag is REQUIRED. All `t` values are lowercase
+  secondary. Ordering is a navigation hint only — it does not affect
+  identity. At least one `t` tag is REQUIRED. All `t` values are lowercase
   hashtags without `#`, exactly as in posts (NIP-24 `t` tags).
+- Clients SHOULD derive the identity from the `t` tags rather than trusting
+  `d`, so malformed events still group correctly; relays, however, replace
+  by `d`, which is why writing the canonical form is mandatory.
 
 Client behavior
 ---------------
 
 - Topics are **relay-communal**: clients subscribe to kind `30177` without an
-  author filter and resolve conflicts by `d` alone — the newest `created_at`
-  per `d` wins **across authors**, so anyone on the space can refine a topic.
-  (This deliberately extends the usual per-`(kind, pubkey, d)` addressable
-  replacement: the relay's community, not the author, owns the namespace.)
+  author filter and resolve conflicts by channel set alone — the newest
+  `created_at` per set wins **across authors**, so anyone on the space can
+  refine or rename a topic. (This deliberately extends the usual
+  per-`(kind, pubkey, d)` addressable replacement: the relay's community,
+  not the author, owns the namespace.)
 - Selecting a topic filters the feed to posts carrying **all** of its
   channels, and posts composed inside the topic MUST carry all of its
   channels as `t` tags. This keeps topic conversations fully visible to

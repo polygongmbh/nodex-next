@@ -17,7 +17,7 @@ export interface Channel {
  * per-user (preferences), never part of the shared event.
  */
 export interface Topic {
-  /** The d-tag: a stable lowercase slug of the name. */
+  /** Canonical channel-set encoding (topicIdForChannels) — the identity. */
   id: string;
   name: string;
   primary: string;
