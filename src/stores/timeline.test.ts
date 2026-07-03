@@ -111,7 +111,7 @@ describe("buildTimeline", () => {
     if (replyItem?.type !== "post" || rootItem?.type !== "post") throw new Error("missing items");
     expect(replyItem.parent?.id).toBe(root.id);
     expect(rootItem.replyCount).toBe(1);
-    expect(items[0]).toBe(replyItem); // newest first
+    expect(items[items.length - 1]).toBe(replyItem); // newest at the bottom
   });
 
   it("renders task state updates as their own timeline items", () => {
@@ -122,7 +122,7 @@ describe("buildTimeline", () => {
       RELAY_A
     );
     const items = buildTimeline(timelineStore.postsById, scope());
-    expect(items.map((item) => item.type)).toEqual(["state", "post"]);
+    expect(items.map((item) => item.type)).toEqual(["post", "state"]);
   });
 
   it("scopes to the active relay", () => {

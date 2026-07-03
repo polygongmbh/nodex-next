@@ -29,6 +29,22 @@
 
   let relaySheetPostId = $state<string | null>(null);
   let menuOpen = $state(false);
+
+  let feedElement = $state<HTMLElement | null>(null);
+  let hasAutoScrolled = false;
+  // why: chat orientation — new items keep the view pinned to the bottom
+  // (the newest message) unless the user has scrolled up to read history.
+  $effect(() => {
+    void items.length;
+    const element = feedElement;
+    if (!element) return;
+    const nearBottom =
+      element.scrollHeight - element.scrollTop - element.clientHeight < 400;
+    if (nearBottom || (!hasAutoScrolled && items.length > 0)) {
+      element.scrollTop = element.scrollHeight;
+      if (items.length > 0) hasAutoScrolled = true;
+    }
+  });
 </script>
 
 <div class="screen">
@@ -56,7 +72,7 @@
       </div>
     {/if}
 
-    <main class="feed">
+    <main class="feed" bind:this={feedElement}>
       {#if timelineStore.hydrating && items.length === 0}
         <p class="empty">Loading your timeline…</p>
       {:else if items.length === 0}
@@ -91,30 +107,37 @@
 <style>
   .screen {
     height: 100dvh;
-    max-width: 42rem;
-    margin: 0 auto;
   }
   .rail {
     display: none;
   }
+  /* One fluid column at every width: it grows with the viewport up to a
+     readable measure and centers beyond that. The feed is transparent so
+     wider viewports show one seamless background — no edge borders. */
   .column {
     height: 100dvh;
     display: flex;
     flex-direction: column;
     min-width: 0;
+    width: 100%;
+    max-width: 48rem;
+    margin: 0 auto;
   }
   /* Desktop: persistent sidebar replaces the hamburger + chips row. */
   @media (min-width: 900px) {
     .screen {
       display: grid;
-      grid-template-columns: 16rem minmax(0, 1fr);
-      max-width: 68rem;
+      grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
     }
     .rail {
       display: block;
     }
     .top {
       display: none;
+    }
+    .column {
+      max-width: 52rem;
+      justify-self: center;
     }
   }
   .top {
@@ -162,7 +185,6 @@
     flex: 1;
     overflow-y: auto;
     overscroll-behavior: contain;
-    background: var(--surface-sunken);
   }
   .empty {
     text-align: center;

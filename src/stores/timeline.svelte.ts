@@ -226,9 +226,10 @@ export function buildTimeline(
       items.push({ type: "state", post, update, timestamp: update.timestamp });
     }
   }
-  // Newest first; on ties the compact state row sits above its task card.
+  // Chat orientation: oldest at the top, newest at the bottom. On ties the
+  // task card comes before its state row (the update follows the task).
   return items.sort(
-    (a, b) => b.timestamp - a.timestamp || (a.type === "state" ? -1 : 1) - (b.type === "state" ? -1 : 1)
+    (a, b) => a.timestamp - b.timestamp || (a.type === "post" ? -1 : 1) - (b.type === "post" ? -1 : 1)
   );
 }
 
