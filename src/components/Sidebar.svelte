@@ -1,6 +1,7 @@
 <script lang="ts">
   import { deriveChannels, partitionPinnedChannels, type Topic } from "@/domain/channel";
   import { relayColorSlot } from "@/domain/relay-identity";
+  import { i18n, t, type Locale } from "@/lib/i18n/index.svelte";
   import { longpress } from "@/lib/longpress";
   import { authStore } from "@/stores/auth.svelte";
   import { filterStore } from "@/stores/filters.svelte";
@@ -61,7 +62,7 @@
     {/each}
   </ul>
 
-  <h2>Topics</h2>
+  <h2>{t("sidebar.topics")}</h2>
   <nav class="channels">
     {#each topics as topic (topic.id)}
       <button
@@ -79,11 +80,11 @@
       </button>
     {/each}
     <button class="channel add" onclick={() => (manager = { type: "create" })}>
-      + New topic
+      {t("sidebar.newTopic")}
     </button>
   </nav>
 
-  <h2>Channels</h2>
+  <h2>{t("sidebar.channels")}</h2>
   <nav class="channels">
     {#each [...channels.pinned, ...channels.rest] as channel (channel.name)}
       {@const pinned = preferencesStore.pinnedChannels.includes(channel.name)}
@@ -116,7 +117,16 @@
     <button class="username" onclick={() => (profileOpen = true)} data-testid="edit-profile">
       {authStore.session?.username}
     </button>
-    <button class="signout" onclick={() => authStore.signOut()}>Sign out</button>
+    <select
+      class="language"
+      value={i18n.locale}
+      onchange={(event) =>
+        i18n.setLocale((event.currentTarget as HTMLSelectElement).value as Locale)}
+    >
+      <option value="en">EN</option>
+      <option value="de">DE</option>
+    </select>
+    <button class="signout" onclick={() => authStore.signOut()}>{t("menu.signOut")}</button>
   </div>
 
   {#if manager}
@@ -260,5 +270,13 @@
   .signout {
     color: var(--danger);
     font-size: 0.8rem;
+  }
+  .language {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 0.4rem;
+    padding: 0.15rem 0.25rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
   }
 </style>

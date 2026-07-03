@@ -2,6 +2,7 @@
   import { authStore } from "@/stores/auth.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import { relayColorSlot } from "@/domain/relay-identity";
+  import { i18n, t, type Locale } from "@/lib/i18n/index.svelte";
   import Avatar from "./Avatar.svelte";
   import ProfileSheet from "./ProfileSheet.svelte";
   import SpaceSelector from "./SpaceSelector.svelte";
@@ -22,14 +23,14 @@
     />
     <span class="username">{authStore.session?.username}</span>
     <button class="edit" onclick={() => (profileOpen = true)} data-testid="edit-profile">
-      Edit profile
+      {t("profile.edit")}
     </button>
     <button class="signout" onclick={() => authStore.signOut()} data-testid="sign-out">
-      Sign out
+      {t("menu.signOut")}
     </button>
   </div>
 
-  <h2>Spaces</h2>
+  <h2>{t("menu.spaces")}</h2>
   <SpaceSelector />
   <ul>
     {#each timelineStore.relays as relay (relay.id)}
@@ -37,11 +38,23 @@
         <span class="dot" style="background: var(--relay-{relayColorSlot(relay.id)})"></span>
         <span class="name">{relay.name}</span>
         <span class="state" class:online={relay.connected}>
-          {relay.connected ? "connected" : "offline"}
+          {relay.connected ? t("menu.connected") : t("space.offline")}
         </span>
       </li>
     {/each}
   </ul>
+
+  <label class="language">
+    <span>{t("menu.language")}</span>
+    <select
+      value={i18n.locale}
+      onchange={(event) =>
+        i18n.setLocale((event.currentTarget as HTMLSelectElement).value as Locale)}
+    >
+      <option value="en">English</option>
+      <option value="de">Deutsch</option>
+    </select>
+  </label>
 </div>
 
 {#if profileOpen}
@@ -101,6 +114,20 @@
     color: var(--danger);
     font-size: 0.85rem;
     padding: 0.4rem 0.6rem;
+  }
+  .language {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .language select {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 0.5rem;
+    padding: 0.3rem 0.5rem;
   }
   h2 {
     margin: 0;

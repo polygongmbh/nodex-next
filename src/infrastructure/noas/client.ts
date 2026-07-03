@@ -67,12 +67,12 @@ export function decryptNoasPrivateKey(encryptedKey: string, password: string): s
   if (trimmed.startsWith("nsec1")) {
     const decoded = nip19.decode(trimmed);
     if (decoded.type === "nsec") return bytesToHex(decoded.data as Uint8Array);
-    throw new NoasAuthError("Received an unreadable private key.");
+    throw new NoasAuthError("error.unreadableKey");
   }
   try {
     return bytesToHex(nip49Decrypt(trimmed, password));
   } catch {
-    throw new NoasAuthError("Could not decrypt your key — check your password.");
+    throw new NoasAuthError("error.decrypt");
   }
 }
 
@@ -90,19 +90,19 @@ export async function signInWithNoas(
       credentials: "include",
     });
   } catch {
-    throw new NoasAuthError("Could not reach the sign-in server.");
+    throw new NoasAuthError("error.connection");
   }
 
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   if (!response.ok || data.success === false) {
-    if (response.status === 401) throw new NoasAuthError("Invalid username or password.");
+    if (response.status === 401) throw new NoasAuthError("error.invalidCredentials");
     if (response.status === 403) {
       throw new NoasAuthError(
-        typeof data.error === "string" ? data.error : "This account is disabled or unverified."
+        typeof data.error === "string" ? data.error : "error.accountDisabled"
       );
     }
     throw new NoasAuthError(
-      typeof data.error === "string" ? data.error : "Sign-in failed — try again."
+      typeof data.error === "string" ? data.error : "error.signinFailed"
     );
   }
 
@@ -114,12 +114,12 @@ export async function signInWithNoas(
     pickString(data, ["publicKey", "public_key", "public_npub"]) ??
       pickString(user, ["publicKey", "public_key", "public_npub"])
   );
-  if (!encryptedKey) throw new NoasAuthError("The server returned no key for this account.");
+  if (!encryptedKey) throw new NoasAuthError("error.noKey");
 
   const privateKeyHex = decryptNoasPrivateKey(encryptedKey, password);
   const derivedPubkey = getPublicKey(hexToBytes(privateKeyHex));
   if (responsePubkey && derivedPubkey !== responsePubkey) {
-    throw new NoasAuthError("Key mismatch — the decrypted key does not match this account.");
+    throw new NoasAuthError("error.keyMismatch");
   }
 
   const relaysRaw = Array.isArray(data.relays) ? data.relays : user.relays;
@@ -168,13 +168,13 @@ export async function registerWithNoas(
       body: JSON.stringify(payload),
     });
   } catch {
-    throw new NoasAuthError("Could not reach the sign-in server.");
+    throw new NoasAuthError("error.connection");
   }
 
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   if (!response.ok || data.success === false) {
     throw new NoasAuthError(
-      typeof data.error === "string" ? data.error : "Registration failed — try again."
+      typeof data.error === "string" ? data.error : "error.registerFailed"
     );
   }
   return {

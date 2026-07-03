@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Topic } from "@/domain/channel";
+  import { t } from "@/lib/i18n/index.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
 
   // Bottom sheet for topic management: create a topic from the current
@@ -29,9 +30,9 @@
 <div class="sheet" data-testid="topic-manager">
   <div class="grip"></div>
   {#if mode.type === "create"}
-    <h2>New topic</h2>
+    <h2>{t("topics.new")}</h2>
     {#if contextTags.length === 0}
-      <p class="hint">Select channels or type #hashtags first — a topic is made of tags.</p>
+      <p class="hint">{t("topics.needTags")}</p>
     {:else}
       <div class="tags">
         {#each contextTags as tag (tag)}
@@ -41,10 +42,10 @@
       <input
         type="text"
         bind:value={name}
-        placeholder="Topic name, e.g. CalDav Integration"
+        placeholder={t("topics.namePlaceholder")}
         data-testid="topic-name"
       />
-      <button class="primary" onclick={create} disabled={!name.trim()}>Create topic</button>
+      <button class="primary" onclick={create} disabled={!name.trim()}>{t("topics.create")}</button>
     {/if}
   {:else}
     <h2>{mode.topic.name}</h2>
@@ -60,7 +61,7 @@
         onClose();
       }}
     >
-      {mode.topic.pinned ? "Unpin" : "Pin"}
+      {t(mode.topic.pinned ? "topics.unpin" : "topics.pin")}
     </button>
     <button
       class="action danger"
@@ -69,7 +70,7 @@
         onClose();
       }}
     >
-      Delete topic
+      {t("topics.delete")}
     </button>
   {/if}
 </div>

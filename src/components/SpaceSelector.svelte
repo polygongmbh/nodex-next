@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "@/lib/i18n/index.svelte";
   import { filterStore } from "@/stores/filters.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
 
@@ -15,10 +16,10 @@
 
 <div class="selector">
   <select value={filterStore.activeRelayId ?? ""} onchange={onChange} data-testid="space-selector">
-    <option value="">All spaces</option>
+    <option value="">{t("space.all")}</option>
     {#each timelineStore.relays as relay (relay.id)}
       <option value={relay.id}>
-        {relay.name}{relay.connected ? "" : " (offline)"}
+        {relay.name}{relay.connected ? "" : ` (${t("space.offline")})`}
       </option>
     {/each}
   </select>

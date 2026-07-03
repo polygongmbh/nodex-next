@@ -37,13 +37,13 @@ class AuthStore {
   async signIn(hostInput: string, usernameInput: string, password: string): Promise<void> {
     const { username, host } = splitNoasCredentials(usernameInput, hostInput);
     if (!host) {
-      throw new NoasAuthError("Add a server, or sign in as user@domain.");
+      throw new NoasAuthError("error.needHost");
     }
     const apiBaseUrl = await resolveNoasApiBaseUrl(host);
-    if (!apiBaseUrl) throw new NoasAuthError("Enter a valid server address.");
+    if (!apiBaseUrl) throw new NoasAuthError("error.invalidServer");
     const result = await signInWithNoas(apiBaseUrl, username, password);
     if (result.relayUrls.length === 0) {
-      throw new NoasAuthError("This account has no spaces configured.");
+      throw new NoasAuthError("error.noSpaces");
     }
     const session: StoredSession = {
       pubkeyHex: result.pubkeyHex,
@@ -72,17 +72,17 @@ class AuthStore {
   ): Promise<string | null> {
     const { username, host } = splitNoasCredentials(usernameInput, hostInput);
     if (!host) {
-      throw new NoasAuthError("Add a server, or register as user@domain.");
+      throw new NoasAuthError("error.needHost");
     }
     const apiBaseUrl = await resolveNoasApiBaseUrl(host);
-    if (!apiBaseUrl) throw new NoasAuthError("Enter a valid server address.");
+    if (!apiBaseUrl) throw new NoasAuthError("error.invalidServer");
     const result = await registerWithNoas(apiBaseUrl, username, password, email);
     try {
       await this.signIn(host, username, password);
       return null;
     } catch {
       // Account created but not signed in (e.g. pending email verification).
-      return result.message ?? "Account created — you may need to verify your email.";
+      return result.message ?? "error.verifyEmail";
     }
   }
 

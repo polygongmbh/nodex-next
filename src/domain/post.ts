@@ -62,16 +62,11 @@ export function isTopLevel(post: Post): boolean {
   return !post.parentId;
 }
 
-export const STATUS_LABELS: Record<TaskStatus, string> = {
-  open: "Open",
-  active: "In Progress",
-  done: "Done",
-  closed: "Closed",
-};
-
-/** Visible label for a state update: its content (e.g. "Review") or the status name. */
-export function stateUpdateLabel(update: TaskStateUpdate): string {
+/**
+ * Custom label of a state update (e.g. "Review"), or null when the generic
+ * status name should be shown — the UI translates that one (status.* keys).
+ */
+export function stateUpdateCustomLabel(update: TaskStateUpdate): string | null {
   const custom = update.content.trim();
-  if (custom) return custom;
-  return STATUS_LABELS[statusFromKind(update.kind, update.content) ?? "open"];
+  return custom || null;
 }

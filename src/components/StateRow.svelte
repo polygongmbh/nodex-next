@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Post, TaskStateUpdate } from "@/domain/post";
-  import { stateUpdateLabel, statusFromKind } from "@/domain/post";
+  import { stateUpdateCustomLabel, statusFromKind } from "@/domain/post";
   import { personLabel } from "@/domain/person";
   import { formatTimelineTimestamp } from "@/domain/timeline-timestamp";
+  import { i18n, t } from "@/lib/i18n/index.svelte";
   import { filterStore } from "@/stores/filters.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import ProfileHover from "./ProfileHover.svelte";
@@ -16,14 +17,14 @@
 
 <div class="row">
   <StatusIcon {status} size={16} />
-  <span class="label">{stateUpdateLabel(update)}</span>
+  <span class="label">{stateUpdateCustomLabel(update) ?? t(`status.${status}`)}</span>
   <span class="sep">·</span>
   <ProfileHover pubkey={update.pubkey}>
     <span class="author">{personLabel(author, update.pubkey)}</span>
   </ProfileHover>
   <span class="sep">·</span>
   <button class="task" onclick={() => filterStore.focusThread(post.id)}>{post.content}</button>
-  <time>{formatTimelineTimestamp(new Date(update.timestamp * 1000))}</time>
+  <time>{formatTimelineTimestamp(new Date(update.timestamp * 1000), i18n.locale)}</time>
 </div>
 
 <style>

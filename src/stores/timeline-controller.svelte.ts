@@ -137,9 +137,9 @@ class TimelineController {
    * Throws PublishRuleError with a user-readable message on rule violations.
    */
   async sendMessage(): Promise<string> {
-    if (!this.service) throw new PublishRuleError("Not connected yet.");
+    if (!this.service) throw new PublishRuleError("error.notConnected");
     const content = this.draft.trim();
-    if (!content) throw new PublishRuleError("Write a message first.");
+    if (!content) throw new PublishRuleError("error.emptyMessage");
     const channels = this.draftChannels;
     const tags = buildMessageTags(channels);
     const relay = resolvePublishRelay(timelineStore.relays, filterStore.activeRelayId);
@@ -159,9 +159,9 @@ class TimelineController {
    * scope so unknown fields survive.
    */
   async publishProfile(edits: ProfileEdits, relayId?: string): Promise<void> {
-    if (!this.service) throw new PublishRuleError("Not connected yet.");
+    if (!this.service) throw new PublishRuleError("error.notConnected");
     const relayUrls = this.relayUrlsForScope(relayId);
-    if (relayUrls.length === 0) throw new PublishRuleError("No space is available.");
+    if (relayUrls.length === 0) throw new PublishRuleError("error.noSpaceAvailable");
     const scopeKey = relayId ?? "*";
     const base =
       this.ownProfileBases.get(scopeKey) ?? this.ownProfileBases.get("*") ?? {};

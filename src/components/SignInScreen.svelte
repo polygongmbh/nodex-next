@@ -1,6 +1,7 @@
 <script lang="ts">
   import { authStore } from "@/stores/auth.svelte";
   import { NoasAuthError } from "@/infrastructure/noas/client";
+  import { t } from "@/lib/i18n/index.svelte";
 
   let mode = $state<"signin" | "register">("signin");
   let host = $state(authStore.lastHost);
@@ -18,22 +19,19 @@
     error = "";
     info = "";
     if (mode === "register" && password !== confirm) {
-      error = "Passwords do not match.";
+      error = t("signin.passwordMismatch");
       return;
     }
     busy = true;
     try {
       if (mode === "register") {
         const message = await authStore.register(host, username, password, email);
-        if (message) info = message;
+        if (message) info = t(message);
       } else {
         await authStore.signIn(host, username, password);
       }
     } catch (caught) {
-      error =
-        caught instanceof NoasAuthError
-          ? caught.message
-          : "Something went wrong — try again.";
+      error = caught instanceof NoasAuthError ? t(caught.message) : t("error.generic");
     } finally {
       busy = false;
     }
@@ -53,11 +51,9 @@
         <path d="M202.53 40.0443L202.952 134.619C202.966 137.752 199.138 139.286 196.985 137.01L126.035 61.9938" />
       </g>
     </svg>
-    <h1>Welcome to Nodex</h1>
+    <h1>{t("app.welcome")}</h1>
     <p class="hint">
-      {mode === "signin"
-        ? "Sign in with your organization's account."
-        : "Create your account — your key is generated on this device."}
+{mode === "signin" ? t("signin.hint") : t("signin.registerHint")}
     </p>
 
     <div class="tabs">
@@ -66,7 +62,7 @@
         class:active={mode === "signin"}
         onclick={() => (mode = "signin")}
       >
-        Sign in
+        {t("signin.tab")}
       </button>
       <button
         type="button"
@@ -74,16 +70,16 @@
         onclick={() => (mode = "register")}
         data-testid="register-tab"
       >
-        Create account
+        {t("signin.registerTab")}
       </button>
     </div>
 
     <label>
-      <span>Username</span>
+      <span>{t("signin.username")}</span>
       <input
         type="text"
         bind:value={username}
-        placeholder="you — or you@your-org.example"
+        placeholder={t("signin.usernamePlaceholder")}
         autocapitalize="off"
         autocorrect="off"
         autocomplete="username"
@@ -91,7 +87,7 @@
       />
     </label>
     <label>
-      <span>Server <em>(optional with user@domain)</em></span>
+      <span>{t("signin.server")} <em>{t("signin.serverOptional")}</em></span>
       <input
         type="text"
         bind:value={host}
@@ -102,12 +98,12 @@
     </label>
     {#if mode === "register"}
       <label>
-        <span>Email <em>(optional, for verification)</em></span>
+        <span>{t("signin.email")} <em>{t("signin.emailOptional")}</em></span>
         <input type="email" bind:value={email} autocomplete="email" />
       </label>
     {/if}
     <label>
-      <span>Password</span>
+      <span>{t("signin.password")}</span>
       <input
         type="password"
         bind:value={password}
@@ -117,7 +113,7 @@
     </label>
     {#if mode === "register"}
       <label>
-        <span>Confirm password</span>
+        <span>{t("signin.confirm")}</span>
         <input type="password" bind:value={confirm} autocomplete="new-password" required />
       </label>
     {/if}
@@ -131,12 +127,8 @@
 
     <button class="submit" type="submit" disabled={busy}>
       {busy
-        ? mode === "register"
-          ? "Creating account…"
-          : "Signing in…"
-        : mode === "register"
-          ? "Create account"
-          : "Sign in"}
+        ? t(mode === "register" ? "signin.registering" : "signin.submitting")
+        : t(mode === "register" ? "signin.register" : "signin.submit")}
     </button>
   </form>
 </div>

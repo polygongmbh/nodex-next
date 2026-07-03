@@ -31,23 +31,23 @@ export function resolvePublishRelay(
     const originId = parent.relays[0];
     const origin = relays.find((relay) => relay.id === originId);
     if (origin) return origin;
-    throw new PublishRuleError("The parent post's origin space is not available.");
+    throw new PublishRuleError("error.parentSpaceUnavailable");
   }
   if (activeRelayId) {
     const active = relays.find((relay) => relay.id === activeRelayId);
     if (active) return active;
-    throw new PublishRuleError("The selected space is not available.");
+    throw new PublishRuleError("error.spaceUnavailable");
   }
   const connected = relays.filter((relay) => relay.connected);
   if (connected.length === 1) return connected[0];
-  if (connected.length === 0) throw new PublishRuleError("No space is connected.");
-  throw new PublishRuleError("Select a space to post to.");
+  if (connected.length === 0) throw new PublishRuleError("error.noSpaceConnected");
+  throw new PublishRuleError("error.selectSpace");
 }
 
 /** Tags for a kind-1 message: every channel as lowercased `t`-tag. */
 export function buildMessageTags(channels: string[], parent?: Post): string[][] {
   if (channels.length === 0) {
-    throw new PublishRuleError("A post needs at least one #channel.");
+    throw new PublishRuleError("error.needChannel");
   }
   const tags: string[][] = channels.map((channel) => ["t", channel.toLowerCase()]);
   if (parent) {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { timelineController } from "@/stores/timeline-controller.svelte";
   import { PublishRuleError } from "@/domain/publish-rules";
+  import { t } from "@/lib/i18n/index.svelte";
 
   // One bar for search and posting (the nodex mobile concept): typed text
   // live-filters the feed; typed #hashtags scope it AND become the post's
@@ -9,8 +10,10 @@
   const canSend = $derived(canPost && timelineController.draft.trim().length > 0);
   const placeholder = $derived(
     canPost
-      ? `Message ${timelineController.draftChannels.map((channel) => `#${channel}`).join(" ")}`
-      : "Search — add a #channel to post"
+      ? t("bar.message", {
+          channels: timelineController.draftChannels.map((channel) => `#${channel}`).join(" "),
+        })
+      : t("bar.search")
   );
 
   let error = $state("");
@@ -23,8 +26,7 @@
     try {
       await timelineController.sendMessage();
     } catch (caught) {
-      error =
-        caught instanceof PublishRuleError ? caught.message : "Sending failed — try again.";
+      error = caught instanceof PublishRuleError ? t(caught.message) : t("bar.sendFailed");
     } finally {
       sending = false;
     }

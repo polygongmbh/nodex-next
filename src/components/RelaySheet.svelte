@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "@/lib/i18n/index.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import { relayColorSlot } from "@/domain/relay-identity";
 
@@ -23,7 +24,7 @@
 <div class="backdrop" onclick={onClose}></div>
 <div class="sheet" data-testid="relay-sheet">
   <div class="grip"></div>
-  <h2>Delivered by</h2>
+  <h2>{t("relaysheet.title")}</h2>
   <ul>
     {#each entries as relay (relay.id)}
       <li>
@@ -33,7 +34,7 @@
           {#if relay.url}<span class="url">{relay.url}</span>{/if}
         </div>
         <span class="state" class:online={relay.connected}>
-          {relay.connected ? "connected" : "offline"}
+          {relay.connected ? t("menu.connected") : t("space.offline")}
         </span>
       </li>
     {/each}

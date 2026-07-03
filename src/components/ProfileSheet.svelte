@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "@/lib/i18n/index.svelte";
   import { authStore } from "@/stores/auth.svelte";
   import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
@@ -69,12 +70,12 @@
 <div class="backdrop" onclick={onClose}></div>
 <div class="sheet" data-testid="profile-sheet">
   <div class="grip"></div>
-  <h2>Edit profile</h2>
+  <h2>{t("profile.edit")}</h2>
 
   <label>
-    <span>Scope</span>
+    <span>{t("profile.scope")}</span>
     <select bind:value={scope}>
-      <option value="*">All spaces</option>
+      <option value="*">{t("space.all")}</option>
       {#each timelineStore.relays as relay (relay.id)}
         <option value={relay.id}>{relay.name}</option>
       {/each}
@@ -82,7 +83,7 @@
   </label>
 
   {#if loading}
-    <p class="hint">Fetching your profile…</p>
+    <p class="hint">{t("profile.fetching")}</p>
   {:else}
     <div class="avatar-row">
       <Avatar
@@ -91,29 +92,29 @@
         picture={picture || undefined}
       />
       <label class="grow">
-        <span>Picture URL</span>
+        <span>{t("profile.picture")}</span>
         <input type="url" bind:value={picture} placeholder="https://…" />
       </label>
     </div>
     <label>
-      <span>Display name</span>
+      <span>{t("profile.displayName")}</span>
       <input type="text" bind:value={displayName} />
     </label>
     <label>
-      <span>Bio</span>
+      <span>{t("profile.bio")}</span>
       <textarea rows="2" bind:value={about}></textarea>
     </label>
     <label>
-      <span>Website</span>
+      <span>{t("profile.website")}</span>
       <input type="url" bind:value={website} placeholder="https://…" />
     </label>
     {#if feedback === "saved"}
-      <p class="ok">Profile published.</p>
+      <p class="ok">{t("profile.saved")}</p>
     {:else if feedback === "error"}
-      <p class="error">Publishing failed — try again.</p>
+      <p class="error">{t("profile.saveError")}</p>
     {/if}
     <button class="primary" onclick={save} disabled={saving}>
-      {saving ? "Saving…" : scope === "*" ? "Save to all spaces" : "Save to this space"}
+      {saving ? t("common.saving") : scope === "*" ? t("profile.saveAll") : t("profile.saveSpace")}
     </button>
   {/if}
 </div>

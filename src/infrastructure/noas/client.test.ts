@@ -102,14 +102,14 @@ describe("signInWithNoas", () => {
       relays: ["wss://one.example"],
     });
     await expect(signInWithNoas("https://api.example/api/v1", "alice", PASSWORD)).rejects.toThrow(
-      /mismatch/i
+      "error.keyMismatch"
     );
   });
 
   it("maps 401 to an invalid-credentials message", async () => {
     mockSignInResponse({ success: false }, 401);
     await expect(signInWithNoas("https://api.example/api/v1", "alice", PASSWORD)).rejects.toThrow(
-      /invalid username or password/i
+      "error.invalidCredentials"
     );
   });
 });

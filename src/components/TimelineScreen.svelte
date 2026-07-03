@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "@/lib/i18n/index.svelte";
   import { authStore } from "@/stores/auth.svelte";
   import { filterStore } from "@/stores/filters.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
@@ -65,7 +66,7 @@
 
     {#if focusedPost}
       <div class="thread-bar">
-        <span class="thread-title">Thread · {focusedPost.content.split("\n")[0]}</span>
+        <span class="thread-title">{t("timeline.thread")} · {focusedPost.content.split("\n")[0]}</span>
         <button class="thread-close" onclick={() => filterStore.clearThread()} data-testid="thread-close">
           ✕
         </button>
@@ -74,9 +75,9 @@
 
     <main class="feed" bind:this={feedElement}>
       {#if timelineStore.hydrating && items.length === 0}
-        <p class="empty">Loading your timeline…</p>
+        <p class="empty">{t("timeline.loading")}</p>
       {:else if items.length === 0}
-        <p class="empty">Nothing here yet. Pick different channels or start the conversation.</p>
+        <p class="empty">{t("timeline.empty")}</p>
       {:else}
         {#each items as item (item.type === "post" ? item.post.id : item.update.id)}
           {#if item.type === "post"}

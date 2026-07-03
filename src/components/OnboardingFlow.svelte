@@ -1,5 +1,6 @@
 <script lang="ts">
   import { deriveChannels } from "@/domain/channel";
+  import { t } from "@/lib/i18n/index.svelte";
   import { authStore } from "@/stores/auth.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
   import { timelineController } from "@/stores/timeline-controller.svelte";
@@ -54,7 +55,7 @@
       });
       step = "channels";
     } catch {
-      profileError = "Could not save your profile yet — you can retry or skip for now.";
+      profileError = t("onboarding.profileError");
     } finally {
       saving = false;
     }
@@ -80,15 +81,15 @@
           <path d="M202.53 40.0443L202.952 134.619C202.966 137.752 199.138 139.286 196.985 137.01L126.035 61.9938" />
         </g>
       </svg>
-      <h1>Hey {authStore.session?.username}, welcome onboard!</h1>
-      <p>Let's take a quick moment to personalize your experience.</p>
-      <button class="primary" onclick={() => (step = "profile")}>Let's go</button>
+      <h1>{t("onboarding.welcome", { name: authStore.session?.username ?? "" })}</h1>
+      <p>{t("onboarding.personalize")}</p>
+      <button class="primary" onclick={() => (step = "profile")}>{t("onboarding.go")}</button>
     </div>
   {:else if step === "profile"}
     <div class="step">
-      <h1>Set up your profile</h1>
+      <h1>{t("onboarding.profileTitle")}</h1>
       {#if profileLoading}
-        <p class="hint">Fetching your existing profile…</p>
+        <p class="hint">{t("onboarding.fetching")}</p>
       {:else}
         <div class="avatar-row">
           <Avatar
@@ -97,38 +98,38 @@
             picture={picture || undefined}
           />
           <label class="grow">
-            <span>Picture URL <em>(optional)</em></span>
+            <span>{t("profile.picture")} <em>{t("common.optional")}</em></span>
             <input type="url" bind:value={picture} placeholder="https://…" />
           </label>
         </div>
         <label>
-          <span>Display name</span>
+          <span>{t("profile.displayName")}</span>
           <input type="text" bind:value={displayName} data-testid="onboarding-display-name" />
         </label>
         <label>
-          <span>Bio <em>(optional)</em></span>
-          <textarea rows="3" bind:value={about} placeholder="What should your team know about you?"></textarea>
+          <span>{t("profile.bio")} <em>{t("common.optional")}</em></span>
+          <textarea rows="3" bind:value={about} placeholder={t("profile.bioPlaceholder")}></textarea>
         </label>
         <label>
-          <span>Website <em>(optional)</em></span>
+          <span>{t("profile.website")} <em>{t("common.optional")}</em></span>
           <input type="url" bind:value={website} placeholder="https://…" />
         </label>
         {#if profileError}
           <p class="error">{profileError}</p>
         {/if}
         <button class="primary" onclick={saveProfile} disabled={saving}>
-          {saving ? "Saving…" : "Continue"}
+          {saving ? t("common.saving") : t("onboarding.continue")}
         </button>
-        <button class="skip" onclick={() => (step = "channels")}>Skip for now</button>
+        <button class="skip" onclick={() => (step = "channels")}>{t("onboarding.skip")}</button>
       {/if}
     </div>
   {:else}
     <div class="step">
-      <h1>Pick your channels</h1>
-      <p class="hint">Which channels would you like to see in your main feed?</p>
+      <h1>{t("onboarding.channelsTitle")}</h1>
+      <p class="hint">{t("onboarding.channelsHint")}</p>
       {#if channels.length === 0}
         <p class="hint">
-          {timelineStore.hydrating ? "Looking for channels…" : "No channels yet — you can pick them later."}
+          {timelineStore.hydrating ? t("onboarding.searching") : t("onboarding.noChannels")}
         </p>
       {:else}
         <div class="grid">
@@ -144,7 +145,11 @@
         </div>
       {/if}
       <button class="primary" onclick={finish} data-testid="onboarding-finish">
-        {selected.length > 0 ? `Show me ${selected.length} channel${selected.length > 1 ? "s" : ""}` : "Show me everything"}
+        {selected.length === 0
+          ? t("onboarding.showAll")
+          : selected.length === 1
+            ? t("onboarding.showOne")
+            : t("onboarding.showCount", { count: selected.length })}
       </button>
     </div>
   {/if}

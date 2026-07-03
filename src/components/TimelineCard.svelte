@@ -5,6 +5,7 @@
   import { relayColorSlot } from "@/domain/relay-identity";
   import { tokenizeContent } from "@/domain/content-tokens";
   import { formatTimelineTimestamp } from "@/domain/timeline-timestamp";
+  import { i18n, t } from "@/lib/i18n/index.svelte";
   import { filterStore } from "@/stores/filters.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
@@ -82,7 +83,7 @@
             #{channel}
           </button>
         {/each}
-        <time>{formatTimelineTimestamp(new Date(post.timestamp * 1000))}</time>
+        <time>{formatTimelineTimestamp(new Date(post.timestamp * 1000), i18n.locale)}</time>
       </header>
       <p class="content" class:struck class:clamped={long && !expanded}>
         {#each tokens as token, index (index)}
@@ -95,13 +96,13 @@
       </p>
       {#if long}
         <button class="more" onclick={() => (expanded = !expanded)}>
-          {expanded ? "Show less" : "Show more"}
+          {expanded ? t("card.showLess") : t("card.showMore")}
         </button>
       {/if}
       <footer>
         {#if replyCount > 0}
           <button class="replies" onclick={() => filterStore.focusThread(post.id)}>
-            ↩ {replyCount} {replyCount === 1 ? "reply" : "replies"}
+            ↩ {t(replyCount === 1 ? "card.reply" : "card.replies", { count: replyCount })}
           </button>
         {/if}
         <span class="spacer"></span>
