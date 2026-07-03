@@ -58,10 +58,19 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   `localStorage` (web equivalent of "trust this browser"). A `user@domain`
   username fills the server automatically, so the server field is optional.
 - **Onboarding** runs after the first sign-in on a device: welcome → profile
-  (display name, optional bio, account picture — published as a kind-0
-  profile to every space) → channel picks. Picked channels are pinned: they
-  lead the chips row and form the default feed scope together with posts
-  that mention you.
+  → channel picks. The profile step fetches your existing kind-0 from the
+  relays, prefills picture/display name/bio/website, and publishes edits
+  merged into that base (unknown fields like `lud16` survive). Picked
+  channels are pinned: they lead the chips row and form the default feed
+  scope together with posts that mention you.
+- **Desktop (≥900px)** gets a persistent sidebar — spaces with connection
+  dots, vertical channel list, user card — while phones keep the hamburger
+  and chips row.
+- **Interactivity**: reply cards carry clickable breadcrumb ancestor chains;
+  crumbs, reply indicators, and state rows focus the conversation as a
+  thread (ancestors + all replies) with a dismissible thread bar. Names,
+  avatars, and @mentions open profile hover cards; card channel chips filter
+  on click.
 - **Channels are hashtags** (no NIP-28); **spaces are relays**; empty space
   selection means "All spaces", never "no relays". Channel filters are AND.
 - **The timeline** shows post cards (replies carry a parent-context header

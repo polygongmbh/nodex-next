@@ -4,6 +4,18 @@
 
 ### Added
 
+- Desktop layout (≥900px): persistent sidebar with space selector, per-relay
+  connection status, vertical channel list, and user card — replacing the
+  mobile hamburger and chips row.
+- Interactive timeline: reply headers are clickable breadcrumb chains, and
+  clicking a crumb, reply indicator, or state-row task focuses that whole
+  conversation (dismissible thread bar). Author names, avatars, and
+  @mentions show profile hover cards; channel chips on cards filter on click.
+- Onboarding profile step is a full profile editor (picture URL with
+  preview, display name, bio, website), prefilled from the existing kind-0
+  fetched off the relays; publishing merges into it so unknown profile
+  fields survive.
+
 - Onboarding flow after first sign-in: welcome, profile setup (display name,
   optional bio, account picture published as kind-0 profile), and channel
   picks that become the pinned default feed scope.
