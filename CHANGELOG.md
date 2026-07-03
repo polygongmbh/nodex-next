@@ -14,7 +14,7 @@
 
 - **Topics are now shared relay events** (addressable kind 30177, see
   `docs/nip-topics.md`): every user of a space sees the same topics, newest
-  definition per name wins across authors, deletion per NIP-09. Pinned state
+  definition per channel set wins across authors (a topic is identified by the channels it contains, not its name), deletion per NIP-09. Pinned state
   stays personal (stored per account next to pinned channels). Topics unfold
   under any of their selected channels; the primary channel only drives
   auto-selection and the sidebar placement. Selecting a channel switches

@@ -86,7 +86,7 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   with a primary channel and secondary channels. They are **shared**: each
   topic is an addressable kind-30177 event on the relay (spec:
   `docs/nip-topics.md`), visible to every user of the space; the newest
-  definition per name wins across authors, and NIP-09 deletion removes your
+  definition per channel set wins across authors (a topic is identified by the channels it contains, not its name), and NIP-09 deletion removes your
   own. Topics unfold under any of their channels once selected; the primary
   channel decides auto-selection (topic tapped with no channel active) and
   where it lives in the sidebar. Selecting a channel switches over from a
