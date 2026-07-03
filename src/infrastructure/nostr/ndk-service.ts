@@ -31,6 +31,8 @@ export interface NdkService {
     tags: string[][];
     relayUrls: string[];
   }): Promise<void>;
+  /** One-shot fetch of the newest kind-0 profile event across all relays. */
+  fetchProfileEvent(pubkeyHex: string): Promise<RawNostrEvent | null>;
   stop(): void;
 }
 
@@ -95,6 +97,14 @@ export function startNdkService(
   subscription.on("eose", () => handlers.onEose());
 
   return {
+    async fetchProfileEvent(pubkeyHex) {
+      const events = await ndk.fetchEvents({ kinds: [0 as NDKKind], authors: [pubkeyHex] });
+      let newest: NDKEvent | null = null;
+      for (const event of events) {
+        if (!newest || (event.created_at ?? 0) > (newest.created_at ?? 0)) newest = event;
+      }
+      return newest ? toRawEvent(newest) : null;
+    },
     async publish({ kind, content, tags, relayUrls }) {
       const event = new NDKEvent(ndk);
       event.kind = kind;

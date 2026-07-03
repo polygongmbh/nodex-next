@@ -6,14 +6,36 @@
   import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
 
+  import { onMount } from "svelte";
+
   // Welcome → profile → channels. The timeline service already runs behind
   // this flow, so the channel step offers live channels from the spaces.
   let step = $state<"welcome" | "profile" | "channels">("welcome");
 
   let displayName = $state(authStore.session?.username ?? "");
   let about = $state("");
+  let picture = $state("");
+  let website = $state("");
+  let profileLoading = $state(true);
   let profileError = $state("");
   let saving = $state(false);
+
+  // why: an existing kind-0 on the relays must prefill (and survive) the
+  // profile step, so republishing never wipes a profile made elsewhere.
+  onMount(() => {
+    void timelineController
+      .fetchOwnProfile()
+      .then((existing) => {
+        const text = (value: unknown): string =>
+          typeof value === "string" ? value.trim() : "";
+        displayName =
+          text(existing.display_name) || text(existing.name) || displayName;
+        about = text(existing.about) || about;
+        website = text(existing.website) || website;
+        picture = text(existing.picture) || authStore.profilePictureUrl || "";
+      })
+      .finally(() => (profileLoading = false));
+  });
 
   let selected = $state<string[]>([]);
   const channels = $derived(deriveChannels(Object.values(timelineStore.postsById)));
@@ -27,7 +49,8 @@
         name: authStore.session?.username,
         displayName: displayName.trim() || (authStore.session?.username ?? ""),
         about,
-        picture: authStore.profilePictureUrl ?? undefined,
+        picture: picture.trim(),
+        website,
       });
       step = "channels";
     } catch {
@@ -64,29 +87,40 @@
   {:else if step === "profile"}
     <div class="step">
       <h1>Set up your profile</h1>
-      <div class="avatar-row">
-        <Avatar
-          label={displayName || "?"}
-          pubkey={authStore.session?.pubkeyHex ?? ""}
-          picture={authStore.profilePictureUrl ?? undefined}
-        />
-        <span class="hint">Your picture comes from your account.</span>
-      </div>
-      <label>
-        <span>Display name</span>
-        <input type="text" bind:value={displayName} data-testid="onboarding-display-name" />
-      </label>
-      <label>
-        <span>Bio <em>(optional)</em></span>
-        <textarea rows="3" bind:value={about} placeholder="What should your team know about you?"></textarea>
-      </label>
-      {#if profileError}
-        <p class="error">{profileError}</p>
+      {#if profileLoading}
+        <p class="hint">Fetching your existing profile…</p>
+      {:else}
+        <div class="avatar-row">
+          <Avatar
+            label={displayName || "?"}
+            pubkey={authStore.session?.pubkeyHex ?? ""}
+            picture={picture || undefined}
+          />
+          <label class="grow">
+            <span>Picture URL <em>(optional)</em></span>
+            <input type="url" bind:value={picture} placeholder="https://…" />
+          </label>
+        </div>
+        <label>
+          <span>Display name</span>
+          <input type="text" bind:value={displayName} data-testid="onboarding-display-name" />
+        </label>
+        <label>
+          <span>Bio <em>(optional)</em></span>
+          <textarea rows="3" bind:value={about} placeholder="What should your team know about you?"></textarea>
+        </label>
+        <label>
+          <span>Website <em>(optional)</em></span>
+          <input type="url" bind:value={website} placeholder="https://…" />
+        </label>
+        {#if profileError}
+          <p class="error">{profileError}</p>
+        {/if}
+        <button class="primary" onclick={saveProfile} disabled={saving}>
+          {saving ? "Saving…" : "Continue"}
+        </button>
+        <button class="skip" onclick={() => (step = "channels")}>Skip for now</button>
       {/if}
-      <button class="primary" onclick={saveProfile} disabled={saving}>
-        {saving ? "Saving…" : "Continue"}
-      </button>
-      <button class="skip" onclick={() => (step = "channels")}>Skip for now</button>
     </div>
   {:else}
     <div class="step">
@@ -157,8 +191,11 @@
   }
   .avatar-row {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 0.75rem;
+  }
+  .grow {
+    flex: 1;
   }
   label {
     display: flex;

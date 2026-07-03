@@ -3,6 +3,8 @@
 
 import { NOSTR_KINDS } from "@/domain/nostr-kinds";
 import type { ChannelFilterState } from "@/domain/channel";
+import { mergeProfileContent, type ProfileEdits } from "@/domain/person";
+import { classifyEvent } from "@/domain/event-to-post";
 import {
   buildMessageTags,
   PublishRuleError,
@@ -17,9 +19,12 @@ import { timelineStore } from "./timeline.svelte";
 class TimelineController {
   draft = $state("");
   private service: NdkService | null = null;
+  private sessionPubkey: string | null = null;
+  private ownProfileBase: Record<string, unknown> = {};
 
   start(session: StoredSession): void {
     if (this.service) return;
+    this.sessionPubkey = session.pubkeyHex;
     timelineStore.initRelays(session.relayUrls);
     this.service = startNdkService(session.relayUrls, session.privateKeyHex, {
       onEvent: (event, relayUrl) => timelineStore.ingestEvent(event, relayUrl),
@@ -31,9 +36,31 @@ class TimelineController {
   stop(): void {
     this.service?.stop();
     this.service = null;
+    this.sessionPubkey = null;
+    this.ownProfileBase = {};
     timelineStore.reset();
     filterStore.reset();
     this.draft = "";
+  }
+
+  /**
+   * Fetch the user's existing kind-0 from the relays. The parsed content
+   * becomes the merge base for publishProfile, so republishing never drops
+   * fields this UI doesn't know about.
+   */
+  async fetchOwnProfile(): Promise<Record<string, unknown>> {
+    if (!this.service || !this.sessionPubkey) return {};
+    const raw = await this.service.fetchProfileEvent(this.sessionPubkey);
+    if (raw) {
+      try {
+        this.ownProfileBase = JSON.parse(raw.content) as Record<string, unknown>;
+      } catch {
+        this.ownProfileBase = {};
+      }
+      const classified = classifyEvent(raw, []);
+      if (classified.type === "person") timelineStore.upsertPerson(classified.person);
+    }
+    return this.ownProfileBase;
   }
 
   get draftChannels(): string[] {
@@ -78,26 +105,22 @@ class TimelineController {
     return relay.id;
   }
 
-  /** Publish a kind-0 profile to every session relay (profiles are global). */
-  async publishProfile(profile: {
-    name?: string;
-    displayName: string;
-    about?: string;
-    picture?: string;
-  }): Promise<void> {
+  /**
+   * Publish a kind-0 profile to every session relay (profiles are global),
+   * merged into the last fetched profile so unknown fields survive.
+   */
+  async publishProfile(edits: ProfileEdits): Promise<void> {
     if (!this.service) throw new PublishRuleError("Not connected yet.");
     const relayUrls = timelineStore.relays.map((relay) => relay.url);
     if (relayUrls.length === 0) throw new PublishRuleError("No space is available.");
-    const content: Record<string, string> = { display_name: profile.displayName };
-    if (profile.name) content.name = profile.name;
-    if (profile.about?.trim()) content.about = profile.about.trim();
-    if (profile.picture) content.picture = profile.picture;
+    const content = mergeProfileContent(this.ownProfileBase, edits);
     await this.service.publish({
       kind: NOSTR_KINDS.metadata,
       content: JSON.stringify(content),
       tags: [],
       relayUrls,
     });
+    this.ownProfileBase = content;
   }
 }
 
