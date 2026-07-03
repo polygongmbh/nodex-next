@@ -7,6 +7,7 @@
   import ChannelChips from "./ChannelChips.svelte";
   import MenuSheet from "./MenuSheet.svelte";
   import RelaySheet from "./RelaySheet.svelte";
+  import Sidebar from "./Sidebar.svelte";
   import StateRow from "./StateRow.svelte";
   import TimelineCard from "./TimelineCard.svelte";
   import UnifiedBar from "./UnifiedBar.svelte";
@@ -18,7 +19,12 @@
       searchQuery: timelineController.searchText,
       pinnedChannels: preferencesStore.pinnedChannels,
       myPubkey: authStore.session?.pubkeyHex ?? null,
+      focusedPostId: filterStore.focusedPostId,
     })
+  );
+
+  const focusedPost = $derived(
+    filterStore.focusedPostId ? timelineStore.postsById[filterStore.focusedPostId] : null
   );
 
   let relaySheetPostId = $state<string | null>(null);
@@ -26,38 +32,53 @@
 </script>
 
 <div class="screen">
-  <header class="top">
-    <!-- svelte-ignore a11y_consider_explicit_label -->
-    <button class="menu" onclick={() => (menuOpen = true)} data-testid="menu-button">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <path d="M4 7h16M4 12h16M4 17h16" />
-      </svg>
-    </button>
-    <ChannelChips />
-  </header>
+  <div class="rail">
+    <Sidebar />
+  </div>
 
-  <main class="feed">
-    {#if timelineStore.hydrating && items.length === 0}
-      <p class="empty">Loading your timeline…</p>
-    {:else if items.length === 0}
-      <p class="empty">Nothing here yet. Pick different channels or start the conversation.</p>
-    {:else}
-      {#each items as item (item.type === "post" ? item.post.id : item.update.id)}
-        {#if item.type === "post"}
-          <TimelineCard
-            post={item.post}
-            parent={item.parent}
-            replyCount={item.replyCount}
-            onRelayDots={(postId) => (relaySheetPostId = postId)}
-          />
-        {:else}
-          <StateRow post={item.post} update={item.update} />
-        {/if}
-      {/each}
+  <div class="column">
+    <header class="top">
+      <!-- svelte-ignore a11y_consider_explicit_label -->
+      <button class="menu" onclick={() => (menuOpen = true)} data-testid="menu-button">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
+      <ChannelChips />
+    </header>
+
+    {#if focusedPost}
+      <div class="thread-bar">
+        <span class="thread-title">Thread · {focusedPost.content.split("\n")[0]}</span>
+        <button class="thread-close" onclick={() => filterStore.clearThread()} data-testid="thread-close">
+          ✕
+        </button>
+      </div>
     {/if}
-  </main>
 
-  <UnifiedBar />
+    <main class="feed">
+      {#if timelineStore.hydrating && items.length === 0}
+        <p class="empty">Loading your timeline…</p>
+      {:else if items.length === 0}
+        <p class="empty">Nothing here yet. Pick different channels or start the conversation.</p>
+      {:else}
+        {#each items as item (item.type === "post" ? item.post.id : item.update.id)}
+          {#if item.type === "post"}
+            <TimelineCard
+              post={item.post}
+              parent={item.parent}
+              replyCount={item.replyCount}
+              onRelayDots={(postId) => (relaySheetPostId = postId)}
+            />
+          {:else}
+            <StateRow post={item.post} update={item.update} />
+          {/if}
+        {/each}
+      {/if}
+    </main>
+
+    <UnifiedBar />
+  </div>
 
   {#if relaySheetPostId}
     <RelaySheet postId={relaySheetPostId} onClose={() => (relaySheetPostId = null)} />
@@ -70,10 +91,31 @@
 <style>
   .screen {
     height: 100dvh;
-    display: flex;
-    flex-direction: column;
     max-width: 42rem;
     margin: 0 auto;
+  }
+  .rail {
+    display: none;
+  }
+  .column {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  /* Desktop: persistent sidebar replaces the hamburger + chips row. */
+  @media (min-width: 900px) {
+    .screen {
+      display: grid;
+      grid-template-columns: 16rem minmax(0, 1fr);
+      max-width: 68rem;
+    }
+    .rail {
+      display: block;
+    }
+    .top {
+      display: none;
+    }
   }
   .top {
     display: flex;
@@ -90,6 +132,31 @@
     border: 1px solid var(--border);
     display: flex;
     flex-shrink: 0;
+  }
+  .thread-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 1rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .thread-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .thread-close {
+    color: var(--text-muted);
+    padding: 0.2rem 0.45rem;
+    flex-shrink: 0;
+  }
+  .thread-close:hover {
+    color: var(--text);
   }
   .feed {
     flex: 1;

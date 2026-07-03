@@ -1,22 +1,17 @@
 <script lang="ts">
-  import { deriveChannels } from "@/domain/channel";
+  import { deriveChannels, partitionPinnedChannels } from "@/domain/channel";
   import { filterStore } from "@/stores/filters.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
 
   // Channels come from ALL posts (unfiltered) so chips don't vanish while
   // filtering narrows the feed. Pinned channels (onboarding picks) lead.
-  const channels = $derived.by(() => {
-    const derived = deriveChannels(Object.values(timelineStore.postsById));
-    const pinnedSet = new Set(preferencesStore.pinnedChannels);
-    const pinned = derived.filter((channel) => pinnedSet.has(channel.name));
-    const rest = derived.filter((channel) => !pinnedSet.has(channel.name));
-    // Pinned channels with no posts yet still deserve their chip.
-    const missing = preferencesStore.pinnedChannels
-      .filter((name) => !derived.some((channel) => channel.name === name))
-      .map((name) => ({ name, postCount: 0 }));
-    return { pinned: [...pinned, ...missing], rest };
-  });
+  const channels = $derived(
+    partitionPinnedChannels(
+      deriveChannels(Object.values(timelineStore.postsById)),
+      preferencesStore.pinnedChannels
+    )
+  );
 </script>
 
 <div class="chips">
