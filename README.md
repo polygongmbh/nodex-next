@@ -11,6 +11,15 @@ npm run check   # svelte-check typechecking
 npm run test    # vitest
 ```
 
+## Documentation
+
+- [docs/development-history.md](docs/development-history.md) — how this got built, phase by phase
+- [docs/rebuild-prompt.md](docs/rebuild-prompt.md) — self-contained prompt to rebuild this app from scratch
+- [docs/mobile-app-prompt.md](docs/mobile-app-prompt.md) — prompt for the native mobile companion (supersedes nodex-talk/SPEC.md)
+- [docs/nodex-parity.md](docs/nodex-parity.md) — faithful / needs work / missing / out of scope vs. nodex
+- [docs/nip-topics.md](docs/nip-topics.md) — NIP draft for shared topics (kind 30177)
+- [docs/nostr-extensions.md](docs/nostr-extensions.md) — survey of all protocol conventions in use
+
 ## Framework decisions (vs. the React/Tailwind original)
 
 - **Svelte 5 (runes) + Vite** instead of React. Domain logic stays in plain
