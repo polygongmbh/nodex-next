@@ -5,9 +5,13 @@
 ### Added
 
 - **Topics**: named, composable tag combinations instead of sub-channels
-  ("Nodex User Stories" = #design + #nodex). Created from the current
-  context via the + chip, selectable alongside channels (their tags compose
-  into the filter and into published posts), long-press to pin or delete.
+  ("Nodex User Stories" = #design + #nodex). Each topic has a primary
+  channel plus secondary channels, picked freely in the creation sheet (no
+  prior selection needed). Topics render as subitems of their primary
+  channel — unfolding after the selected channel chip, nested in the
+  sidebar; pinned topics stay always visible, and selecting one with no
+  channel active auto-selects its primary channel. Their tags compose into
+  the filter and into published posts; long-press to pin or delete.
 - Create-account option at sign-in: generates the key on-device,
   NIP-49-encrypts it with the password, mirrors nodex registration
   (optional email verification).

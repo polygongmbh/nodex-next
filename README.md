@@ -73,10 +73,15 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   on click.
 - **Channels are hashtags** (no NIP-28); **spaces are relays**; empty space
   selection means "All spaces", never "no relays". Channel filters are AND.
-- **Topics** are named, composable tag combinations (not sub-channels):
-  selecting one includes all its tags, composing with channel chips and
-  typed hashtags — and posting inside it tags the message with all of them.
-  Create via the + chip from the current context; long-press to pin/delete.
+- **Topics** are named, composable tag combinations (not sub-channels), each
+  with a primary channel and secondary channels. They render as subitems of
+  their primary channel (unfolding after the selected chip, nested in the
+  sidebar); pinned topics are always visible, and selecting one with no
+  channel active auto-selects its primary channel. Selecting a topic
+  includes all its tags — filtering the feed and tagging posted messages.
+  Create via the + chip (primary/secondary pickers, free-text tags);
+  long-press to pin/delete. Topics are stored per account in localStorage
+  (`nodex-next.prefs.v1.<pubkey>`), device-local for now.
 - **Chat orientation**: newest messages at the bottom with auto-scroll;
   long-press any channel chip to pin it. The sign-in card also offers
   account creation (key generated on-device, NIP-49-encrypted); `user@domain`
