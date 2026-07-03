@@ -24,6 +24,13 @@
     })
   );
 
+  // Recycler-style windowing: only the newest WINDOW_STEP-sized tail renders;
+  // scrolling to the top reveals older items incrementally instead of
+  // mounting thousands of cards at once.
+  const WINDOW_STEP = 80;
+  let visibleCount = $state(WINDOW_STEP);
+  const windowed = $derived(items.slice(Math.max(0, items.length - visibleCount)));
+
   const focusedPost = $derived(
     filterStore.focusedPostId ? timelineStore.postsById[filterStore.focusedPostId] : null
   );
@@ -32,19 +39,59 @@
   let menuOpen = $state(false);
 
   let feedElement = $state<HTMLElement | null>(null);
-  let hasAutoScrolled = false;
-  // why: chat orientation — new items keep the view pinned to the bottom
-  // (the newest message) unless the user has scrolled up to read history.
-  $effect(() => {
-    void items.length;
+  // User intent: pinned means "keep me at the newest message". Starts true so
+  // hydration lands at the bottom; any upward scroll releases it.
+  let pinnedToBottom = true;
+  let lastItemCount = 0;
+
+  function scrollToBottom() {
+    const element = feedElement;
+    if (element) element.scrollTop = element.scrollHeight;
+  }
+
+  function onFeedScroll() {
     const element = feedElement;
     if (!element) return;
-    const nearBottom =
-      element.scrollHeight - element.scrollTop - element.clientHeight < 400;
-    if (nearBottom || (!hasAutoScrolled && items.length > 0)) {
-      element.scrollTop = element.scrollHeight;
-      if (items.length > 0) hasAutoScrolled = true;
-    }
+    pinnedToBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 120;
+    if (element.scrollTop < 300 && visibleCount < items.length) revealOlder();
+  }
+
+  // Revealing older items prepends content — keep the viewport anchored on
+  // the message the user was reading.
+  function revealOlder() {
+    const element = feedElement;
+    if (!element) return;
+    const previousHeight = element.scrollHeight;
+    const previousTop = element.scrollTop;
+    visibleCount += WINDOW_STEP;
+    requestAnimationFrame(() => {
+      element.scrollTop = previousTop + (element.scrollHeight - previousHeight);
+    });
+  }
+
+  // why: with a tail window, every appended item would silently shift the
+  // window while reading history — grow the window instead so the visible
+  // slice keeps covering the same messages; when pinned, follow the bottom.
+  $effect(() => {
+    const count = items.length;
+    const grewBy = count - lastItemCount;
+    lastItemCount = count;
+    if (grewBy > 0 && !pinnedToBottom) visibleCount += grewBy;
+    void windowed.length;
+    if (pinnedToBottom) scrollToBottom();
+  });
+
+  // why: layout changes (viewport resize, images loading, keyboard opening)
+  // change scrollHeight without an items change — a pinned view must follow.
+  $effect(() => {
+    const element = feedElement;
+    if (!element) return;
+    const observer = new ResizeObserver(() => {
+      if (pinnedToBottom) scrollToBottom();
+    });
+    observer.observe(element);
+    if (element.firstElementChild) observer.observe(element.firstElementChild);
+    return () => observer.disconnect();
   });
 </script>
 
@@ -73,25 +120,30 @@
       </div>
     {/if}
 
-    <main class="feed" bind:this={feedElement}>
-      {#if timelineStore.hydrating && items.length === 0}
-        <p class="empty">{t("timeline.loading")}</p>
-      {:else if items.length === 0}
-        <p class="empty">{t("timeline.empty")}</p>
-      {:else}
-        {#each items as item (item.type === "post" ? item.post.id : item.update.id)}
-          {#if item.type === "post"}
-            <TimelineCard
-              post={item.post}
-              parent={item.parent}
-              replyCount={item.replyCount}
-              onRelayDots={(postId) => (relaySheetPostId = postId)}
-            />
-          {:else}
-            <StateRow post={item.post} update={item.update} />
+    <main class="feed" bind:this={feedElement} onscroll={onFeedScroll}>
+      <div class="feed-content">
+        {#if timelineStore.hydrating && items.length === 0}
+          <p class="empty">{t("timeline.loading")}</p>
+        {:else if items.length === 0}
+          <p class="empty">{t("timeline.empty")}</p>
+        {:else}
+          {#if visibleCount < items.length}
+            <button class="older" onclick={revealOlder}>{t("timeline.older")}</button>
           {/if}
-        {/each}
-      {/if}
+          {#each windowed as item (item.type === "post" ? item.post.id : item.update.id)}
+            {#if item.type === "post"}
+              <TimelineCard
+                post={item.post}
+                parent={item.parent}
+                replyCount={item.replyCount}
+                onRelayDots={(postId) => (relaySheetPostId = postId)}
+              />
+            {:else}
+              <StateRow post={item.post} update={item.update} />
+            {/if}
+          {/each}
+        {/if}
+      </div>
     </main>
 
     <UnifiedBar />
@@ -112,17 +164,13 @@
   .rail {
     display: none;
   }
-  /* One fluid column at every width: it grows with the viewport up to a
-     readable measure and centers beyond that. The feed is transparent so
-     wider viewports show one seamless background — no edge borders. */
+  /* Full-bleed column at every width — no max-width caps, no side gutters. */
   .column {
     height: 100dvh;
     display: flex;
     flex-direction: column;
     min-width: 0;
     width: 100%;
-    max-width: 48rem;
-    margin: 0 auto;
   }
   /* Desktop: persistent sidebar replaces the hamburger + chips row. */
   @media (min-width: 900px) {
@@ -135,10 +183,6 @@
     }
     .top {
       display: none;
-    }
-    .column {
-      max-width: 52rem;
-      justify-self: center;
     }
   }
   .top {
@@ -186,6 +230,17 @@
     flex: 1;
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+  .older {
+    display: block;
+    width: 100%;
+    padding: 0.6rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-align: center;
+  }
+  .older:hover {
+    color: var(--accent);
   }
   .empty {
     text-align: center;
