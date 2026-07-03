@@ -14,7 +14,10 @@ import NDK, {
   type NDKSubscription,
   type NostrEvent,
 } from "@nostr-dev-kit/ndk";
-import { TIMELINE_SUBSCRIPTION_FILTERS } from "@/domain/nostr-kinds";
+import {
+  CONTENT_SUBSCRIPTION_FILTERS,
+  PROFILE_SUBSCRIPTION_FILTERS,
+} from "@/domain/nostr-kinds";
 import type { RawNostrEvent } from "@/domain/event-to-post";
 
 export interface NdkServiceHandlers {
@@ -31,8 +34,13 @@ export interface NdkService {
     tags: string[][];
     relayUrls: string[];
   }): Promise<void>;
-  /** One-shot fetch of the newest kind-0 profile event across all relays. */
-  fetchProfileEvent(pubkeyHex: string): Promise<RawNostrEvent | null>;
+  /**
+   * One-shot fetch of the newest kind-0 profile event; scoped to specific
+   * relays when given (per-space profiles), all relays otherwise.
+   */
+  fetchProfileEvent(pubkeyHex: string, relayUrls?: string[]): Promise<RawNostrEvent | null>;
+  /** One-shot fetch of the newest kind-0 per author, for backfilling gaps. */
+  fetchProfileEvents(pubkeyHexes: string[]): Promise<RawNostrEvent[]>;
   stop(): void;
 }
 
@@ -74,36 +82,70 @@ export function startNdkService(
 
   void ndk.connect();
 
-  const subscription: NDKSubscription = ndk.subscribe(
-    TIMELINE_SUBSCRIPTION_FILTERS.map((filter) => ({
-      kinds: filter.kinds as NDKKind[],
-      limit: filter.limit,
-    })),
-    {
-      closeOnEose: false,
-      // We echo our own publishes with the ack'ing relay instead (see publish
-      // below); NDK's optimistic dispatch has relay=undefined.
-      skipOptimisticPublishEvent: true,
-    }
+  const subscriptionOptions = {
+    closeOnEose: false,
+    // We echo our own publishes with the ack'ing relay instead (see publish
+    // below); NDK's optimistic dispatch has relay=undefined.
+    skipOptimisticPublishEvent: true,
+  };
+  const toFilters = (filters: { kinds: number[]; limit: number }[]) =>
+    filters.map((filter) => ({ kinds: filter.kinds as NDKKind[], limit: filter.limit }));
+
+  const attachEventHandlers = (subscription: NDKSubscription) => {
+    subscription.on("event", (event: NDKEvent, relay?: NDKRelay) => {
+      const raw = toRawEvent(event);
+      if (raw) handlers.onEvent(raw, relay?.url ?? event.relay?.url);
+    });
+    subscription.on("event:dup", (event: NDKEvent | NostrEvent, relay?: NDKRelay) => {
+      const raw = toRawEvent(event);
+      if (raw) handlers.onEvent(raw, relay?.url);
+    });
+  };
+
+  // Profiles first: their REQ goes out before the content REQ, so kind-0
+  // events stream on their own lane instead of behind the post backfill.
+  const profileSubscription = ndk.subscribe(
+    toFilters(PROFILE_SUBSCRIPTION_FILTERS),
+    subscriptionOptions
   );
-  subscription.on("event", (event: NDKEvent, relay?: NDKRelay) => {
-    const raw = toRawEvent(event);
-    if (raw) handlers.onEvent(raw, relay?.url ?? event.relay?.url);
-  });
-  subscription.on("event:dup", (event: NDKEvent | NostrEvent, relay?: NDKRelay) => {
-    const raw = toRawEvent(event);
-    if (raw) handlers.onEvent(raw, relay?.url);
-  });
-  subscription.on("eose", () => handlers.onEose());
+  attachEventHandlers(profileSubscription);
+
+  const contentSubscription = ndk.subscribe(
+    toFilters(CONTENT_SUBSCRIPTION_FILTERS),
+    subscriptionOptions
+  );
+  attachEventHandlers(contentSubscription);
+  contentSubscription.on("eose", () => handlers.onEose());
 
   return {
-    async fetchProfileEvent(pubkeyHex) {
-      const events = await ndk.fetchEvents({ kinds: [0 as NDKKind], authors: [pubkeyHex] });
+    async fetchProfileEvent(pubkeyHex, relayUrls) {
+      const relaySet = relayUrls?.length
+        ? NDKRelaySet.fromRelayUrls(relayUrls, ndk)
+        : undefined;
+      const events = await ndk.fetchEvents(
+        { kinds: [0 as NDKKind], authors: [pubkeyHex] },
+        undefined,
+        relaySet
+      );
       let newest: NDKEvent | null = null;
       for (const event of events) {
         if (!newest || (event.created_at ?? 0) > (newest.created_at ?? 0)) newest = event;
       }
       return newest ? toRawEvent(newest) : null;
+    },
+    async fetchProfileEvents(pubkeyHexes) {
+      if (pubkeyHexes.length === 0) return [];
+      const events = await ndk.fetchEvents({ kinds: [0 as NDKKind], authors: pubkeyHexes });
+      const newestByAuthor = new Map<string, NDKEvent>();
+      for (const event of events) {
+        const existing = newestByAuthor.get(event.pubkey);
+        if (!existing || (event.created_at ?? 0) > (existing.created_at ?? 0)) {
+          newestByAuthor.set(event.pubkey, event);
+        }
+      }
+      return Array.from(newestByAuthor.values())
+        .map((event) => toRawEvent(event))
+        .filter((raw): raw is RawNostrEvent => raw !== null);
     },
     async publish({ kind, content, tags, relayUrls }) {
       const event = new NDKEvent(ndk);
@@ -119,7 +161,8 @@ export function startNdkService(
       if (raw) for (const relayUrl of relayUrls) handlers.onEvent(raw, relayUrl);
     },
     stop() {
-      subscription.stop();
+      profileSubscription.stop();
+      contentSubscription.stop();
       ndk.pool.removeAllListeners();
       ndk.pool.relays.forEach((relay) => relay.disconnect());
     },

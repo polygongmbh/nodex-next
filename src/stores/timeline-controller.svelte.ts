@@ -29,8 +29,33 @@ class TimelineController {
     this.service = startNdkService(session.relayUrls, session.privateKeyHex, {
       onEvent: (event, relayUrl) => timelineStore.ingestEvent(event, relayUrl),
       onRelayStatus: (relayUrl, connected) => timelineStore.setRelayConnected(relayUrl, connected),
-      onEose: () => timelineStore.markHydrated(),
+      onEose: () => {
+        timelineStore.markHydrated();
+        void this.backfillMissingProfiles();
+      },
     });
+  }
+
+  /**
+   * The live profile subscription is capped, so authors of old posts can slip
+   * through. After content EOSE, fetch the newest kind-0 for every author and
+   * mention still missing a profile.
+   */
+  private async backfillMissingProfiles(): Promise<void> {
+    if (!this.service) return;
+    const missing = new Set<string>();
+    for (const post of Object.values(timelineStore.postsById)) {
+      if (!timelineStore.peopleByPubkey[post.pubkey]) missing.add(post.pubkey);
+      for (const mention of post.mentions) {
+        if (!timelineStore.peopleByPubkey[mention]) missing.add(mention);
+      }
+    }
+    if (missing.size === 0) return;
+    const events = await this.service.fetchProfileEvents(Array.from(missing));
+    for (const raw of events) {
+      const classified = classifyEvent(raw, []);
+      if (classified.type === "person") timelineStore.upsertPerson(classified.person);
+    }
   }
 
   stop(): void {

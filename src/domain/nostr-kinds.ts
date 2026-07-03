@@ -14,11 +14,15 @@ export const TASK_STATE_KINDS = [1630, 1631, 1632, 1633] as const;
 
 // Separate filters per concern: with a single mixed-kind filter, relays count
 // profile/state/deletion events against the same `limit`, starving message
-// backfill. Split limits keep the timeline deep.
-export const TIMELINE_SUBSCRIPTION_FILTERS = [
+// backfill. Profiles get their OWN subscription, opened first, so names and
+// avatars stream in without queueing behind thousands of content events.
+export const PROFILE_SUBSCRIPTION_FILTERS = [
+  { kinds: [NOSTR_KINDS.metadata] as number[], limit: 500 },
+];
+
+export const CONTENT_SUBSCRIPTION_FILTERS = [
   { kinds: [NOSTR_KINDS.message, NOSTR_KINDS.task] as number[], limit: 1000 },
   { kinds: [NOSTR_KINDS.deletion, ...TASK_STATE_KINDS] as number[], limit: 1000 },
-  { kinds: [NOSTR_KINDS.metadata] as number[], limit: 500 },
 ];
 
 export function isTaskStateKind(kind: number): boolean {
