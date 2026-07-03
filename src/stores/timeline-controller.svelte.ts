@@ -21,7 +21,9 @@ class TimelineController {
   draft = $state("");
   private service: NdkService | null = null;
   private sessionPubkey: string | null = null;
-  private ownProfileBase: Record<string, unknown> = {};
+  // Merge bases per scope: "*" = all spaces, else a relay id. Per-space
+  // profiles are separate kind-0 events living only on that relay.
+  private ownProfileBases = new Map<string, Record<string, unknown>>();
 
   start(session: StoredSession): void {
     if (this.service) return;
@@ -63,30 +65,44 @@ class TimelineController {
     this.service?.stop();
     this.service = null;
     this.sessionPubkey = null;
-    this.ownProfileBase = {};
+    this.ownProfileBases.clear();
     timelineStore.reset();
     filterStore.reset();
     this.draft = "";
   }
 
+  private relayUrlsForScope(relayId?: string): string[] {
+    const relays = relayId
+      ? timelineStore.relays.filter((relay) => relay.id === relayId)
+      : timelineStore.relays;
+    return relays.map((relay) => relay.url);
+  }
+
   /**
-   * Fetch the user's existing kind-0 from the relays. The parsed content
-   * becomes the merge base for publishProfile, so republishing never drops
-   * fields this UI doesn't know about.
+   * Fetch the user's existing kind-0 — from one space when relayId is given,
+   * across all spaces otherwise. The parsed content becomes the merge base
+   * for publishProfile, so republishing never drops fields this UI doesn't
+   * know about.
    */
-  async fetchOwnProfile(): Promise<Record<string, unknown>> {
+  async fetchOwnProfile(relayId?: string): Promise<Record<string, unknown>> {
     if (!this.service || !this.sessionPubkey) return {};
-    const raw = await this.service.fetchProfileEvent(this.sessionPubkey);
+    const scopeKey = relayId ?? "*";
+    const raw = await this.service.fetchProfileEvent(
+      this.sessionPubkey,
+      relayId ? this.relayUrlsForScope(relayId) : undefined
+    );
     if (raw) {
+      let base: Record<string, unknown> = {};
       try {
-        this.ownProfileBase = JSON.parse(raw.content) as Record<string, unknown>;
+        base = JSON.parse(raw.content) as Record<string, unknown>;
       } catch {
-        this.ownProfileBase = {};
+        base = {};
       }
+      this.ownProfileBases.set(scopeKey, base);
       const classified = classifyEvent(raw, []);
       if (classified.type === "person") timelineStore.upsertPerson(classified.person);
     }
-    return this.ownProfileBase;
+    return this.ownProfileBases.get(scopeKey) ?? this.ownProfileBases.get("*") ?? {};
   }
 
   /** Channels a send would publish with: every included channel in context. */
@@ -138,21 +154,25 @@ class TimelineController {
   }
 
   /**
-   * Publish a kind-0 profile to every session relay (profiles are global),
-   * merged into the last fetched profile so unknown fields survive.
+   * Publish a kind-0 profile — to one space when relayId is given, to every
+   * session relay otherwise — merged into the last fetched profile for that
+   * scope so unknown fields survive.
    */
-  async publishProfile(edits: ProfileEdits): Promise<void> {
+  async publishProfile(edits: ProfileEdits, relayId?: string): Promise<void> {
     if (!this.service) throw new PublishRuleError("Not connected yet.");
-    const relayUrls = timelineStore.relays.map((relay) => relay.url);
+    const relayUrls = this.relayUrlsForScope(relayId);
     if (relayUrls.length === 0) throw new PublishRuleError("No space is available.");
-    const content = mergeProfileContent(this.ownProfileBase, edits);
+    const scopeKey = relayId ?? "*";
+    const base =
+      this.ownProfileBases.get(scopeKey) ?? this.ownProfileBases.get("*") ?? {};
+    const content = mergeProfileContent(base, edits);
     await this.service.publish({
       kind: NOSTR_KINDS.metadata,
       content: JSON.stringify(content),
       tags: [],
       relayUrls,
     });
-    this.ownProfileBase = content;
+    this.ownProfileBases.set(scopeKey, content);
   }
 }
 

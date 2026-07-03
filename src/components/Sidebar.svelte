@@ -9,6 +9,7 @@
   import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
   import ProfileHover from "./ProfileHover.svelte";
+  import ProfileSheet from "./ProfileSheet.svelte";
   import SpaceSelector from "./SpaceSelector.svelte";
   import TopicManager from "./TopicManager.svelte";
 
@@ -32,6 +33,7 @@
   );
 
   let manager = $state<{ type: "create" } | { type: "manage"; topic: Topic } | null>(null);
+  let profileOpen = $state(false);
 </script>
 
 <aside class="sidebar">
@@ -111,12 +113,17 @@
         picture={authStore.profilePictureUrl ?? undefined}
       />
     </ProfileHover>
-    <span class="username">{authStore.session?.username}</span>
+    <button class="username" onclick={() => (profileOpen = true)} data-testid="edit-profile">
+      {authStore.session?.username}
+    </button>
     <button class="signout" onclick={() => authStore.signOut()}>Sign out</button>
   </div>
 
   {#if manager}
     <TopicManager mode={manager} {contextTags} onClose={() => (manager = null)} />
+  {/if}
+  {#if profileOpen}
+    <ProfileSheet onClose={() => (profileOpen = false)} />
   {/if}
 </aside>
 
@@ -245,6 +252,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: left;
+  }
+  .username:hover {
+    color: var(--accent);
   }
   .signout {
     color: var(--danger);

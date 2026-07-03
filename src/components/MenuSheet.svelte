@@ -3,9 +3,11 @@
   import { timelineStore } from "@/stores/timeline.svelte";
   import { relayColorSlot } from "@/domain/relay-identity";
   import Avatar from "./Avatar.svelte";
+  import ProfileSheet from "./ProfileSheet.svelte";
   import SpaceSelector from "./SpaceSelector.svelte";
 
   let { onClose }: { onClose: () => void } = $props();
+  let profileOpen = $state(false);
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -19,6 +21,9 @@
       picture={authStore.profilePictureUrl ?? undefined}
     />
     <span class="username">{authStore.session?.username}</span>
+    <button class="edit" onclick={() => (profileOpen = true)} data-testid="edit-profile">
+      Edit profile
+    </button>
     <button class="signout" onclick={() => authStore.signOut()} data-testid="sign-out">
       Sign out
     </button>
@@ -38,6 +43,10 @@
     {/each}
   </ul>
 </div>
+
+{#if profileOpen}
+  <ProfileSheet onClose={() => (profileOpen = false)} />
+{/if}
 
 <style>
   .backdrop {
@@ -82,6 +91,11 @@
   .username {
     font-weight: 600;
     flex: 1;
+  }
+  .edit {
+    color: var(--accent);
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
   }
   .signout {
     color: var(--danger);
