@@ -43,25 +43,25 @@
     <p class="hint">Sign in with your organization's account.</p>
 
     <label>
-      <span>Server</span>
+      <span>Username</span>
+      <input
+        type="text"
+        bind:value={username}
+        placeholder="you — or you@your-org.example"
+        autocapitalize="off"
+        autocorrect="off"
+        autocomplete="username"
+        required
+      />
+    </label>
+    <label>
+      <span>Server <em>(optional with user@domain)</em></span>
       <input
         type="text"
         bind:value={host}
         placeholder="your-org.example"
         autocapitalize="off"
         autocorrect="off"
-        required
-      />
-    </label>
-    <label>
-      <span>Username</span>
-      <input
-        type="text"
-        bind:value={username}
-        autocapitalize="off"
-        autocorrect="off"
-        autocomplete="username"
-        required
       />
     </label>
     <label>
@@ -121,6 +121,10 @@
     gap: 0.3rem;
     font-size: 0.85rem;
     color: var(--text-muted);
+  }
+  label em {
+    font-style: normal;
+    opacity: 0.7;
   }
   input {
     padding: 0.7rem 0.85rem;

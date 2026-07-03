@@ -8,6 +8,7 @@ import {
   hashNoasPassword,
   NoasAuthError,
   signInWithNoas,
+  splitNoasCredentials,
 } from "./client";
 
 const PASSWORD = "correct horse";
@@ -40,6 +41,28 @@ describe("decryptNoasPrivateKey", () => {
   it("accepts raw hex and nsec values", () => {
     expect(decryptNoasPrivateKey(secretHex, PASSWORD)).toBe(secretHex);
     expect(decryptNoasPrivateKey(nip19.nsecEncode(secretKey), PASSWORD)).toBe(secretHex);
+  });
+});
+
+describe("splitNoasCredentials", () => {
+  it("derives the host from a user@domain username", () => {
+    expect(splitNoasCredentials("alice@polygon.example", "")).toEqual({
+      username: "alice",
+      host: "polygon.example",
+    });
+  });
+
+  it("lets an explicit host win over the username domain", () => {
+    expect(splitNoasCredentials("alice@polygon.example", "other.example").host).toBe(
+      "other.example"
+    );
+  });
+
+  it("passes plain usernames through untouched", () => {
+    expect(splitNoasCredentials("alice", "polygon.example")).toEqual({
+      username: "alice",
+      host: "polygon.example",
+    });
   });
 });
 

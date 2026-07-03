@@ -3,6 +3,7 @@ import {
   NoasAuthError,
   noasProfilePictureUrl,
   signInWithNoas,
+  splitNoasCredentials,
 } from "@/infrastructure/noas/client";
 import {
   clearSession,
@@ -32,23 +33,27 @@ class AuthStore {
   }
 
   /** Throws NoasAuthError with a user-readable message on failure. */
-  async signIn(host: string, username: string, password: string): Promise<void> {
+  async signIn(hostInput: string, usernameInput: string, password: string): Promise<void> {
+    const { username, host } = splitNoasCredentials(usernameInput, hostInput);
+    if (!host) {
+      throw new NoasAuthError("Add a server, or sign in as user@domain.");
+    }
     const apiBaseUrl = await resolveNoasApiBaseUrl(host);
     if (!apiBaseUrl) throw new NoasAuthError("Enter a valid server address.");
-    const result = await signInWithNoas(apiBaseUrl, username.trim(), password);
+    const result = await signInWithNoas(apiBaseUrl, username, password);
     if (result.relayUrls.length === 0) {
       throw new NoasAuthError("This account has no spaces configured.");
     }
     const session: StoredSession = {
       pubkeyHex: result.pubkeyHex,
       privateKeyHex: result.privateKeyHex,
-      username: username.trim(),
+      username,
       apiBaseUrl,
       relayUrls: result.relayUrls,
     };
     saveSession(session);
-    saveLastHost(host.trim());
-    this.lastHost = host.trim();
+    saveLastHost(host);
+    this.lastHost = host;
     this.session = session;
     this.status = "signedIn";
   }

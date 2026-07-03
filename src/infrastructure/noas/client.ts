@@ -15,6 +15,25 @@ export interface NoasSignInResult {
   relayUrls: string[];
 }
 
+export interface NoasCredentials {
+  username: string;
+  host: string;
+}
+
+/**
+ * A `user@domain` username carries its own server: the domain wins over an
+ * empty host field, and an explicitly typed host wins over the domain.
+ */
+export function splitNoasCredentials(usernameInput: string, hostInput: string): NoasCredentials {
+  const raw = usernameInput.trim();
+  const host = hostInput.trim();
+  const atIndex = raw.lastIndexOf("@");
+  if (atIndex > 0 && raw.slice(atIndex + 1).includes(".")) {
+    return { username: raw.slice(0, atIndex), host: host || raw.slice(atIndex + 1) };
+  }
+  return { username: raw, host };
+}
+
 export function hashNoasPassword(password: string): string {
   return bytesToHex(sha256(new TextEncoder().encode(password)));
 }
