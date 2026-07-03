@@ -37,12 +37,18 @@ Event format
 ```
 
 - **A topic is identified by the set of channels it contains, not by its
-  name.** `d` MUST be the canonical encoding of that set: the deduplicated,
-  lowercase channel names sorted lexicographically and joined with `+`
-  (e.g. `design+nodex+persona`). Republishing the same channel set —
-  regardless of name or `t`-tag order — addresses the same topic, so
-  renaming is just a newer event, and independent authors describing the
-  same combination converge on one topic.
+  name.** A topic is nothing more than a named lens over the posts carrying
+  its channels — the same selection of channels contains the same posts,
+  ergo it IS the same topic; a second name over the same set could never
+  show different content. `d` MUST therefore be the canonical encoding of
+  the set: the deduplicated, lowercase channel names sorted
+  lexicographically and joined with `+` (e.g. `design+nodex+persona`).
+  Republishing the same channel set — regardless of name or `t`-tag order —
+  addresses the same topic, so renaming is just a newer event, and
+  independent authors describing the same combination converge on one
+  topic. To split a topic into distinct conversations, add a distinguishing
+  channel (`#dev`+`#nodex`+`#bugs` vs `#dev`+`#nodex`+`#ideas`) — which
+  keeps the distinction visible to plain-hashtag clients too.
 - `title` carries the display name. If absent, clients render the channel
   list. Names need not be unique and are not identity.
 - The **first `t` tag is the primary channel**; all further `t` tags are
