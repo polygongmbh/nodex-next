@@ -1,0 +1,111 @@
+// Boundary conversion: raw Nostr event JSON → typed domain objects. The
+// stores never see raw events; every input is one of these classified shapes.
+
+import { NOSTR_KINDS, isPostKind, isTaskStateKind } from "./nostr-kinds";
+import type { Person } from "./person";
+import type { Post, TaskStateUpdate } from "./post";
+import { deriveChannelTags } from "./hashtags";
+
+export interface RawNostrEvent {
+  id: string;
+  pubkey: string;
+  kind: number;
+  content: string;
+  tags: string[][];
+  created_at: number;
+}
+
+export type ClassifiedEvent =
+  | { type: "post"; post: Post }
+  | { type: "person"; person: Person }
+  | { type: "state"; targetId: string; update: TaskStateUpdate }
+  | { type: "deletion"; byPubkey: string; targetIds: string[] }
+  | { type: "ignored" };
+
+/** `e`-tag with marker `parent` (preferred) or `reply`; no marker fallback. */
+export function resolveParentId(tags: string[][]): string | undefined {
+  let reply: string | undefined;
+  for (const tag of tags) {
+    if (tag[0] !== "e" || !tag[1]) continue;
+    if (tag[3] === "parent") return tag[1];
+    if (tag[3] === "reply" && !reply) reply = tag[1];
+  }
+  return reply;
+}
+
+function resolveMentions(tags: string[][]): string[] {
+  return Array.from(
+    new Set(tags.filter((tag) => tag[0] === "p" && tag[1]).map((tag) => tag[1]))
+  );
+}
+
+function firstEventReference(tags: string[][]): string | undefined {
+  return tags.find((tag) => tag[0] === "e" && tag[1])?.[1];
+}
+
+export function classifyEvent(event: RawNostrEvent, relayIds: string[]): ClassifiedEvent {
+  if (isPostKind(event.kind)) {
+    return {
+      type: "post",
+      post: {
+        id: event.id,
+        pubkey: event.pubkey,
+        kind: event.kind,
+        content: event.content,
+        channels: deriveChannelTags(event.tags, event.content),
+        relays: [...relayIds],
+        timestamp: event.created_at,
+        parentId: resolveParentId(event.tags),
+        mentions: resolveMentions(event.tags),
+        stateUpdates: [],
+      },
+    };
+  }
+
+  if (isTaskStateKind(event.kind)) {
+    const targetId = firstEventReference(event.tags);
+    if (!targetId) return { type: "ignored" };
+    return {
+      type: "state",
+      targetId,
+      update: {
+        id: event.id,
+        kind: event.kind,
+        content: event.content,
+        pubkey: event.pubkey,
+        timestamp: event.created_at,
+      },
+    };
+  }
+
+  if (event.kind === NOSTR_KINDS.deletion) {
+    const targetIds = event.tags.filter((tag) => tag[0] === "e" && tag[1]).map((tag) => tag[1]);
+    if (targetIds.length === 0) return { type: "ignored" };
+    return { type: "deletion", byPubkey: event.pubkey, targetIds };
+  }
+
+  if (event.kind === NOSTR_KINDS.metadata) {
+    const person = parseMetadata(event);
+    return person ? { type: "person", person } : { type: "ignored" };
+  }
+
+  return { type: "ignored" };
+}
+
+function parseMetadata(event: RawNostrEvent): Person | null {
+  try {
+    const profile = JSON.parse(event.content) as Record<string, unknown>;
+    const text = (value: unknown): string | undefined =>
+      typeof value === "string" && value.trim() ? value.trim() : undefined;
+    return {
+      pubkey: event.pubkey,
+      name: text(profile.name) ?? text(profile.username),
+      displayName: text(profile.display_name) ?? text(profile.displayName),
+      nip05: text(profile.nip05),
+      picture: text(profile.picture),
+      metadataTimestamp: event.created_at,
+    };
+  } catch {
+    return null;
+  }
+}

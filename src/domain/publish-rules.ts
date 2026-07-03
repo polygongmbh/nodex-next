@@ -1,0 +1,58 @@
+// Publish rules ported from nodex/SPEC: a post MUST carry ≥1 channel, and new
+// posts target exactly one relay — the single active relay, else the sole
+// connected relay, else it's an error. Replies pin to the parent's origin relay.
+
+import type { Post } from "./post";
+import { extractHashtagsFromContent } from "./hashtags";
+
+export class PublishRuleError extends Error {}
+
+export interface PublishRelayCandidate {
+  id: string;
+  url: string;
+  connected: boolean;
+}
+
+/** Channels a draft would publish with: included filter chips ∪ typed #hashtags. */
+export function resolveDraftChannels(content: string, includedChannels: string[]): string[] {
+  const channels = new Set(includedChannels.map((channel) => channel.toLowerCase()));
+  for (const hashtag of extractHashtagsFromContent(content)) {
+    channels.add(hashtag);
+  }
+  return Array.from(channels);
+}
+
+export function resolvePublishRelay(
+  relays: PublishRelayCandidate[],
+  activeRelayId: string | null,
+  parent?: Post
+): PublishRelayCandidate {
+  if (parent) {
+    const originId = parent.relays[0];
+    const origin = relays.find((relay) => relay.id === originId);
+    if (origin) return origin;
+    throw new PublishRuleError("The parent post's origin space is not available.");
+  }
+  if (activeRelayId) {
+    const active = relays.find((relay) => relay.id === activeRelayId);
+    if (active) return active;
+    throw new PublishRuleError("The selected space is not available.");
+  }
+  const connected = relays.filter((relay) => relay.connected);
+  if (connected.length === 1) return connected[0];
+  if (connected.length === 0) throw new PublishRuleError("No space is connected.");
+  throw new PublishRuleError("Select a space to post to.");
+}
+
+/** Tags for a kind-1 message: every channel as lowercased `t`-tag. */
+export function buildMessageTags(channels: string[], parent?: Post): string[][] {
+  if (channels.length === 0) {
+    throw new PublishRuleError("A post needs at least one #channel.");
+  }
+  const tags: string[][] = channels.map((channel) => ["t", channel.toLowerCase()]);
+  if (parent) {
+    tags.push(["e", parent.id, "", "parent"]);
+    tags.push(["p", parent.pubkey]);
+  }
+  return tags;
+}

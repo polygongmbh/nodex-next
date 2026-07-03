@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en" class="app-loading">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f1318" />
+    <title>Nodex</title>
+    <style>
+      /* Express splash painted before any JS loads. On dismiss (dismissSplash
+         in src/lib/splash.ts) the two logo strokes slide apart along their
+         shared diagonal axis while the overlay dissolves. */
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: hsl(210 28% 98%);
+        /* Fade to zero-alpha of the SAME color (not `transparent`) to avoid an
+           interpolated grey flash. */
+        transition: background-color 650ms ease;
+      }
+      @media (prefers-color-scheme: dark) {
+        #splash { background: hsl(220 20% 10%); }
+      }
+      #splash svg {
+        width: 62vmin;
+        height: 62vmin;
+        overflow: visible;
+        animation: splash-pulse 1600ms ease-in-out infinite;
+      }
+      #splash .glyph path {
+        stroke: #000;
+        transition: transform 800ms cubic-bezier(0.22, 1, 0.36, 1), opacity 800ms ease;
+      }
+      @media (prefers-color-scheme: dark) {
+        #splash .glyph path { stroke: hsl(210 100% 55%); }
+      }
+      @keyframes splash-pulse {
+        0%, 100% { opacity: 0.85; }
+        50% { opacity: 1; }
+      }
+      #splash.splash-hide {
+        pointer-events: none;
+        background-color: hsl(210 28% 98% / 0);
+      }
+      @media (prefers-color-scheme: dark) {
+        #splash.splash-hide { background-color: hsl(220 20% 10% / 0); }
+      }
+      #splash.splash-hide svg { animation: none; }
+      /* path order: 1 = lower-left stroke, 2 = upper-right. */
+      #splash.splash-hide .glyph path:nth-of-type(1) {
+        transform: translate(-150px, -160px);
+        opacity: 0;
+      }
+      #splash.splash-hide .glyph path:nth-of-type(2) {
+        transform: translate(150px, 160px);
+        opacity: 0;
+      }
+      #app { transition: opacity 650ms ease; }
+      html.app-loading #app { opacity: 0; }
+      @media (prefers-reduced-motion: reduce) {
+        #splash, #app { transition-duration: 200ms; }
+        #splash .glyph path { transition: opacity 200ms ease; }
+        #splash svg { animation: none; }
+        #splash.splash-hide .glyph path { transform: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="splash">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220">
+        <g
+          class="glyph"
+          transform="translate(-54.08,-13.59) scale(1.12)"
+          fill="none"
+          stroke-width="31.104"
+          stroke-linecap="round"
+        >
+          <path d="M90.4329 180.698L90.0113 86.1228C89.9973 82.9897 93.8252 81.4563 95.9781 83.7326L166.928 158.748" />
+          <path d="M202.53 40.0443L202.952 134.619C202.966 137.752 199.138 139.286 196.985 137.01L126.035 61.9938" />
+        </g>
+      </svg>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,80 @@
+/* Design tokens + base. Mobile-first: layouts are single-column by default;
+   wider screens only get more breathing room. Light/dark follows the system. */
+
+:root {
+  --bg: hsl(210 28% 98%);
+  --surface: hsl(0 0% 100%);
+  --surface-sunken: hsl(210 20% 94%);
+  --text: hsl(220 25% 12%);
+  --text-muted: hsl(220 10% 45%);
+  --border: hsl(215 18% 88%);
+  --accent: hsl(210 100% 45%);
+  --accent-strong: hsl(210 100% 38%);
+  --accent-contrast: hsl(0 0% 100%);
+  --danger: hsl(0 72% 48%);
+  --shadow: 0 1px 3px hsl(220 25% 12% / 0.08);
+
+  --relay-0: hsl(210 90% 52%);
+  --relay-1: hsl(150 60% 40%);
+  --relay-2: hsl(28 92% 52%);
+  --relay-3: hsl(275 60% 58%);
+  --relay-4: hsl(350 72% 52%);
+  --relay-5: hsl(180 55% 38%);
+  --relay-6: hsl(48 85% 42%);
+  --relay-7: hsl(320 60% 52%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: hsl(220 20% 10%);
+    --surface: hsl(220 18% 14%);
+    --surface-sunken: hsl(220 20% 8%);
+    --text: hsl(210 20% 92%);
+    --text-muted: hsl(215 12% 62%);
+    --border: hsl(218 14% 24%);
+    --accent: hsl(210 100% 60%);
+    --accent-strong: hsl(210 100% 68%);
+    --accent-contrast: hsl(220 25% 10%);
+    --shadow: 0 1px 3px hsl(0 0% 0% / 0.4);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100%;
+  height: 100dvh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+}
