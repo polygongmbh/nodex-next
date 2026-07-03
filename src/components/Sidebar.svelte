@@ -1,13 +1,16 @@
 <script lang="ts">
-  import { deriveChannels, partitionPinnedChannels } from "@/domain/channel";
+  import { deriveChannels, partitionPinnedChannels, type Topic } from "@/domain/channel";
   import { relayColorSlot } from "@/domain/relay-identity";
+  import { longpress } from "@/lib/longpress";
   import { authStore } from "@/stores/auth.svelte";
   import { filterStore } from "@/stores/filters.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
+  import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
   import ProfileHover from "./ProfileHover.svelte";
   import SpaceSelector from "./SpaceSelector.svelte";
+  import TopicManager from "./TopicManager.svelte";
 
   // Desktop-only rail (hidden < 900px, see TimelineScreen). Same stores as
   // the mobile chips row — no duplicated filter state.
@@ -17,6 +20,18 @@
       preferencesStore.pinnedChannels
     )
   );
+  const topics = $derived(
+    [...preferencesStore.topics].sort(
+      (a, b) => Number(b.pinned) - Number(a.pinned) || a.name.localeCompare(b.name)
+    )
+  );
+  const contextTags = $derived(
+    Object.entries(timelineController.effectiveChannelStates)
+      .filter(([, state]) => state === "included")
+      .map(([name]) => name)
+  );
+
+  let manager = $state<{ type: "create" } | { type: "manage"; topic: Topic } | null>(null);
 </script>
 
 <aside class="sidebar">
@@ -44,6 +59,28 @@
     {/each}
   </ul>
 
+  <h2>Topics</h2>
+  <nav class="channels">
+    {#each topics as topic (topic.id)}
+      <button
+        class="channel"
+        class:included={filterStore.selectedTopicIds.includes(topic.id)}
+        onclick={() => filterStore.toggleTopic(topic.id)}
+        use:longpress={() => (manager = { type: "manage", topic })}
+      >
+        <span class="name">{topic.name}</span>
+        {#if topic.pinned}
+          <svg class="pin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+            <path d="M12 17v5M7 4h10l-1.5 6.5 2.5 3.5H6l2.5-3.5z" />
+          </svg>
+        {/if}
+      </button>
+    {/each}
+    <button class="channel add" onclick={() => (manager = { type: "create" })}>
+      + New topic
+    </button>
+  </nav>
+
   <h2>Channels</h2>
   <nav class="channels">
     {#each [...channels.pinned, ...channels.rest] as channel (channel.name)}
@@ -53,6 +90,7 @@
         class:included={filterStore.channelStates[channel.name] === "included"}
         class:excluded={filterStore.channelStates[channel.name] === "excluded"}
         onclick={() => filterStore.tapChannelChip(channel.name)}
+        use:longpress={() => preferencesStore.togglePinned(channel.name)}
       >
         <span class="name">#{channel.name}</span>
         {#if pinned}
@@ -76,6 +114,10 @@
     <span class="username">{authStore.session?.username}</span>
     <button class="signout" onclick={() => authStore.signOut()}>Sign out</button>
   </div>
+
+  {#if manager}
+    <TopicManager mode={manager} {contextTags} onClose={() => (manager = null)} />
+  {/if}
 </aside>
 
 <style>
@@ -140,9 +182,19 @@
     display: flex;
     flex-direction: column;
     gap: 0.1rem;
-    flex: 1;
     overflow-y: auto;
     min-height: 0;
+  }
+  .channels:last-of-type {
+    flex: 1;
+  }
+  .channel.add {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+  .channel {
+    user-select: none;
+    -webkit-user-select: none;
   }
   .channel {
     display: flex;
