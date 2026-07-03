@@ -7,6 +7,18 @@ export interface Channel {
   postCount: number;
 }
 
+/**
+ * A topic is a named, composable combination of tags — flexible contexts
+ * instead of rigid sub-channels ("Nodex User Stories" = #design + #nodex).
+ * Selecting a topic includes all its tags; topics and channels compose.
+ */
+export interface Topic {
+  id: string;
+  name: string;
+  tags: string[];
+  pinned: boolean;
+}
+
 /** Channels derived from ALL posts (unfiltered), most-used first. */
 export function deriveChannels(posts: Post[]): Channel[] {
   const counts = new Map<string, number>();

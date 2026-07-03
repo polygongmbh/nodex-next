@@ -8,6 +8,14 @@ class FilterStore {
   activeRelayId = $state<string | null>(null);
   /** Thread focus (breadcrumb / reply-indicator click): show one conversation. */
   focusedPostId = $state<string | null>(null);
+  /** Selected topics compose with channels: all their tags become includes. */
+  selectedTopicIds = $state<string[]>([]);
+
+  toggleTopic(id: string): void {
+    this.selectedTopicIds = this.selectedTopicIds.includes(id)
+      ? this.selectedTopicIds.filter((topicId) => topicId !== id)
+      : [...this.selectedTopicIds, id];
+  }
 
   focusThread(postId: string): void {
     this.focusedPostId = postId;
@@ -57,6 +65,7 @@ class FilterStore {
     this.channelStates = {};
     this.activeRelayId = null;
     this.focusedPostId = null;
+    this.selectedTopicIds = [];
   }
 }
 

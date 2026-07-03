@@ -14,6 +14,7 @@ import {
 import { startNdkService, type NdkService } from "@/infrastructure/nostr/ndk-service";
 import type { StoredSession } from "@/infrastructure/noas/session";
 import { filterStore } from "./filters.svelte";
+import { preferencesStore } from "./preferences.svelte";
 import { timelineStore } from "./timeline.svelte";
 
 class TimelineController {
@@ -88,8 +89,12 @@ class TimelineController {
     return this.ownProfileBase;
   }
 
+  /** Channels a send would publish with: every included channel in context. */
   get draftChannels(): string[] {
-    return resolveDraftChannels(this.draft, filterStore.includedChannels);
+    const included = Object.entries(this.effectiveChannelStates)
+      .filter(([, state]) => state === "included")
+      .map(([name]) => name);
+    return resolveDraftChannels(this.draft, included);
   }
 
   /** The draft with hashtag tokens removed — what the unified bar searches for. */
@@ -98,14 +103,16 @@ class TimelineController {
   }
 
   /**
-   * Channel states for the visible feed: the chip filters plus any #hashtags
-   * typed into the unified bar, which scope the feed while composing.
+   * Channel states for the visible feed: chip filters, plus the tags of every
+   * selected topic, plus any #hashtags typed into the unified bar.
    */
   get effectiveChannelStates(): Record<string, ChannelFilterState> {
-    const typed = resolveDraftChannels(this.draft, []);
-    if (typed.length === 0) return filterStore.channelStates;
     const merged: Record<string, ChannelFilterState> = { ...filterStore.channelStates };
-    for (const channel of typed) merged[channel] = "included";
+    for (const topicId of filterStore.selectedTopicIds) {
+      const topic = preferencesStore.topics.find((candidate) => candidate.id === topicId);
+      for (const tag of topic?.tags ?? []) merged[tag] = "included";
+    }
+    for (const channel of resolveDraftChannels(this.draft, [])) merged[channel] = "included";
     return merged;
   }
 
