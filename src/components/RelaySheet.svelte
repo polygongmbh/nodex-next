@@ -52,6 +52,8 @@
     left: 0;
     right: 0;
     bottom: 0;
+    max-width: 32rem;
+    margin-inline: auto;
     z-index: 41;
     background: var(--surface);
     border-radius: 1rem 1rem 0 0;
