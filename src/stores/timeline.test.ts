@@ -154,6 +154,29 @@ describe("buildTimeline", () => {
     expect(included.map((item) => item.post.id).sort()).toEqual([mention.id, other.id].sort());
   });
 
+  it("thread focus shows the whole conversation and ignores channel scope", () => {
+    const root = rawEvent({ tags: [["t", "dev"]], created_at: 100 });
+    const reply = rawEvent({
+      tags: [["t", "other"], ["e", root.id, "", "parent"]],
+      created_at: 150,
+    });
+    const nested = rawEvent({
+      tags: [["t", "third"], ["e", reply.id, "", "parent"]],
+      created_at: 200,
+    });
+    const unrelated = rawEvent({ tags: [["t", "dev"]], created_at: 300 });
+    for (const event of [root, reply, nested, unrelated]) {
+      timelineStore.ingestEvent(event, RELAY_A);
+    }
+    const items = buildTimeline(
+      timelineStore.postsById,
+      scope({ focusedPostId: reply.id, pinnedChannels: ["dev"] })
+    );
+    expect(items.map((item) => item.post.id).sort()).toEqual(
+      [root.id, reply.id, nested.id].sort()
+    );
+  });
+
   it("filters by search query, case-insensitively", () => {
     const hit = rawEvent({ content: "Deploy nocal #dev", tags: [] });
     const miss = rawEvent({ content: "lunch plans #dev", tags: [] });

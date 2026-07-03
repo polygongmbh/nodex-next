@@ -5,8 +5,10 @@
   import { relayColorSlot } from "@/domain/relay-identity";
   import { tokenizeContent } from "@/domain/content-tokens";
   import { formatTimelineTimestamp } from "@/domain/timeline-timestamp";
+  import { filterStore } from "@/stores/filters.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
+  import ProfileHover from "./ProfileHover.svelte";
   import StatusIcon from "./StatusIcon.svelte";
 
   let {
@@ -26,18 +28,33 @@
   const status = $derived(postStatus(post));
   const struck = $derived(status === "done" || status === "closed");
   const tokens = $derived(tokenizeContent(post.content));
-  const mentionLabels = $derived(
-    post.mentions.map((pubkey) => personLabel(timelineStore.peopleByPubkey[pubkey], pubkey))
-  );
 
   const CLAMP_CHARS = 280;
   const long = $derived(post.content.length > CLAMP_CHARS || post.content.split("\n").length > 5);
   let expanded = $state(false);
+
+  // Ancestor chain for the breadcrumb header, oldest first (root › … › parent).
+  const crumbs = $derived.by(() => {
+    const chain: Post[] = [];
+    let current = parent;
+    while (current && chain.length < 3) {
+      chain.unshift(current);
+      current = current.parentId ? timelineStore.postsById[current.parentId] : undefined;
+    }
+    return chain;
+  });
 </script>
 
 <article class="card">
-  {#if parent}
-    <div class="parent">{parent.content.split("\n")[0]}</div>
+  {#if crumbs.length > 0}
+    <nav class="crumbs">
+      {#each crumbs as crumb, index (crumb.id)}
+        {#if index > 0}<span class="crumb-sep">›</span>{/if}
+        <button class="crumb" onclick={() => filterStore.focusThread(crumb.id)}>
+          {crumb.content.split("\n")[0]}
+        </button>
+      {/each}
+    </nav>
   {/if}
   <div class="main">
     <div class="gutter">
@@ -45,15 +62,25 @@
         <StatusIcon {status} size={20} />
       {/if}
     </div>
-    <Avatar {label} pubkey={post.pubkey} picture={author?.picture} />
+    <ProfileHover pubkey={post.pubkey}>
+      <Avatar {label} pubkey={post.pubkey} picture={author?.picture} />
+    </ProfileHover>
     <div class="body">
       <header>
-        <span class="author">{label}</span>
-        {#each mentionLabels as mention (mention)}
-          <span class="chip mention">@{mention}</span>
+        <ProfileHover pubkey={post.pubkey}>
+          <span class="author">{label}</span>
+        </ProfileHover>
+        {#each post.mentions as mention (mention)}
+          <ProfileHover pubkey={mention}>
+            <span class="chip mention">
+              @{personLabel(timelineStore.peopleByPubkey[mention], mention)}
+            </span>
+          </ProfileHover>
         {/each}
         {#each post.channels as channel (channel)}
-          <span class="chip channel">#{channel}</span>
+          <button class="chip channel" onclick={() => filterStore.tapChannelChip(channel)}>
+            #{channel}
+          </button>
         {/each}
         <time>{formatTimelineTimestamp(new Date(post.timestamp * 1000))}</time>
       </header>
@@ -73,7 +100,9 @@
       {/if}
       <footer>
         {#if replyCount > 0}
-          <span class="replies">↩ {replyCount}</span>
+          <button class="replies" onclick={() => filterStore.focusThread(post.id)}>
+            ↩ {replyCount} {replyCount === 1 ? "reply" : "replies"}
+          </button>
         {/if}
         <span class="spacer"></span>
         <button class="dots" data-testid="relay-dots" onclick={() => onRelayDots(post.id)}>
@@ -92,14 +121,29 @@
     border-bottom: 1px solid var(--border);
     padding: 0.6rem 1rem 0.5rem 0.6rem;
   }
-  .parent {
+  .crumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0 0 0.45rem 0.4rem;
+    min-width: 0;
+  }
+  .crumb {
     font-weight: 600;
     font-size: 0.9rem;
     color: var(--text-muted);
-    padding: 0 0 0.45rem 0.4rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 14rem;
+  }
+  .crumb:hover {
+    color: var(--accent);
+  }
+  .crumb-sep {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    font-size: 0.9rem;
   }
   .main {
     display: flex;
@@ -125,6 +169,11 @@
   .author {
     font-weight: 600;
     font-size: 0.95rem;
+  }
+  .author:hover,
+  .chip.channel:hover {
+    color: var(--accent);
+    cursor: pointer;
   }
   .chip {
     font-size: 0.75rem;
@@ -180,6 +229,9 @@
   .replies {
     color: var(--text-muted);
     font-size: 0.8rem;
+  }
+  .replies:hover {
+    color: var(--accent);
   }
   .spacer {
     flex: 1;

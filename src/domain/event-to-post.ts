@@ -103,6 +103,8 @@ function parseMetadata(event: RawNostrEvent): Person | null {
       displayName: text(profile.display_name) ?? text(profile.displayName),
       nip05: text(profile.nip05),
       picture: text(profile.picture),
+      about: text(profile.about),
+      website: text(profile.website),
       metadataTimestamp: event.created_at,
     };
   } catch {

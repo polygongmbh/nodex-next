@@ -3,7 +3,9 @@
   import { stateUpdateLabel, statusFromKind } from "@/domain/post";
   import { personLabel } from "@/domain/person";
   import { formatTimelineTimestamp } from "@/domain/timeline-timestamp";
+  import { filterStore } from "@/stores/filters.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
+  import ProfileHover from "./ProfileHover.svelte";
   import StatusIcon from "./StatusIcon.svelte";
 
   let { post, update }: { post: Post; update: TaskStateUpdate } = $props();
@@ -16,9 +18,11 @@
   <StatusIcon {status} size={16} />
   <span class="label">{stateUpdateLabel(update)}</span>
   <span class="sep">·</span>
-  <span class="author">{personLabel(author, update.pubkey)}</span>
+  <ProfileHover pubkey={update.pubkey}>
+    <span class="author">{personLabel(author, update.pubkey)}</span>
+  </ProfileHover>
   <span class="sep">·</span>
-  <span class="task">{post.content}</span>
+  <button class="task" onclick={() => filterStore.focusThread(post.id)}>{post.content}</button>
   <time>{formatTimelineTimestamp(new Date(update.timestamp * 1000))}</time>
 </div>
 
@@ -52,6 +56,11 @@
     white-space: nowrap;
     flex: 1;
     min-width: 0;
+    text-align: left;
+  }
+  .task:hover,
+  .author:hover {
+    color: var(--accent);
   }
   time {
     margin-left: auto;

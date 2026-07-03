@@ -23,6 +23,8 @@ export interface TimelineScope {
   /** Channels picked during onboarding — the default feed scope. */
   pinnedChannels: string[];
   myPubkey: string | null;
+  /** When set, show that conversation: ancestors + the post + descendants. */
+  focusedPostId?: string | null;
 }
 
 // Folds that arrived before their target post; replayed once it lands.
@@ -71,7 +73,7 @@ class TimelineStore {
         this.ingestPost(classified.post);
         break;
       case "person":
-        this.ingestPerson(classified.person);
+        this.upsertPerson(classified.person);
         break;
       case "state":
         this.applyStateUpdate(classified.targetId, classified.update);
@@ -101,7 +103,8 @@ class TimelineStore {
     this.postsById[landed.id] = landed;
   }
 
-  private ingestPerson(person: Person): void {
+  /** Newest kind-0 wins. Public so one-shot profile fetches can land too. */
+  upsertPerson(person: Person): void {
     const existing = this.peopleByPubkey[person.pubkey];
     if (existing && existing.metadataTimestamp >= person.metadataTimestamp) return;
     this.peopleByPubkey[person.pubkey] = person;
@@ -186,9 +189,15 @@ export function buildTimeline(
 
   const hasIncludes = Object.values(scope.channelStates).includes("included");
   const query = scope.searchQuery.trim().toLowerCase();
+  // Thread focus shows the whole conversation regardless of channel scope:
+  // the focused post, its ancestors, and every descendant.
+  const threadIds = scope.focusedPostId
+    ? collectThreadIds(postsById, posts, scope.focusedPostId)
+    : null;
 
   const inScope = (post: Post): boolean => {
     if (scope.activeRelayId && !post.relays.includes(scope.activeRelayId)) return false;
+    if (threadIds) return threadIds.has(post.id);
     if (!postMatchesChannelFilters(post, scope.channelStates)) return false;
     if (!hasIncludes && scope.pinnedChannels.length > 0) {
       const pinned = scope.pinnedChannels.some((channel) => post.channels.includes(channel));
@@ -221,4 +230,28 @@ export function buildTimeline(
   return items.sort(
     (a, b) => b.timestamp - a.timestamp || (a.type === "state" ? -1 : 1) - (b.type === "state" ? -1 : 1)
   );
+}
+
+function collectThreadIds(
+  postsById: Record<string, Post>,
+  posts: Post[],
+  focusedId: string
+): Set<string> {
+  const ids = new Set<string>([focusedId]);
+  let ancestor = postsById[focusedId]?.parentId;
+  while (ancestor && !ids.has(ancestor)) {
+    ids.add(ancestor);
+    ancestor = postsById[ancestor]?.parentId;
+  }
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const post of posts) {
+      if (post.parentId && ids.has(post.parentId) && !ids.has(post.id)) {
+        ids.add(post.id);
+        grew = true;
+      }
+    }
+  }
+  return ids;
 }

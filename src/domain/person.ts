@@ -4,6 +4,8 @@ export interface Person {
   displayName?: string;
   nip05?: string;
   picture?: string;
+  about?: string;
+  website?: string;
   /** created_at of the kind-0 event this profile came from; newer wins. */
   metadataTimestamp: number;
 }
@@ -24,6 +26,38 @@ export function personInitials(label: string): string {
   const words = label.split(/\s+/).filter(Boolean);
   if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
   return label.slice(0, 2).toUpperCase();
+}
+
+export interface ProfileEdits {
+  displayName: string;
+  name?: string;
+  about?: string;
+  picture?: string;
+  website?: string;
+}
+
+/**
+ * Merge profile edits into the existing kind-0 content: unknown fields
+ * (lud16, banner, …) survive untouched, edited fields override, and fields
+ * the user cleared are removed.
+ */
+export function mergeProfileContent(
+  base: Record<string, unknown>,
+  edits: ProfileEdits
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...base };
+  merged.display_name = edits.displayName;
+  if (edits.name?.trim()) merged.name = edits.name.trim();
+  for (const [key, value] of [
+    ["about", edits.about],
+    ["picture", edits.picture],
+    ["website", edits.website],
+  ] as const) {
+    if (value === undefined) continue;
+    if (value.trim()) merged[key] = value.trim();
+    else delete merged[key];
+  }
+  return merged;
 }
 
 /** Stable hue for avatar placeholder backgrounds, derived from the pubkey. */

@@ -6,6 +6,16 @@ import type { ChannelFilterState } from "@/domain/channel";
 class FilterStore {
   channelStates = $state<Record<string, ChannelFilterState>>({});
   activeRelayId = $state<string | null>(null);
+  /** Thread focus (breadcrumb / reply-indicator click): show one conversation. */
+  focusedPostId = $state<string | null>(null);
+
+  focusThread(postId: string): void {
+    this.focusedPostId = postId;
+  }
+
+  clearThread(): void {
+    this.focusedPostId = null;
+  }
 
   /** Exclusive include; tapping the sole included channel clears to neutral. */
   tapChannelChip(name: string): void {
@@ -46,6 +56,7 @@ class FilterStore {
   reset(): void {
     this.channelStates = {};
     this.activeRelayId = null;
+    this.focusedPostId = null;
   }
 }
 
