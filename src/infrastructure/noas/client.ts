@@ -4,8 +4,8 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 import { nip19 } from "nostr-tools";
-import { decrypt as nip49Decrypt } from "nostr-tools/nip49";
-import { getPublicKey } from "nostr-tools/pure";
+import { decrypt as nip49Decrypt, encrypt as nip49Encrypt } from "nostr-tools/nip49";
+import { generateSecretKey, getPublicKey } from "nostr-tools/pure";
 
 export class NoasAuthError extends Error {}
 
@@ -128,6 +128,60 @@ export async function signInWithNoas(
     .map((relay) => relay.trim());
 
   return { pubkeyHex: derivedPubkey, privateKeyHex, relayUrls };
+}
+
+export interface NoasRegisterResult {
+  pubkeyHex: string;
+  status?: string;
+  message?: string;
+}
+
+/**
+ * Register a new account: generate a fresh key locally, encrypt it with the
+ * password (NIP-49), and hand the server only the hash and the ciphertext —
+ * the raw key and password never leave the device.
+ */
+export async function registerWithNoas(
+  apiBaseUrl: string,
+  username: string,
+  password: string,
+  email?: string
+): Promise<NoasRegisterResult> {
+  const secretKey = generateSecretKey();
+  const pubkeyHex = getPublicKey(secretKey);
+  const payload: Record<string, string> = {
+    username,
+    password_hash: hashNoasPassword(password),
+    public_key: pubkeyHex,
+    private_key_encrypted: nip49Encrypt(secretKey, password),
+  };
+  if (typeof window !== "undefined" && window.location?.origin) {
+    payload.redirect = window.location.origin;
+  }
+  if (email?.trim()) payload.email = email.trim();
+
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new NoasAuthError("Could not reach the sign-in server.");
+  }
+
+  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!response.ok || data.success === false) {
+    throw new NoasAuthError(
+      typeof data.error === "string" ? data.error : "Registration failed — try again."
+    );
+  }
+  return {
+    pubkeyHex,
+    status: typeof data.status === "string" ? data.status : undefined,
+    message: typeof data.message === "string" ? data.message : undefined,
+  };
 }
 
 export function noasProfilePictureUrl(apiBaseUrl: string, pubkeyHex: string): string {

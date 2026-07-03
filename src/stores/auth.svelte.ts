@@ -2,6 +2,7 @@ import { resolveNoasApiBaseUrl } from "@/infrastructure/noas/discovery";
 import {
   NoasAuthError,
   noasProfilePictureUrl,
+  registerWithNoas,
   signInWithNoas,
   splitNoasCredentials,
 } from "@/infrastructure/noas/client";
@@ -56,6 +57,33 @@ class AuthStore {
     this.lastHost = host;
     this.session = session;
     this.status = "signedIn";
+  }
+
+  /**
+   * Create an account, then try to sign straight in. Returns a server
+   * message (e.g. "verify your email") when the account isn't active yet.
+   * Throws NoasAuthError on failure.
+   */
+  async register(
+    hostInput: string,
+    usernameInput: string,
+    password: string,
+    email?: string
+  ): Promise<string | null> {
+    const { username, host } = splitNoasCredentials(usernameInput, hostInput);
+    if (!host) {
+      throw new NoasAuthError("Add a server, or register as user@domain.");
+    }
+    const apiBaseUrl = await resolveNoasApiBaseUrl(host);
+    if (!apiBaseUrl) throw new NoasAuthError("Enter a valid server address.");
+    const result = await registerWithNoas(apiBaseUrl, username, password, email);
+    try {
+      await this.signIn(host, username, password);
+      return null;
+    } catch {
+      // Account created but not signed in (e.g. pending email verification).
+      return result.message ?? "Account created — you may need to verify your email.";
+    }
   }
 
   signOut(): void {

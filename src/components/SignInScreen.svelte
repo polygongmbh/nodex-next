@@ -2,19 +2,33 @@
   import { authStore } from "@/stores/auth.svelte";
   import { NoasAuthError } from "@/infrastructure/noas/client";
 
+  let mode = $state<"signin" | "register">("signin");
   let host = $state(authStore.lastHost);
   let username = $state("");
+  let email = $state("");
   let password = $state("");
+  let confirm = $state("");
   let error = $state("");
+  let info = $state("");
   let busy = $state(false);
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     if (busy) return;
     error = "";
+    info = "";
+    if (mode === "register" && password !== confirm) {
+      error = "Passwords do not match.";
+      return;
+    }
     busy = true;
     try {
-      await authStore.signIn(host, username, password);
+      if (mode === "register") {
+        const message = await authStore.register(host, username, password, email);
+        if (message) info = message;
+      } else {
+        await authStore.signIn(host, username, password);
+      }
     } catch (caught) {
       error =
         caught instanceof NoasAuthError
@@ -40,7 +54,29 @@
       </g>
     </svg>
     <h1>Welcome to Nodex</h1>
-    <p class="hint">Sign in with your organization's account.</p>
+    <p class="hint">
+      {mode === "signin"
+        ? "Sign in with your organization's account."
+        : "Create your account — your key is generated on this device."}
+    </p>
+
+    <div class="tabs">
+      <button
+        type="button"
+        class:active={mode === "signin"}
+        onclick={() => (mode = "signin")}
+      >
+        Sign in
+      </button>
+      <button
+        type="button"
+        class:active={mode === "register"}
+        onclick={() => (mode = "register")}
+        data-testid="register-tab"
+      >
+        Create account
+      </button>
+    </div>
 
     <label>
       <span>Username</span>
@@ -64,17 +100,43 @@
         autocorrect="off"
       />
     </label>
+    {#if mode === "register"}
+      <label>
+        <span>Email <em>(optional, for verification)</em></span>
+        <input type="email" bind:value={email} autocomplete="email" />
+      </label>
+    {/if}
     <label>
       <span>Password</span>
-      <input type="password" bind:value={password} autocomplete="current-password" required />
+      <input
+        type="password"
+        bind:value={password}
+        autocomplete={mode === "register" ? "new-password" : "current-password"}
+        required
+      />
     </label>
+    {#if mode === "register"}
+      <label>
+        <span>Confirm password</span>
+        <input type="password" bind:value={confirm} autocomplete="new-password" required />
+      </label>
+    {/if}
 
     {#if error}
       <p class="error">{error}</p>
     {/if}
+    {#if info}
+      <p class="info">{info}</p>
+    {/if}
 
     <button class="submit" type="submit" disabled={busy}>
-      {busy ? "Signing in…" : "Sign in"}
+      {busy
+        ? mode === "register"
+          ? "Creating account…"
+          : "Signing in…"
+        : mode === "register"
+          ? "Create account"
+          : "Sign in"}
     </button>
   </form>
 </div>
@@ -139,9 +201,32 @@
     outline-offset: -1px;
     border-color: transparent;
   }
+  .tabs {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 0.65rem;
+    overflow: hidden;
+  }
+  .tabs button {
+    flex: 1;
+    padding: 0.55rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    background: var(--surface);
+  }
+  .tabs button.active {
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-weight: 600;
+  }
   .error {
     margin: 0;
     color: var(--danger);
+    font-size: 0.9rem;
+  }
+  .info {
+    margin: 0;
+    color: var(--relay-1);
     font-size: 0.9rem;
   }
   .submit {
