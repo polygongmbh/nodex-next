@@ -9,6 +9,7 @@
   import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
   import ProfileHover from "./ProfileHover.svelte";
+  import AddSpace from "./AddSpace.svelte";
   import ProfileSheet from "./ProfileSheet.svelte";
   import SpaceSelector from "./SpaceSelector.svelte";
   import TopicManager from "./TopicManager.svelte";
@@ -21,12 +22,14 @@
       preferencesStore.pinnedChannels
     )
   );
-  // Topics render as subitems of their primary channel: pinned ones always,
-  // the rest only while that channel is included.
+  // In the sidebar a topic LIVES under its primary channel: pinned ones show
+  // always, the rest only while that channel is included.
   function topicsFor(channelName: string): Topic[] {
     const unfolded = filterStore.channelStates[channelName] === "included";
-    return preferencesStore.topics.filter(
-      (topic) => topic.primary === channelName && (topic.pinned || unfolded)
+    return timelineStore.topics.filter(
+      (topic) =>
+        topic.primary === channelName &&
+        (preferencesStore.isTopicPinned(topic.id) || unfolded)
     );
   }
 
@@ -58,6 +61,7 @@
       </li>
     {/each}
   </ul>
+  <AddSpace />
 
   <h2>{t("sidebar.channels")}</h2>
   <nav class="channels">
@@ -86,7 +90,7 @@
           use:longpress={() => (manager = { type: "manage", topic })}
         >
           <span class="name">{topic.name}</span>
-          {#if topic.pinned}
+          {#if preferencesStore.isTopicPinned(topic.id)}
             <svg class="pin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
               <path d="M12 17v5M7 4h10l-1.5 6.5 2.5 3.5H6l2.5-3.5z" />
             </svg>

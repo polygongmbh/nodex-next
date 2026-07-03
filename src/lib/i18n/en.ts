@@ -39,6 +39,9 @@ export default {
   "onboarding.showCount": "Show me {count} channels",
   "onboarding.showOne": "Show me 1 channel",
   "onboarding.showAll": "Show me everything",
+  "onboarding.spaceTitle": "Connect your space",
+  "onboarding.spaceHint":
+    "Your account has no space yet. Enter your organization's space address (a relay) to get started.",
 
   "profile.edit": "Edit profile",
   "profile.scope": "Scope",
@@ -56,6 +59,7 @@ export default {
   "timeline.loading": "Loading your timeline…",
   "timeline.empty": "Nothing here yet. Pick different channels or start the conversation.",
   "timeline.thread": "Thread",
+  "timeline.older": "Show older messages",
   "card.showMore": "Show more",
   "card.showLess": "Show less",
   "card.reply": "{count} reply",
@@ -71,6 +75,8 @@ export default {
   "bar.sendFailed": "Sending failed — try again.",
 
   "space.all": "All spaces",
+  "space.add": "Add",
+  "space.addPlaceholder": "space.your-org.example",
   "space.offline": "offline",
   "menu.spaces": "Spaces",
   "menu.connected": "connected",
@@ -89,6 +95,7 @@ export default {
   "topics.pin": "Pin",
   "topics.unpin": "Unpin",
   "topics.delete": "Delete topic",
+  "topics.createError": "Could not save the topic — try again.",
 
   "error.generic": "Something went wrong — try again.",
   "error.needHost": "Add a server, or sign in as user@domain.",

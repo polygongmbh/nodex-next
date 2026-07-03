@@ -39,6 +39,9 @@ export default {
   "onboarding.showCount": "Zeig mir {count} Channels",
   "onboarding.showOne": "Zeig mir 1 Channel",
   "onboarding.showAll": "Zeig mir alles",
+  "onboarding.spaceTitle": "Verbinde deinen Space",
+  "onboarding.spaceHint":
+    "Dein Konto hat noch keinen Space. Gib die Space-Adresse (ein Relay) deiner Organisation ein, um loszulegen.",
 
   "profile.edit": "Profil bearbeiten",
   "profile.scope": "Geltungsbereich",
@@ -56,6 +59,7 @@ export default {
   "timeline.loading": "Deine Timeline wird geladen…",
   "timeline.empty": "Noch nichts hier. Wähle andere Channels oder starte die Unterhaltung.",
   "timeline.thread": "Thread",
+  "timeline.older": "Ältere Nachrichten anzeigen",
   "card.showMore": "Mehr anzeigen",
   "card.showLess": "Weniger anzeigen",
   "card.reply": "{count} Antwort",
@@ -71,6 +75,8 @@ export default {
   "bar.sendFailed": "Senden fehlgeschlagen — versuche es erneut.",
 
   "space.all": "Alle Spaces",
+  "space.add": "Hinzufügen",
+  "space.addPlaceholder": "space.deine-org.example",
   "space.offline": "offline",
   "menu.spaces": "Spaces",
   "menu.connected": "verbunden",
@@ -89,6 +95,7 @@ export default {
   "topics.pin": "Anheften",
   "topics.unpin": "Lösen",
   "topics.delete": "Thema löschen",
+  "topics.createError": "Das Thema konnte nicht gespeichert werden — versuche es erneut.",
 
   "error.generic": "Etwas ist schiefgelaufen — versuche es erneut.",
   "error.needHost": "Gib einen Server an oder melde dich als benutzer@domain an.",

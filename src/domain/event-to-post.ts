@@ -4,7 +4,9 @@
 import { NOSTR_KINDS, isPostKind, isTaskStateKind } from "./nostr-kinds";
 import type { Person } from "./person";
 import type { Post, TaskStateUpdate } from "./post";
+import type { Topic } from "./channel";
 import { deriveChannelTags } from "./hashtags";
+import { parseTopicEvent } from "./topic-events";
 
 export interface RawNostrEvent {
   id: string;
@@ -18,6 +20,7 @@ export interface RawNostrEvent {
 export type ClassifiedEvent =
   | { type: "post"; post: Post }
   | { type: "person"; person: Person }
+  | { type: "topic"; topic: Topic }
   | { type: "state"; targetId: string; update: TaskStateUpdate }
   | { type: "deletion"; byPubkey: string; targetIds: string[] }
   | { type: "ignored" };
@@ -87,6 +90,11 @@ export function classifyEvent(event: RawNostrEvent, relayIds: string[]): Classif
   if (event.kind === NOSTR_KINDS.metadata) {
     const person = parseMetadata(event);
     return person ? { type: "person", person } : { type: "ignored" };
+  }
+
+  if (event.kind === NOSTR_KINDS.topic) {
+    const topic = parseTopicEvent(event);
+    return topic ? { type: "topic", topic } : { type: "ignored" };
   }
 
   return { type: "ignored" };

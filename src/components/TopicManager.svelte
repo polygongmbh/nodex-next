@@ -1,13 +1,16 @@
 <script lang="ts">
   import { deriveChannels, topicTags, type Topic } from "@/domain/channel";
+  import { slugifyTopicName } from "@/domain/topic-events";
   import { t } from "@/lib/i18n/index.svelte";
+  import { authStore } from "@/stores/auth.svelte";
   import { filterStore } from "@/stores/filters.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
+  import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
 
-  // Bottom sheet for topic management: create a topic (primary channel +
-  // secondary channels, no prior selection required), or manage an existing
-  // one (pin / delete) after long-press.
+  // Bottom sheet for topic management: create a shared topic event (primary
+  // channel + secondary channels, no prior selection required), or manage an
+  // existing one (pin locally / delete if it is yours) after long-press.
   let {
     mode,
     onClose,
@@ -24,9 +27,14 @@
   let primary = $state(filterStore.includedChannels[0] ?? "");
   let secondary = $state<string[]>(filterStore.includedChannels.slice(1));
   let customTag = $state("");
+  let busy = $state(false);
+  let error = $state(false);
 
   const primaryOptions = $derived(
     Array.from(new Set([primary, ...knownChannels, ...secondary].filter(Boolean)))
+  );
+  const mine = $derived(
+    mode.type === "manage" && mode.topic.pubkey === authStore.session?.pubkeyHex
   );
 
   function toggleSecondary(tag: string) {
@@ -43,11 +51,33 @@
     else if (tag !== primary && !secondary.includes(tag)) secondary = [...secondary, tag];
   }
 
-  function create() {
-    if (!name.trim() || !primary) return;
-    const topic = preferencesStore.createTopic(name, primary, secondary);
-    preferencesStore.toggleTopicPinned(topic.id);
-    onClose();
+  async function create() {
+    if (busy || !name.trim() || !primary) return;
+    busy = true;
+    error = false;
+    try {
+      await timelineController.createTopic(name, primary, secondary);
+      preferencesStore.togglePinnedTopic(slugifyTopicName(name));
+      onClose();
+    } catch {
+      error = true;
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function removeTopic(topic: Topic) {
+    if (busy) return;
+    busy = true;
+    error = false;
+    try {
+      await timelineController.deleteTopic(topic);
+      onClose();
+    } catch {
+      error = true;
+    } finally {
+      busy = false;
+    }
   }
 </script>
 
@@ -92,8 +122,11 @@
       }}
       onblur={addCustomTag}
     />
-    <button class="primary-btn" onclick={create} disabled={!name.trim() || !primary}>
-      {t("topics.create")}
+    {#if error}
+      <p class="error">{t("topics.createError")}</p>
+    {/if}
+    <button class="primary-btn" onclick={create} disabled={busy || !name.trim() || !primary}>
+      {busy ? t("common.saving") : t("topics.create")}
     </button>
   {:else}
     <h2>{mode.topic.name}</h2>
@@ -105,21 +138,24 @@
     <button
       class="action"
       onclick={() => {
-        preferencesStore.toggleTopicPinned(mode.type === "manage" ? mode.topic.id : "");
+        preferencesStore.togglePinnedTopic(mode.type === "manage" ? mode.topic.id : "");
         onClose();
       }}
     >
-      {t(mode.topic.pinned ? "topics.unpin" : "topics.pin")}
+      {t(preferencesStore.isTopicPinned(mode.topic.id) ? "topics.unpin" : "topics.pin")}
     </button>
-    <button
-      class="action danger"
-      onclick={() => {
-        preferencesStore.deleteTopic(mode.type === "manage" ? mode.topic.id : "");
-        onClose();
-      }}
-    >
-      {t("topics.delete")}
-    </button>
+    {#if mine}
+      {#if error}
+        <p class="error">{t("topics.createError")}</p>
+      {/if}
+      <button
+        class="action danger"
+        disabled={busy}
+        onclick={() => mode.type === "manage" && removeTopic(mode.topic)}
+      >
+        {t("topics.delete")}
+      </button>
+    {/if}
   {/if}
 </div>
 
@@ -230,5 +266,10 @@
   .action.danger {
     color: var(--danger);
     border-color: var(--danger);
+  }
+  .error {
+    margin: 0;
+    color: var(--danger);
+    font-size: 0.85rem;
   }
 </style>

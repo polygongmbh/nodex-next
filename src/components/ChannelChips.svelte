@@ -2,6 +2,7 @@
   import {
     deriveChannels,
     partitionPinnedChannels,
+    topicTags,
     type Channel,
     type Topic,
   } from "@/domain/channel";
@@ -13,8 +14,8 @@
 
   // Channels come from ALL posts (unfiltered) so chips don't vanish while
   // filtering narrows the feed. Pinned topics are always visible up front;
-  // other topics unfold as subitems right after their primary channel once
-  // that channel is selected (sketch rows A→B).
+  // other topics unfold after ANY of their channels once it is selected
+  // (sketch rows A→B) — each topic appears at most once.
   type ChipItem =
     | { kind: "channel"; channel: Channel; pinned: boolean }
     | { kind: "topic"; topic: Topic };
@@ -25,15 +26,21 @@
       preferencesStore.pinnedChannels
     );
     const items: ChipItem[] = [];
-    for (const topic of preferencesStore.topics) {
-      if (topic.pinned) items.push({ kind: "topic", topic });
+    const shownTopics = new Set<string>();
+    for (const topic of timelineStore.topics) {
+      if (preferencesStore.isTopicPinned(topic.id)) {
+        items.push({ kind: "topic", topic });
+        shownTopics.add(topic.id);
+      }
     }
     const pushChannel = (channel: Channel, pinned: boolean) => {
       items.push({ kind: "channel", channel, pinned });
       if (filterStore.channelStates[channel.name] !== "included") return;
-      for (const topic of preferencesStore.topics) {
-        if (!topic.pinned && topic.primary === channel.name) {
+      for (const topic of timelineStore.topics) {
+        if (shownTopics.has(topic.id)) continue;
+        if (topicTags(topic).includes(channel.name)) {
           items.push({ kind: "topic", topic });
+          shownTopics.add(topic.id);
         }
       }
     };
@@ -55,7 +62,7 @@
         onclick={() => filterStore.toggleTopic(topic)}
         use:longpress={() => (manager = { type: "manage", topic })}
       >
-        {#if topic.pinned}
+        {#if preferencesStore.isTopicPinned(topic.id)}
           <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
             <path d="M12 17v5M7 4h10l-1.5 6.5 2.5 3.5H6l2.5-3.5z" />
           </svg>

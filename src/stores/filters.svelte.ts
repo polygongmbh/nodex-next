@@ -33,7 +33,12 @@ class FilterStore {
     this.focusedPostId = null;
   }
 
-  /** Exclusive include; tapping the sole included channel clears to neutral. */
+  /**
+   * Exclusive include; tapping the sole included channel clears to neutral.
+   * Selecting a channel SWITCHES the context — any selected topics are
+   * dropped, never stacked. (Selecting a topic on top of a channel still
+   * composes; see toggleTopic.)
+   */
   tapChannelChip(name: string): void {
     const wasOnlyIncluded =
       this.channelStates[name] === "included" &&
@@ -44,6 +49,7 @@ class FilterStore {
     }
     if (!wasOnlyIncluded) next[name] = "included";
     this.channelStates = next;
+    this.selectedTopicIds = [];
   }
 
   setChannelState(name: string, state: ChannelFilterState): void {

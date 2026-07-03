@@ -1,32 +1,21 @@
-// Per-account preferences: onboarding completion, pinned channels, and
-// topics (named tag combinations). Persisted per pubkey; malformed entries
-// are rejected, not migrated. `topics` is optional in the validator so
-// entries written before the field existed stay valid — absent ≠ malformed.
-
-import type { Topic } from "@/domain/channel";
+// Per-account, device-local preferences: onboarding completion plus pinned
+// channels and pinned topics (both by name/slug). Topics themselves are
+// SHARED relay events (kind 30177) — only the pinned state is personal, so
+// only that is stored here. Malformed entries are rejected, not migrated;
+// optional fields absent in older entries are not malformed.
 
 interface StoredPreferences {
   onboarded: boolean;
   pinnedChannels: string[];
-  topics?: unknown[];
+  pinnedTopics?: string[];
 }
 
 function storageKey(pubkey: string): string {
   return `nodex-next.prefs.v1.${pubkey}`;
 }
 
-function isTopic(value: unknown): value is Topic {
-  if (typeof value !== "object" || value === null) return false;
-  const topic = value as Record<string, unknown>;
-  return (
-    typeof topic.id === "string" &&
-    typeof topic.name === "string" &&
-    typeof topic.pinned === "boolean" &&
-    typeof topic.primary === "string" &&
-    topic.primary.length > 0 &&
-    Array.isArray(topic.secondary) &&
-    topic.secondary.every((tag) => typeof tag === "string")
-  );
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
 function isStoredPreferences(value: unknown): value is StoredPreferences {
@@ -34,8 +23,8 @@ function isStoredPreferences(value: unknown): value is StoredPreferences {
   const prefs = value as Record<string, unknown>;
   return (
     typeof prefs.onboarded === "boolean" &&
-    Array.isArray(prefs.pinnedChannels) &&
-    prefs.pinnedChannels.every((channel) => typeof channel === "string")
+    isStringArray(prefs.pinnedChannels) &&
+    (prefs.pinnedTopics === undefined || isStringArray(prefs.pinnedTopics))
   );
 }
 
@@ -57,7 +46,7 @@ function readStorage(pubkey: string): StoredPreferences | null {
 class PreferencesStore {
   onboarded = $state(false);
   pinnedChannels = $state<string[]>([]);
-  topics = $state<Topic[]>([]);
+  pinnedTopics = $state<string[]>([]);
   private pubkey: string | null = null;
 
   load(pubkey: string): void {
@@ -65,36 +54,18 @@ class PreferencesStore {
     const stored = readStorage(pubkey);
     this.onboarded = stored?.onboarded ?? false;
     this.pinnedChannels = stored?.pinnedChannels ?? [];
-    // Malformed topics (e.g. from an older shape) are dropped, not migrated.
-    this.topics = Array.isArray(stored?.topics) ? stored.topics.filter(isTopic) : [];
+    this.pinnedTopics = stored?.pinnedTopics ?? [];
   }
 
-  createTopic(name: string, primary: string, secondary: string[]): Topic {
-    const primaryTag = primary.trim().toLowerCase();
-    const topic: Topic = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      primary: primaryTag,
-      secondary: Array.from(
-        new Set(secondary.map((tag) => tag.trim().toLowerCase()).filter(Boolean))
-      ).filter((tag) => tag !== primaryTag),
-      pinned: false,
-    };
-    this.topics = [...this.topics, topic];
-    this.persist();
-    return topic;
-  }
-
-  deleteTopic(id: string): void {
-    this.topics = this.topics.filter((topic) => topic.id !== id);
+  togglePinnedTopic(topicId: string): void {
+    this.pinnedTopics = this.pinnedTopics.includes(topicId)
+      ? this.pinnedTopics.filter((id) => id !== topicId)
+      : [...this.pinnedTopics, topicId];
     this.persist();
   }
 
-  toggleTopicPinned(id: string): void {
-    this.topics = this.topics.map((topic) =>
-      topic.id === id ? { ...topic, pinned: !topic.pinned } : topic
-    );
-    this.persist();
+  isTopicPinned(topicId: string): boolean {
+    return this.pinnedTopics.includes(topicId);
   }
 
   completeOnboarding(pinnedChannels: string[]): void {
@@ -119,7 +90,7 @@ class PreferencesStore {
         JSON.stringify({
           onboarded: this.onboarded,
           pinnedChannels: this.pinnedChannels,
-          topics: this.topics,
+          pinnedTopics: this.pinnedTopics,
         })
       );
     } catch {
@@ -131,7 +102,7 @@ class PreferencesStore {
     this.pubkey = null;
     this.onboarded = false;
     this.pinnedChannels = [];
-    this.topics = [];
+    this.pinnedTopics = [];
   }
 }
 

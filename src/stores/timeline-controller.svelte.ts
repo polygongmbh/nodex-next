@@ -2,7 +2,8 @@
 // Exposes commands only (start/stop/sendMessage); state lives in the stores.
 
 import { NOSTR_KINDS } from "@/domain/nostr-kinds";
-import { topicTags, type ChannelFilterState } from "@/domain/channel";
+import { topicTags, type ChannelFilterState, type Topic } from "@/domain/channel";
+import { buildTopicEvent } from "@/domain/topic-events";
 import { mergeProfileContent, type ProfileEdits } from "@/domain/person";
 import { classifyEvent } from "@/domain/event-to-post";
 import {
@@ -14,7 +15,6 @@ import {
 import { startNdkService, type NdkService } from "@/infrastructure/nostr/ndk-service";
 import type { StoredSession } from "@/infrastructure/noas/session";
 import { filterStore } from "./filters.svelte";
-import { preferencesStore } from "./preferences.svelte";
 import { timelineStore } from "./timeline.svelte";
 
 class TimelineController {
@@ -105,6 +105,51 @@ class TimelineController {
     return this.ownProfileBases.get(scopeKey) ?? this.ownProfileBases.get("*") ?? {};
   }
 
+  /** Tear down and reconnect — used when the session's spaces change. */
+  restart(session: StoredSession): void {
+    this.stop();
+    this.start(session);
+  }
+
+  /**
+   * Publish a shared topic definition (kind 30177) — to the active space,
+   * else to every connected relay, so the whole space sees it.
+   */
+  async createTopic(name: string, primary: string, secondary: string[]): Promise<void> {
+    if (!this.service) throw new PublishRuleError("error.notConnected");
+    const event = buildTopicEvent(name, primary, secondary);
+    await this.service.publish({ ...event, relayUrls: this.topicRelayUrls() });
+  }
+
+  /** NIP-09 delete of an own topic definition. */
+  async deleteTopic(topic: Topic): Promise<void> {
+    if (!this.service || topic.pubkey !== this.sessionPubkey) {
+      throw new PublishRuleError("error.notConnected");
+    }
+    await this.service.publish({
+      kind: NOSTR_KINDS.deletion,
+      content: "",
+      tags: [
+        ["e", topic.eventId],
+        ["a", `${NOSTR_KINDS.topic}:${topic.pubkey}:${topic.id}`],
+      ],
+      relayUrls: this.topicRelayUrls(),
+    });
+  }
+
+  private topicRelayUrls(): string[] {
+    if (filterStore.activeRelayId) {
+      const active = timelineStore.relays.find(
+        (relay) => relay.id === filterStore.activeRelayId
+      );
+      if (active) return [active.url];
+    }
+    const connected = timelineStore.relays.filter((relay) => relay.connected);
+    const targets = connected.length > 0 ? connected : timelineStore.relays;
+    if (targets.length === 0) throw new PublishRuleError("error.noSpaceAvailable");
+    return targets.map((relay) => relay.url);
+  }
+
   /** Channels a send would publish with: every included channel in context. */
   get draftChannels(): string[] {
     const included = Object.entries(this.effectiveChannelStates)
@@ -125,7 +170,7 @@ class TimelineController {
   get effectiveChannelStates(): Record<string, ChannelFilterState> {
     const merged: Record<string, ChannelFilterState> = { ...filterStore.channelStates };
     for (const topicId of filterStore.selectedTopicIds) {
-      const topic = preferencesStore.topics.find((candidate) => candidate.id === topicId);
+      const topic = timelineStore.topicsById[topicId];
       if (topic) for (const tag of topicTags(topic)) merged[tag] = "included";
     }
     for (const channel of resolveDraftChannels(this.draft, [])) merged[channel] = "included";

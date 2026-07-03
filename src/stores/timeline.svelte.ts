@@ -1,4 +1,5 @@
 import type { Person } from "@/domain/person";
+import type { Topic } from "@/domain/channel";
 import type { Post } from "@/domain/post";
 import { foldStateUpdate, type TaskStateUpdate } from "@/domain/post";
 import { classifyEvent, type RawNostrEvent } from "@/domain/event-to-post";
@@ -33,6 +34,8 @@ const PENDING_FOLDS_CAP = 5000;
 class TimelineStore {
   postsById = $state<Record<string, Post>>({});
   peopleByPubkey = $state<Record<string, Person>>({});
+  /** Shared topics (kind 30177), keyed by slug — newest definition wins. */
+  topicsById = $state<Record<string, Topic>>({});
   relays = $state<RelayInfo[]>([]);
   hydrating = $state(true);
 
@@ -75,6 +78,9 @@ class TimelineStore {
       case "person":
         this.upsertPerson(classified.person);
         break;
+      case "topic":
+        this.ingestTopic(classified.topic);
+        break;
       case "state":
         this.applyStateUpdate(classified.targetId, classified.update);
         break;
@@ -101,6 +107,21 @@ class TimelineStore {
       this.pendingFoldsByTargetId.delete(post.id);
     }
     this.postsById[landed.id] = landed;
+  }
+
+  /**
+   * Topics are relay-communal: the newest definition per slug wins across
+   * ALL authors, so anyone on the space can refine a topic.
+   */
+  private ingestTopic(topic: Topic): void {
+    if (this.deletionsByAuthor.get(topic.pubkey)?.has(topic.eventId)) return;
+    const existing = this.topicsById[topic.id];
+    if (existing && existing.createdAt >= topic.createdAt) return;
+    this.topicsById[topic.id] = topic;
+  }
+
+  get topics(): Topic[] {
+    return Object.values(this.topicsById).sort((a, b) => a.name.localeCompare(b.name));
   }
 
   /** Newest kind-0 wins. Public so one-shot profile fetches can land too. */
@@ -135,6 +156,11 @@ class TimelineStore {
       if (existing && existing.pubkey === byPubkey) {
         delete this.postsById[targetId];
       }
+      for (const topic of Object.values(this.topicsById)) {
+        if (topic.eventId === targetId && topic.pubkey === byPubkey) {
+          delete this.topicsById[topic.id];
+        }
+      }
       const pending = this.pendingFoldsByTargetId.get(targetId);
       if (pending) {
         this.pendingFoldsCount -= pending.length;
@@ -155,6 +181,7 @@ class TimelineStore {
   reset(): void {
     this.postsById = {};
     this.peopleByPubkey = {};
+    this.topicsById = {};
     this.relays = [];
     this.hydrating = true;
     this.deletionsByAuthor.clear();

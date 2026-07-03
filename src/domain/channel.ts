@@ -10,16 +10,22 @@ export interface Channel {
 /**
  * A topic is a named, composable combination of tags — flexible contexts
  * instead of rigid sub-channels ("Nodex User Stories" = #design + #nodex).
- * The primary channel is where the topic lives (it renders as a subitem of
- * that channel); secondary channels make it cross-disciplinary. Selecting a
- * topic includes all its tags; topics and channels compose.
+ * Topics are SHARED: they live as addressable kind-30177 events on the relay
+ * (see docs/nip-topics.md), visible to every user of that space. The primary
+ * channel decides auto-selection and the topic's home in the desktop
+ * sidebar; secondary channels make it cross-disciplinary. Pinned state is
+ * per-user (preferences), never part of the shared event.
  */
 export interface Topic {
+  /** The d-tag: a stable lowercase slug of the name. */
   id: string;
   name: string;
   primary: string;
   secondary: string[];
-  pinned: boolean;
+  /** Author + event id of the defining event (needed for NIP-09 deletion). */
+  pubkey: string;
+  eventId: string;
+  createdAt: number;
 }
 
 export function topicTags(topic: Topic): string[] {
