@@ -1,3 +1,4 @@
+import { normalizeRelayUrl } from "@/domain/relay-identity";
 import { resolveNoasApiBaseUrl } from "@/infrastructure/noas/discovery";
 import {
   NoasAuthError,
@@ -42,9 +43,7 @@ class AuthStore {
     const apiBaseUrl = await resolveNoasApiBaseUrl(host);
     if (!apiBaseUrl) throw new NoasAuthError("error.invalidServer");
     const result = await signInWithNoas(apiBaseUrl, username, password);
-    if (result.relayUrls.length === 0) {
-      throw new NoasAuthError("error.noSpaces");
-    }
+    // Zero spaces is fine — onboarding asks for one before the timeline.
     const session: StoredSession = {
       pubkeyHex: result.pubkeyHex,
       privateKeyHex: result.privateKeyHex,
@@ -84,6 +83,26 @@ class AuthStore {
       // Account created but not signed in (e.g. pending email verification).
       return result.message ?? "error.verifyEmail";
     }
+  }
+
+  /**
+   * Add a space (relay) to the session. Returns the updated session, or null
+   * when the input is invalid or already present. The caller restarts the
+   * timeline service against the new relay set.
+   */
+  addRelayUrl(rawUrl: string): StoredSession | null {
+    if (!this.session) return null;
+    const url = normalizeRelayUrl(rawUrl);
+    if (!url) return null;
+    const existing = this.session.relayUrls.map(normalizeRelayUrl);
+    if (existing.includes(url)) return null;
+    const session: StoredSession = {
+      ...this.session,
+      relayUrls: [...this.session.relayUrls, url],
+    };
+    saveSession(session);
+    this.session = session;
+    return session;
   }
 
   signOut(): void {

@@ -3,6 +3,7 @@
   import { timelineStore } from "@/stores/timeline.svelte";
   import { relayColorSlot } from "@/domain/relay-identity";
   import { i18n, t, type Locale } from "@/lib/i18n/index.svelte";
+  import AddSpace from "./AddSpace.svelte";
   import Avatar from "./Avatar.svelte";
   import ProfileSheet from "./ProfileSheet.svelte";
   import SpaceSelector from "./SpaceSelector.svelte";
@@ -43,6 +44,7 @@
       </li>
     {/each}
   </ul>
+  <AddSpace />
 
   <label class="language">
     <span>{t("menu.language")}</span>

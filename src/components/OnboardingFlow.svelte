@@ -5,13 +5,25 @@
   import { preferencesStore } from "@/stores/preferences.svelte";
   import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
+  import AddSpace from "./AddSpace.svelte";
   import Avatar from "./Avatar.svelte";
 
   import { onMount } from "svelte";
 
-  // Welcome → profile → channels. The timeline service already runs behind
-  // this flow, so the channel step offers live channels from the spaces.
-  let step = $state<"welcome" | "profile" | "channels">("welcome");
+  // (Space →) welcome → profile → channels. The space step only appears when
+  // the account has no space configured; the timeline service already runs
+  // behind this flow, so the channel step offers live channels.
+  let step = $state<"space" | "welcome" | "profile" | "channels">(
+    (authStore.session?.relayUrls.length ?? 0) > 0 ? "welcome" : "space"
+  );
+
+  // why: adding the first space (via AddSpace) updates the session — advance
+  // out of the space step as soon as one exists.
+  $effect(() => {
+    if (step === "space" && (authStore.session?.relayUrls.length ?? 0) > 0) {
+      step = "welcome";
+    }
+  });
 
   let displayName = $state(authStore.session?.username ?? "");
   let about = $state("");
@@ -73,7 +85,13 @@
 </script>
 
 <div class="screen">
-  {#if step === "welcome"}
+  {#if step === "space"}
+    <div class="step">
+      <h1>{t("onboarding.spaceTitle")}</h1>
+      <p class="hint">{t("onboarding.spaceHint")}</p>
+      <AddSpace />
+    </div>
+  {:else if step === "welcome"}
     <div class="step center">
       <svg class="glyph" viewBox="0 0 220 220">
         <g transform="translate(-54.08,-13.59) scale(1.12)" fill="none" stroke-width="31.104" stroke-linecap="round">
