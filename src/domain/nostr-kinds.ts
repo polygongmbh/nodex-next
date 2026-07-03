@@ -12,12 +12,13 @@ export const NOSTR_KINDS = {
 
 export const TASK_STATE_KINDS = [1630, 1631, 1632, 1633] as const;
 
-export const TIMELINE_SUBSCRIPTION_KINDS = [
-  NOSTR_KINDS.metadata,
-  NOSTR_KINDS.message,
-  NOSTR_KINDS.deletion,
-  NOSTR_KINDS.task,
-  ...TASK_STATE_KINDS,
+// Separate filters per concern: with a single mixed-kind filter, relays count
+// profile/state/deletion events against the same `limit`, starving message
+// backfill. Split limits keep the timeline deep.
+export const TIMELINE_SUBSCRIPTION_FILTERS = [
+  { kinds: [NOSTR_KINDS.message, NOSTR_KINDS.task] as number[], limit: 1000 },
+  { kinds: [NOSTR_KINDS.deletion, ...TASK_STATE_KINDS] as number[], limit: 1000 },
+  { kinds: [NOSTR_KINDS.metadata] as number[], limit: 500 },
 ];
 
 export function isTaskStateKind(kind: number): boolean {

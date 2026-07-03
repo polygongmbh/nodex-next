@@ -14,7 +14,7 @@ import NDK, {
   type NDKSubscription,
   type NostrEvent,
 } from "@nostr-dev-kit/ndk";
-import { TIMELINE_SUBSCRIPTION_KINDS } from "@/domain/nostr-kinds";
+import { TIMELINE_SUBSCRIPTION_FILTERS } from "@/domain/nostr-kinds";
 import type { RawNostrEvent } from "@/domain/event-to-post";
 
 export interface NdkServiceHandlers {
@@ -24,11 +24,12 @@ export interface NdkServiceHandlers {
 }
 
 export interface NdkService {
+  /** Publish to the given relays; resolves once at least one relay acks. */
   publish(params: {
     kind: number;
     content: string;
     tags: string[][];
-    relayUrl: string;
+    relayUrls: string[];
   }): Promise<void>;
   stop(): void;
 }
@@ -72,7 +73,10 @@ export function startNdkService(
   void ndk.connect();
 
   const subscription: NDKSubscription = ndk.subscribe(
-    { kinds: TIMELINE_SUBSCRIPTION_KINDS as NDKKind[], limit: 500 },
+    TIMELINE_SUBSCRIPTION_FILTERS.map((filter) => ({
+      kinds: filter.kinds as NDKKind[],
+      limit: filter.limit,
+    })),
     {
       closeOnEose: false,
       // We echo our own publishes with the ack'ing relay instead (see publish
@@ -91,18 +95,18 @@ export function startNdkService(
   subscription.on("eose", () => handlers.onEose());
 
   return {
-    async publish({ kind, content, tags, relayUrl }) {
+    async publish({ kind, content, tags, relayUrls }) {
       const event = new NDKEvent(ndk);
       event.kind = kind;
       event.content = content;
       event.tags = tags;
       await event.sign();
-      const relaySet = NDKRelaySet.fromRelayUrls([relayUrl], ndk);
+      const relaySet = NDKRelaySet.fromRelayUrls(relayUrls, ndk);
       await event.publish(relaySet, 10_000, 1);
-      // Optimistic echo attributed to the target relay, so the fresh post
+      // Optimistic echo attributed to the target relays, so the fresh post
       // renders immediately with correct attribution dots.
       const raw = toRawEvent(event);
-      if (raw) handlers.onEvent(raw, relayUrl);
+      if (raw) for (const relayUrl of relayUrls) handlers.onEvent(raw, relayUrl);
     },
     stop() {
       subscription.stop();
