@@ -55,16 +55,28 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
 - **Noas sign-in is the entry dialogue** right after the splash (the same
   two-stroke "N" glyph animation as nodex, ≥450 ms, painted from `index.html`
   before JS loads). It is the only auth path; the decrypted key persists in
-  `localStorage` (web equivalent of "trust this browser").
+  `localStorage` (web equivalent of "trust this browser"). A `user@domain`
+  username fills the server automatically, so the server field is optional.
+- **Onboarding** runs after the first sign-in on a device: welcome → profile
+  (display name, optional bio, account picture — published as a kind-0
+  profile to every space) → channel picks. Picked channels are pinned: they
+  lead the chips row and form the default feed scope together with posts
+  that mention you.
 - **Channels are hashtags** (no NIP-28); **spaces are relays**; empty space
   selection means "All spaces", never "no relays". Channel filters are AND.
+- **The timeline** shows post cards (replies carry a parent-context header
+  and count toward the parent's reply indicator) and compact rows for task
+  state updates; tasks get a status icon and strikethrough when finished.
+- **The bottom bar is search and composer in one**: typed text live-filters
+  the feed even with no channel selected, typed `#hashtags` scope the feed
+  and become the post's channels, and the send button appears once the
+  draft carries a channel.
 - **Publishing** requires ≥1 channel (included chip or typed `#hashtag`,
   written as lowercased `t`-tags) and targets exactly one relay: the active
-  space, else the sole connected relay, else a readable error. The composer
-  input hides behind a "Pick a #channel to post" hint until a channel is
-  included or the draft carries a hashtag.
+  space, else the sole connected relay, else a readable error.
 - **Deletions** (kind 5) tombstone only the author's own events; state events
-  1630–1633 fold into their task and never render as timeline entries.
+  1630–1633 fold into their task and render only as compact rows, never as
+  post cards.
 
 ## Deviations from SPEC.md
 
