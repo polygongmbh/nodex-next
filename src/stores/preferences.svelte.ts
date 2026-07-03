@@ -8,7 +8,7 @@ import type { Topic } from "@/domain/channel";
 interface StoredPreferences {
   onboarded: boolean;
   pinnedChannels: string[];
-  topics?: Topic[];
+  topics?: unknown[];
 }
 
 function storageKey(pubkey: string): string {
@@ -22,9 +22,10 @@ function isTopic(value: unknown): value is Topic {
     typeof topic.id === "string" &&
     typeof topic.name === "string" &&
     typeof topic.pinned === "boolean" &&
-    Array.isArray(topic.tags) &&
-    topic.tags.length > 0 &&
-    topic.tags.every((tag) => typeof tag === "string")
+    typeof topic.primary === "string" &&
+    topic.primary.length > 0 &&
+    Array.isArray(topic.secondary) &&
+    topic.secondary.every((tag) => typeof tag === "string")
   );
 }
 
@@ -34,8 +35,7 @@ function isStoredPreferences(value: unknown): value is StoredPreferences {
   return (
     typeof prefs.onboarded === "boolean" &&
     Array.isArray(prefs.pinnedChannels) &&
-    prefs.pinnedChannels.every((channel) => typeof channel === "string") &&
-    (prefs.topics === undefined || (Array.isArray(prefs.topics) && prefs.topics.every(isTopic)))
+    prefs.pinnedChannels.every((channel) => typeof channel === "string")
   );
 }
 
@@ -65,14 +65,19 @@ class PreferencesStore {
     const stored = readStorage(pubkey);
     this.onboarded = stored?.onboarded ?? false;
     this.pinnedChannels = stored?.pinnedChannels ?? [];
-    this.topics = stored?.topics ?? [];
+    // Malformed topics (e.g. from an older shape) are dropped, not migrated.
+    this.topics = Array.isArray(stored?.topics) ? stored.topics.filter(isTopic) : [];
   }
 
-  createTopic(name: string, tags: string[]): Topic {
+  createTopic(name: string, primary: string, secondary: string[]): Topic {
+    const primaryTag = primary.trim().toLowerCase();
     const topic: Topic = {
       id: crypto.randomUUID(),
       name: name.trim(),
-      tags: Array.from(new Set(tags.map((tag) => tag.toLowerCase()))),
+      primary: primaryTag,
+      secondary: Array.from(
+        new Set(secondary.map((tag) => tag.trim().toLowerCase()).filter(Boolean))
+      ).filter((tag) => tag !== primaryTag),
       pinned: false,
     };
     this.topics = [...this.topics, topic];

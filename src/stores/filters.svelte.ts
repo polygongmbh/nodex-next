@@ -1,4 +1,4 @@
-import type { ChannelFilterState } from "@/domain/channel";
+import type { ChannelFilterState, Topic } from "@/domain/channel";
 
 // Sidebar-filter equivalent for the mobile timeline: channel chip states and
 // the selected space. Empty space selection = "All spaces" (no relay filter),
@@ -11,10 +11,18 @@ class FilterStore {
   /** Selected topics compose with channels: all their tags become includes. */
   selectedTopicIds = $state<string[]>([]);
 
-  toggleTopic(id: string): void {
-    this.selectedTopicIds = this.selectedTopicIds.includes(id)
-      ? this.selectedTopicIds.filter((topicId) => topicId !== id)
-      : [...this.selectedTopicIds, id];
+  /**
+   * Selecting a (pinned) topic while no channel is included auto-selects its
+   * primary channel, so its sibling topics unfold and the context is visible.
+   */
+  toggleTopic(topic: Topic): void {
+    const selecting = !this.selectedTopicIds.includes(topic.id);
+    this.selectedTopicIds = selecting
+      ? [...this.selectedTopicIds, topic.id]
+      : this.selectedTopicIds.filter((topicId) => topicId !== topic.id);
+    if (selecting && !Object.values(this.channelStates).includes("included")) {
+      this.channelStates = { ...this.channelStates, [topic.primary]: "included" };
+    }
   }
 
   focusThread(postId: string): void {

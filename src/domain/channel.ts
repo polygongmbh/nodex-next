@@ -10,13 +10,20 @@ export interface Channel {
 /**
  * A topic is a named, composable combination of tags — flexible contexts
  * instead of rigid sub-channels ("Nodex User Stories" = #design + #nodex).
- * Selecting a topic includes all its tags; topics and channels compose.
+ * The primary channel is where the topic lives (it renders as a subitem of
+ * that channel); secondary channels make it cross-disciplinary. Selecting a
+ * topic includes all its tags; topics and channels compose.
  */
 export interface Topic {
   id: string;
   name: string;
-  tags: string[];
+  primary: string;
+  secondary: string[];
   pinned: boolean;
+}
+
+export function topicTags(topic: Topic): string[] {
+  return [topic.primary, ...topic.secondary];
 }
 
 /** Channels derived from ALL posts (unfiltered), most-used first. */

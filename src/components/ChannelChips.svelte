@@ -1,79 +1,89 @@
 <script lang="ts">
-  import { deriveChannels, partitionPinnedChannels, type Topic } from "@/domain/channel";
+  import {
+    deriveChannels,
+    partitionPinnedChannels,
+    type Channel,
+    type Topic,
+  } from "@/domain/channel";
   import { longpress } from "@/lib/longpress";
   import { filterStore } from "@/stores/filters.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
-  import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import TopicManager from "./TopicManager.svelte";
 
   // Channels come from ALL posts (unfiltered) so chips don't vanish while
-  // filtering narrows the feed. Order: pinned topics, pinned channels,
-  // remaining topics, remaining channels, then the "+" (new topic) chip.
-  const channels = $derived(
-    partitionPinnedChannels(
+  // filtering narrows the feed. Pinned topics are always visible up front;
+  // other topics unfold as subitems right after their primary channel once
+  // that channel is selected (sketch rows A→B).
+  type ChipItem =
+    | { kind: "channel"; channel: Channel; pinned: boolean }
+    | { kind: "topic"; topic: Topic };
+
+  const chipItems = $derived.by(() => {
+    const channels = partitionPinnedChannels(
       deriveChannels(Object.values(timelineStore.postsById)),
       preferencesStore.pinnedChannels
-    )
-  );
-  const topics = $derived({
-    pinned: preferencesStore.topics.filter((topic) => topic.pinned),
-    rest: preferencesStore.topics.filter((topic) => !topic.pinned),
+    );
+    const items: ChipItem[] = [];
+    for (const topic of preferencesStore.topics) {
+      if (topic.pinned) items.push({ kind: "topic", topic });
+    }
+    const pushChannel = (channel: Channel, pinned: boolean) => {
+      items.push({ kind: "channel", channel, pinned });
+      if (filterStore.channelStates[channel.name] !== "included") return;
+      for (const topic of preferencesStore.topics) {
+        if (!topic.pinned && topic.primary === channel.name) {
+          items.push({ kind: "topic", topic });
+        }
+      }
+    };
+    for (const channel of channels.pinned) pushChannel(channel, true);
+    for (const channel of channels.rest) pushChannel(channel, false);
+    return items;
   });
-
-  const contextTags = $derived(
-    Object.entries(timelineController.effectiveChannelStates)
-      .filter(([, state]) => state === "included")
-      .map(([name]) => name)
-  );
 
   let manager = $state<{ type: "create" } | { type: "manage"; topic: Topic } | null>(null);
 </script>
 
-{#snippet topicChip(topic: Topic)}
-  <button
-    class="chip topic"
-    class:included={filterStore.selectedTopicIds.includes(topic.id)}
-    onclick={() => filterStore.toggleTopic(topic.id)}
-    use:longpress={() => (manager = { type: "manage", topic })}
-  >
-    <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 8l8-4 8 4-8 4z M4 14l8 4 8-4" />
-    </svg>
-    {topic.name}
-  </button>
-{/snippet}
-
-{#snippet channelChip(name: string, postCount: number, pinned: boolean)}
-  <button
-    class="chip"
-    class:included={filterStore.channelStates[name] === "included"}
-    class:excluded={filterStore.channelStates[name] === "excluded"}
-    onclick={() => filterStore.tapChannelChip(name)}
-    use:longpress={() => preferencesStore.togglePinned(name)}
-  >
-    {#if pinned}
-      <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
-        <path d="M12 17v5M7 4h10l-1.5 6.5 2.5 3.5H6l2.5-3.5z" />
-      </svg>
-    {/if}
-    #{name}
-    {#if postCount > 0}<span class="count">{postCount}</span>{/if}
-  </button>
-{/snippet}
-
 <div class="chips">
-  {#each topics.pinned as topic (topic.id)}
-    {@render topicChip(topic)}
-  {/each}
-  {#each channels.pinned as channel (channel.name)}
-    {@render channelChip(channel.name, channel.postCount, true)}
-  {/each}
-  {#each topics.rest as topic (topic.id)}
-    {@render topicChip(topic)}
-  {/each}
-  {#each channels.rest as channel (channel.name)}
-    {@render channelChip(channel.name, channel.postCount, false)}
+  {#each chipItems as item (item.kind === "topic" ? `t:${item.topic.id}` : `c:${item.channel.name}`)}
+    {#if item.kind === "topic"}
+      {@const topic = item.topic}
+      <button
+        class="chip topic"
+        class:included={filterStore.selectedTopicIds.includes(topic.id)}
+        onclick={() => filterStore.toggleTopic(topic)}
+        use:longpress={() => (manager = { type: "manage", topic })}
+      >
+        {#if topic.pinned}
+          <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+            <path d="M12 17v5M7 4h10l-1.5 6.5 2.5 3.5H6l2.5-3.5z" />
+          </svg>
+        {:else}
+          <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 8l8-4 8 4-8 4z M4 14l8 4 8-4" />
+          </svg>
+        {/if}
+        {topic.name}
+      </button>
+    {:else}
+      {@const channel = item.channel}
+      <button
+        class="chip"
+        class:included={filterStore.channelStates[channel.name] === "included"}
+        class:excluded={filterStore.channelStates[channel.name] === "excluded"}
+        onclick={() => filterStore.tapChannelChip(channel.name)}
+        use:longpress={() => preferencesStore.togglePinned(channel.name)}
+      >
+        {#if item.pinned}
+          <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+            <path d="M12 17v5M7 4h10l-1.5 6.5 2.5 3.5H6l2.5-3.5z" />
+          </svg>
+        {/if}
+        #{channel.name}
+        {#if channel.postCount > 0}<span class="count">{channel.postCount}</span>{/if}
+      </button>
+    {/if}
   {/each}
   <button class="chip add" onclick={() => (manager = { type: "create" })} data-testid="new-topic">
     +
@@ -81,7 +91,7 @@
 </div>
 
 {#if manager}
-  <TopicManager mode={manager} {contextTags} onClose={() => (manager = null)} />
+  <TopicManager mode={manager} onClose={() => (manager = null)} />
 {/if}
 
 <style>

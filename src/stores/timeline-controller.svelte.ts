@@ -2,7 +2,7 @@
 // Exposes commands only (start/stop/sendMessage); state lives in the stores.
 
 import { NOSTR_KINDS } from "@/domain/nostr-kinds";
-import type { ChannelFilterState } from "@/domain/channel";
+import { topicTags, type ChannelFilterState } from "@/domain/channel";
 import { mergeProfileContent, type ProfileEdits } from "@/domain/person";
 import { classifyEvent } from "@/domain/event-to-post";
 import {
@@ -126,7 +126,7 @@ class TimelineController {
     const merged: Record<string, ChannelFilterState> = { ...filterStore.channelStates };
     for (const topicId of filterStore.selectedTopicIds) {
       const topic = preferencesStore.topics.find((candidate) => candidate.id === topicId);
-      for (const tag of topic?.tags ?? []) merged[tag] = "included";
+      if (topic) for (const tag of topicTags(topic)) merged[tag] = "included";
     }
     for (const channel of resolveDraftChannels(this.draft, [])) merged[channel] = "included";
     return merged;

@@ -6,7 +6,6 @@
   import { authStore } from "@/stores/auth.svelte";
   import { filterStore } from "@/stores/filters.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
-  import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
   import ProfileHover from "./ProfileHover.svelte";
@@ -22,16 +21,14 @@
       preferencesStore.pinnedChannels
     )
   );
-  const topics = $derived(
-    [...preferencesStore.topics].sort(
-      (a, b) => Number(b.pinned) - Number(a.pinned) || a.name.localeCompare(b.name)
-    )
-  );
-  const contextTags = $derived(
-    Object.entries(timelineController.effectiveChannelStates)
-      .filter(([, state]) => state === "included")
-      .map(([name]) => name)
-  );
+  // Topics render as subitems of their primary channel: pinned ones always,
+  // the rest only while that channel is included.
+  function topicsFor(channelName: string): Topic[] {
+    const unfolded = filterStore.channelStates[channelName] === "included";
+    return preferencesStore.topics.filter(
+      (topic) => topic.primary === channelName && (topic.pinned || unfolded)
+    );
+  }
 
   let manager = $state<{ type: "create" } | { type: "manage"; topic: Topic } | null>(null);
   let profileOpen = $state(false);
@@ -62,28 +59,6 @@
     {/each}
   </ul>
 
-  <h2>{t("sidebar.topics")}</h2>
-  <nav class="channels">
-    {#each topics as topic (topic.id)}
-      <button
-        class="channel"
-        class:included={filterStore.selectedTopicIds.includes(topic.id)}
-        onclick={() => filterStore.toggleTopic(topic.id)}
-        use:longpress={() => (manager = { type: "manage", topic })}
-      >
-        <span class="name">{topic.name}</span>
-        {#if topic.pinned}
-          <svg class="pin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
-            <path d="M12 17v5M7 4h10l-1.5 6.5 2.5 3.5H6l2.5-3.5z" />
-          </svg>
-        {/if}
-      </button>
-    {/each}
-    <button class="channel add" onclick={() => (manager = { type: "create" })}>
-      {t("sidebar.newTopic")}
-    </button>
-  </nav>
-
   <h2>{t("sidebar.channels")}</h2>
   <nav class="channels">
     {#each [...channels.pinned, ...channels.rest] as channel (channel.name)}
@@ -103,7 +78,25 @@
         {/if}
         {#if channel.postCount > 0}<span class="count">{channel.postCount}</span>{/if}
       </button>
+      {#each topicsFor(channel.name) as topic (topic.id)}
+        <button
+          class="channel sub"
+          class:included={filterStore.selectedTopicIds.includes(topic.id)}
+          onclick={() => filterStore.toggleTopic(topic)}
+          use:longpress={() => (manager = { type: "manage", topic })}
+        >
+          <span class="name">{topic.name}</span>
+          {#if topic.pinned}
+            <svg class="pin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+              <path d="M12 17v5M7 4h10l-1.5 6.5 2.5 3.5H6l2.5-3.5z" />
+            </svg>
+          {/if}
+        </button>
+      {/each}
     {/each}
+    <button class="channel add" onclick={() => (manager = { type: "create" })}>
+      {t("sidebar.newTopic")}
+    </button>
   </nav>
 
   <div class="user">
@@ -130,7 +123,7 @@
   </div>
 
   {#if manager}
-    <TopicManager mode={manager} {contextTags} onClose={() => (manager = null)} />
+    <TopicManager mode={manager} onClose={() => (manager = null)} />
   {/if}
   {#if profileOpen}
     <ProfileSheet onClose={() => (profileOpen = false)} />
@@ -208,6 +201,15 @@
   .channel.add {
     color: var(--text-muted);
     font-size: 0.85rem;
+  }
+  .channel.sub {
+    margin-left: 1rem;
+    font-size: 0.85rem;
+    border-left: 2px solid var(--border);
+    border-radius: 0 0.5rem 0.5rem 0;
+  }
+  .channel.sub.included {
+    border-left-color: var(--accent-strong);
   }
   .channel {
     user-select: none;
