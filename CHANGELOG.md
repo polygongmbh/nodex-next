@@ -4,6 +4,33 @@
 
 ### Added
 
+- **Topics**: named, composable tag combinations instead of sub-channels
+  ("Nodex User Stories" = #design + #nodex). Created from the current
+  context via the + chip, selectable alongside channels (their tags compose
+  into the filter and into published posts), long-press to pin or delete.
+- Create-account option at sign-in: generates the key on-device,
+  NIP-49-encrypts it with the password, mirrors nodex registration
+  (optional email verification).
+- Full internationalization with German translations; language switch in
+  the menu and sidebar, auto-detected from the browser.
+- Per-space profile editing any time after onboarding (menu → Edit profile
+  / sidebar user card): "All spaces" or a single space, each with its own
+  kind-0.
+- Long-press (or right-click) channel chips and sidebar entries to
+  pin/unpin.
+- The server field is optional at sign-in and registration: `user@domain`
+  fills it automatically.
+
+### Changed
+
+- The feed flows like a chat: newest messages at the bottom, auto-scrolled
+  unless you scrolled up to read history.
+- Profiles load much faster: kind-0 events stream on their own
+  subscription opened before the content backfill, and missing authors are
+  fetched in a targeted pass after EOSE.
+- One fluid, seamless layout across all screen sizes — no edge borders;
+  bottom sheets cap their width on large screens.
+
 - Desktop layout (≥900px): persistent sidebar with space selector, per-relay
   connection status, vertical channel list, and user card — replacing the
   mobile hamburger and chips row.

@@ -73,6 +73,17 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   on click.
 - **Channels are hashtags** (no NIP-28); **spaces are relays**; empty space
   selection means "All spaces", never "no relays". Channel filters are AND.
+- **Topics** are named, composable tag combinations (not sub-channels):
+  selecting one includes all its tags, composing with channel chips and
+  typed hashtags — and posting inside it tags the message with all of them.
+  Create via the + chip from the current context; long-press to pin/delete.
+- **Chat orientation**: newest messages at the bottom with auto-scroll;
+  long-press any channel chip to pin it. The sign-in card also offers
+  account creation (key generated on-device, NIP-49-encrypted); `user@domain`
+  makes the server field optional. UI in English and German (`src/lib/i18n`).
+- **Profiles** stream on a dedicated subscription before the content
+  backfill, with a targeted post-EOSE fetch for stragglers; "Edit profile"
+  works per space (a separate kind-0 per relay) or across all spaces.
 - **The timeline** shows post cards (replies carry a parent-context header
   and count toward the parent's reply indicator) and compact rows for task
   state updates; tasks get a status icon and strikethrough when finished.
