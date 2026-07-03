@@ -1,6 +1,6 @@
 import type { Person } from "@/domain/person";
 import type { Post } from "@/domain/post";
-import { foldStateUpdate, isTopLevel, type TaskStateUpdate } from "@/domain/post";
+import { foldStateUpdate, type TaskStateUpdate } from "@/domain/post";
 import { classifyEvent, type RawNostrEvent } from "@/domain/event-to-post";
 import { postMatchesChannelFilters, type ChannelFilterState } from "@/domain/channel";
 import { normalizeRelayUrl, relayDisplayName, relayUrlToId } from "@/domain/relay-identity";
@@ -12,9 +12,17 @@ export interface RelayInfo {
   connected: boolean;
 }
 
-export interface TimelineEntry {
-  post: Post;
-  replyCount: number;
+export type TimelineItem =
+  | { type: "post"; post: Post; parent?: Post; replyCount: number; timestamp: number }
+  | { type: "state"; post: Post; update: TaskStateUpdate; timestamp: number };
+
+export interface TimelineScope {
+  channelStates: Record<string, ChannelFilterState>;
+  activeRelayId: string | null;
+  searchQuery: string;
+  /** Channels picked during onboarding — the default feed scope. */
+  pinnedChannels: string[];
+  myPubkey: string | null;
 }
 
 // Folds that arrived before their target post; replayed once it lands.
@@ -155,14 +163,19 @@ class TimelineStore {
 export const timelineStore = new TimelineStore();
 
 /**
- * Top-level posts filtered by channel states AND relay scope (post.relays ∩
- * active relay unless none selected), newest first, with reply counts.
+ * The full timeline: post cards (replies included, with parent context) plus
+ * compact rows for task state updates, newest first. Scope rules:
+ * - relay: post.relays ∩ active relay, unless "All spaces"
+ * - channels: explicit include/exclude states (AND semantics); with NO
+ *   includes, pinned channels form the default scope — a post shows when it
+ *   carries a pinned channel, mentions the user, or is the user's own
+ * - search: case-insensitive substring over the post content (state rows also
+ *   match on their update label)
  */
-export function visibleTimeline(
+export function buildTimeline(
   postsById: Record<string, Post>,
-  channelStates: Record<string, ChannelFilterState>,
-  activeRelayId: string | null
-): TimelineEntry[] {
+  scope: TimelineScope
+): TimelineItem[] {
   const posts = Object.values(postsById);
   const replyCounts = new Map<string, number>();
   for (const post of posts) {
@@ -170,10 +183,42 @@ export function visibleTimeline(
       replyCounts.set(post.parentId, (replyCounts.get(post.parentId) ?? 0) + 1);
     }
   }
-  return posts
-    .filter(isTopLevel)
-    .filter((post) => postMatchesChannelFilters(post, channelStates))
-    .filter((post) => !activeRelayId || post.relays.includes(activeRelayId))
-    .sort((a, b) => b.timestamp - a.timestamp)
-    .map((post) => ({ post, replyCount: replyCounts.get(post.id) ?? 0 }));
+
+  const hasIncludes = Object.values(scope.channelStates).includes("included");
+  const query = scope.searchQuery.trim().toLowerCase();
+
+  const inScope = (post: Post): boolean => {
+    if (scope.activeRelayId && !post.relays.includes(scope.activeRelayId)) return false;
+    if (!postMatchesChannelFilters(post, scope.channelStates)) return false;
+    if (!hasIncludes && scope.pinnedChannels.length > 0) {
+      const pinned = scope.pinnedChannels.some((channel) => post.channels.includes(channel));
+      const mentionsMe = scope.myPubkey ? post.mentions.includes(scope.myPubkey) : false;
+      const mine = scope.myPubkey !== null && post.pubkey === scope.myPubkey;
+      if (!pinned && !mentionsMe && !mine) return false;
+    }
+    return true;
+  };
+
+  const items: TimelineItem[] = [];
+  for (const post of posts) {
+    if (!inScope(post)) continue;
+    const contentMatches = !query || post.content.toLowerCase().includes(query);
+    if (contentMatches) {
+      items.push({
+        type: "post",
+        post,
+        parent: post.parentId ? postsById[post.parentId] : undefined,
+        replyCount: replyCounts.get(post.id) ?? 0,
+        timestamp: post.timestamp,
+      });
+    }
+    for (const update of post.stateUpdates) {
+      if (!contentMatches && !update.content.toLowerCase().includes(query)) continue;
+      items.push({ type: "state", post, update, timestamp: update.timestamp });
+    }
+  }
+  // Newest first; on ties the compact state row sits above its task card.
+  return items.sort(
+    (a, b) => b.timestamp - a.timestamp || (a.type === "state" ? -1 : 1) - (b.type === "state" ? -1 : 1)
+  );
 }

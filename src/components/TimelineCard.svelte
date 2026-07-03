@@ -1,65 +1,116 @@
 <script lang="ts">
-  import type { TimelineEntry } from "@/stores/timeline.svelte";
-  import { timelineStore } from "@/stores/timeline.svelte";
-  import { personLabel } from "@/domain/person";
+  import type { Post } from "@/domain/post";
   import { postStatus } from "@/domain/post";
+  import { personLabel } from "@/domain/person";
   import { relayColorSlot } from "@/domain/relay-identity";
+  import { tokenizeContent } from "@/domain/content-tokens";
   import { formatTimelineTimestamp } from "@/domain/timeline-timestamp";
+  import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
+  import StatusIcon from "./StatusIcon.svelte";
 
   let {
-    entry,
+    post,
+    parent,
+    replyCount,
     onRelayDots,
-  }: { entry: TimelineEntry; onRelayDots: (postId: string) => void } = $props();
+  }: {
+    post: Post;
+    parent?: Post;
+    replyCount: number;
+    onRelayDots: (postId: string) => void;
+  } = $props();
 
-  const post = $derived(entry.post);
   const author = $derived(timelineStore.peopleByPubkey[post.pubkey]);
   const label = $derived(personLabel(author, post.pubkey));
   const status = $derived(postStatus(post));
+  const struck = $derived(status === "done" || status === "closed");
+  const tokens = $derived(tokenizeContent(post.content));
+  const mentionLabels = $derived(
+    post.mentions.map((pubkey) => personLabel(timelineStore.peopleByPubkey[pubkey], pubkey))
+  );
 
-  const STATUS_ICONS: Record<string, string> = {
-    open: "○",
-    active: "◐",
-    done: "●",
-    closed: "⊘",
-  };
+  const CLAMP_CHARS = 280;
+  const long = $derived(post.content.length > CLAMP_CHARS || post.content.split("\n").length > 5);
+  let expanded = $state(false);
 </script>
 
 <article class="card">
-  <Avatar {label} pubkey={post.pubkey} picture={author?.picture} />
-  <div class="body">
-    <header>
-      <span class="author">{label}</span>
+  {#if parent}
+    <div class="parent">{parent.content.split("\n")[0]}</div>
+  {/if}
+  <div class="main">
+    <div class="gutter">
       {#if status}
-        <span class="status status-{status}" title={status}>{STATUS_ICONS[status]}</span>
+        <StatusIcon {status} size={20} />
       {/if}
-      <time>{formatTimelineTimestamp(new Date(post.timestamp * 1000))}</time>
-    </header>
-    <p class="content">{post.content}</p>
-    <footer>
-      {#each post.channels as channel (channel)}
-        <span class="channel">#{channel}</span>
-      {/each}
-      <span class="spacer"></span>
-      {#if entry.replyCount > 0}
-        <span class="replies">↩ {entry.replyCount}</span>
-      {/if}
-      <button class="dots" data-testid="relay-dots" onclick={() => onRelayDots(post.id)}>
-        {#each post.relays as relayId (relayId)}
-          <span class="dot" style="background: var(--relay-{relayColorSlot(relayId)})"></span>
+    </div>
+    <Avatar {label} pubkey={post.pubkey} picture={author?.picture} />
+    <div class="body">
+      <header>
+        <span class="author">{label}</span>
+        {#each mentionLabels as mention (mention)}
+          <span class="chip mention">@{mention}</span>
         {/each}
-      </button>
-    </footer>
+        {#each post.channels as channel (channel)}
+          <span class="chip channel">#{channel}</span>
+        {/each}
+        <time>{formatTimelineTimestamp(new Date(post.timestamp * 1000))}</time>
+      </header>
+      <p class="content" class:struck class:clamped={long && !expanded}>
+        {#each tokens as token, index (index)}
+          {#if token.type === "url"}
+            <a href={token.value} target="_blank" rel="noreferrer noopener">{token.value}</a>
+          {:else if token.type === "hashtag"}
+            <span class="tag">#{token.value}</span>
+          {:else}{token.value}{/if}
+        {/each}
+      </p>
+      {#if long}
+        <button class="more" onclick={() => (expanded = !expanded)}>
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      {/if}
+      <footer>
+        {#if replyCount > 0}
+          <span class="replies">↩ {replyCount}</span>
+        {/if}
+        <span class="spacer"></span>
+        <button class="dots" data-testid="relay-dots" onclick={() => onRelayDots(post.id)}>
+          {#each post.relays as relayId (relayId)}
+            <span class="dot" style="background: var(--relay-{relayColorSlot(relayId)})"></span>
+          {/each}
+        </button>
+      </footer>
+    </div>
   </div>
 </article>
 
 <style>
   .card {
-    display: flex;
-    gap: 0.65rem;
-    padding: 0.75rem 1rem;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
+    padding: 0.6rem 1rem 0.5rem 0.6rem;
+  }
+  .parent {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    padding: 0 0 0.45rem 0.4rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .main {
+    display: flex;
+    gap: 0.55rem;
+  }
+  .gutter {
+    width: 1.4rem;
+    display: flex;
+    justify-content: center;
+    padding-top: 0.25rem;
+    flex-shrink: 0;
   }
   .body {
     flex: 1;
@@ -67,23 +118,26 @@
   }
   header {
     display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
   }
   .author {
     font-weight: 600;
     font-size: 0.95rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
-  .status {
-    font-size: 0.85rem;
+  .chip {
+    font-size: 0.75rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 0.5rem;
+    background: var(--surface-sunken);
   }
-  .status-done { color: var(--relay-1); }
-  .status-active { color: var(--accent); }
-  .status-closed { color: var(--text-muted); }
-  .status-open { color: var(--text-muted); }
+  .chip.mention {
+    color: var(--accent);
+  }
+  .chip.channel {
+    color: var(--accent-strong);
+  }
   time {
     margin-left: auto;
     flex-shrink: 0;
@@ -91,26 +145,44 @@
     font-size: 0.75rem;
   }
   .content {
-    margin: 0.15rem 0 0.35rem;
+    margin: 0.2rem 0 0.35rem;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+  }
+  .content.clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .content.struck {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+  .content a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .content .tag {
+    color: var(--accent-strong);
+  }
+  .more {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
   }
   footer {
     display: flex;
     align-items: center;
     gap: 0.45rem;
-    flex-wrap: wrap;
-  }
-  .channel {
-    color: var(--accent);
-    font-size: 0.8rem;
-  }
-  .spacer {
-    flex: 1;
   }
   .replies {
     color: var(--text-muted);
     font-size: 0.8rem;
+  }
+  .spacer {
+    flex: 1;
   }
   .dots {
     display: flex;

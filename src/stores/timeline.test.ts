@@ -1,6 +1,17 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { timelineStore, visibleTimeline } from "./timeline.svelte";
+import { buildTimeline, timelineStore, type TimelineScope } from "./timeline.svelte";
 import { ALICE, BOB, rawEvent } from "@/test/fixtures";
+
+function scope(overrides: Partial<TimelineScope> = {}): TimelineScope {
+  return {
+    channelStates: {},
+    activeRelayId: null,
+    searchQuery: "",
+    pinnedChannels: [],
+    myPubkey: null,
+    ...overrides,
+  };
+}
 
 const RELAY_A = "wss://one.example/";
 const RELAY_B = "wss://two.example/";
@@ -84,20 +95,34 @@ describe("ingestEvent", () => {
   });
 });
 
-describe("visibleTimeline", () => {
-  it("shows only top-level posts with reply counts, newest first", () => {
+describe("buildTimeline", () => {
+  it("shows replies with parent context and counts them on the parent", () => {
     const root = rawEvent({ created_at: 100 });
     timelineStore.ingestEvent(root, RELAY_A);
+    const reply = rawEvent({
+      tags: [["t", "general"], ["e", root.id, "", "parent"]],
+      created_at: 150,
+    });
+    timelineStore.ingestEvent(reply, RELAY_A);
+
+    const items = buildTimeline(timelineStore.postsById, scope());
+    const replyItem = items.find((item) => item.type === "post" && item.post.id === reply.id);
+    const rootItem = items.find((item) => item.type === "post" && item.post.id === root.id);
+    if (replyItem?.type !== "post" || rootItem?.type !== "post") throw new Error("missing items");
+    expect(replyItem.parent?.id).toBe(root.id);
+    expect(rootItem.replyCount).toBe(1);
+    expect(items[0]).toBe(replyItem); // newest first
+  });
+
+  it("renders task state updates as their own timeline items", () => {
+    const task = rawEvent({ kind: 1621, created_at: 100 });
+    timelineStore.ingestEvent(task, RELAY_A);
     timelineStore.ingestEvent(
-      rawEvent({ tags: [["t", "general"], ["e", root.id, "", "parent"]], created_at: 150 }),
+      rawEvent({ kind: 1630, content: "Review", tags: [["e", task.id]], created_at: 200 }),
       RELAY_A
     );
-    const newer = rawEvent({ created_at: 200 });
-    timelineStore.ingestEvent(newer, RELAY_A);
-
-    const entries = visibleTimeline(timelineStore.postsById, {}, null);
-    expect(entries.map((entry) => entry.post.id)).toEqual([newer.id, root.id]);
-    expect(entries[1].replyCount).toBe(1);
+    const items = buildTimeline(timelineStore.postsById, scope());
+    expect(items.map((item) => item.type)).toEqual(["state", "post"]);
   });
 
   it("scopes to the active relay", () => {
@@ -105,7 +130,36 @@ describe("visibleTimeline", () => {
     const onB = rawEvent();
     timelineStore.ingestEvent(onA, RELAY_A);
     timelineStore.ingestEvent(onB, RELAY_B);
-    const entries = visibleTimeline(timelineStore.postsById, {}, "two-example");
-    expect(entries.map((entry) => entry.post.id)).toEqual([onB.id]);
+    const items = buildTimeline(timelineStore.postsById, scope({ activeRelayId: "two-example" }));
+    expect(items.map((item) => item.post.id)).toEqual([onB.id]);
+  });
+
+  it("defaults to pinned channels plus mentions when nothing is included", () => {
+    const pinned = rawEvent({ content: "in #design", tags: [["t", "design"]] });
+    const mention = rawEvent({ content: "hey", tags: [["t", "random"], ["p", BOB]] });
+    const other = rawEvent({ content: "noise", tags: [["t", "random"]] });
+    for (const event of [pinned, mention, other]) timelineStore.ingestEvent(event, RELAY_A);
+
+    const items = buildTimeline(
+      timelineStore.postsById,
+      scope({ pinnedChannels: ["design"], myPubkey: BOB })
+    );
+    expect(items.map((item) => item.post.id).sort()).toEqual([pinned.id, mention.id].sort());
+
+    // An explicit include overrides the pinned default scope.
+    const included = buildTimeline(
+      timelineStore.postsById,
+      scope({ pinnedChannels: ["design"], myPubkey: BOB, channelStates: { random: "included" } })
+    );
+    expect(included.map((item) => item.post.id).sort()).toEqual([mention.id, other.id].sort());
+  });
+
+  it("filters by search query, case-insensitively", () => {
+    const hit = rawEvent({ content: "Deploy nocal #dev", tags: [] });
+    const miss = rawEvent({ content: "lunch plans #dev", tags: [] });
+    timelineStore.ingestEvent(hit, RELAY_A);
+    timelineStore.ingestEvent(miss, RELAY_A);
+    const items = buildTimeline(timelineStore.postsById, scope({ searchQuery: "deploy" }));
+    expect(items.map((item) => item.post.id)).toEqual([hit.id]);
   });
 });

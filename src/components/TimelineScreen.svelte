@@ -1,49 +1,69 @@
 <script lang="ts">
   import { authStore } from "@/stores/auth.svelte";
   import { filterStore } from "@/stores/filters.svelte";
-  import { timelineStore, visibleTimeline } from "@/stores/timeline.svelte";
+  import { preferencesStore } from "@/stores/preferences.svelte";
+  import { timelineController } from "@/stores/timeline-controller.svelte";
+  import { buildTimeline, timelineStore } from "@/stores/timeline.svelte";
   import ChannelChips from "./ChannelChips.svelte";
-  import Composer from "./Composer.svelte";
+  import MenuSheet from "./MenuSheet.svelte";
   import RelaySheet from "./RelaySheet.svelte";
-  import SpaceSelector from "./SpaceSelector.svelte";
+  import StateRow from "./StateRow.svelte";
   import TimelineCard from "./TimelineCard.svelte";
+  import UnifiedBar from "./UnifiedBar.svelte";
 
-  const entries = $derived(
-    visibleTimeline(
-      timelineStore.postsById,
-      filterStore.channelStates,
-      filterStore.activeRelayId
-    )
+  const items = $derived(
+    buildTimeline(timelineStore.postsById, {
+      channelStates: timelineController.effectiveChannelStates,
+      activeRelayId: filterStore.activeRelayId,
+      searchQuery: timelineController.searchText,
+      pinnedChannels: preferencesStore.pinnedChannels,
+      myPubkey: authStore.session?.pubkeyHex ?? null,
+    })
   );
 
   let relaySheetPostId = $state<string | null>(null);
+  let menuOpen = $state(false);
 </script>
 
 <div class="screen">
   <header class="top">
-    <SpaceSelector />
-    <button class="signout" onclick={() => authStore.signOut()} data-testid="sign-out">
-      {authStore.session?.username}
+    <!-- svelte-ignore a11y_consider_explicit_label -->
+    <button class="menu" onclick={() => (menuOpen = true)} data-testid="menu-button">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M4 7h16M4 12h16M4 17h16" />
+      </svg>
     </button>
+    <ChannelChips />
   </header>
-  <ChannelChips />
 
   <main class="feed">
-    {#if timelineStore.hydrating && entries.length === 0}
+    {#if timelineStore.hydrating && items.length === 0}
       <p class="empty">Loading your timeline…</p>
-    {:else if entries.length === 0}
+    {:else if items.length === 0}
       <p class="empty">Nothing here yet. Pick different channels or start the conversation.</p>
     {:else}
-      {#each entries as entry (entry.post.id)}
-        <TimelineCard {entry} onRelayDots={(postId) => (relaySheetPostId = postId)} />
+      {#each items as item (item.type === "post" ? item.post.id : item.update.id)}
+        {#if item.type === "post"}
+          <TimelineCard
+            post={item.post}
+            parent={item.parent}
+            replyCount={item.replyCount}
+            onRelayDots={(postId) => (relaySheetPostId = postId)}
+          />
+        {:else}
+          <StateRow post={item.post} update={item.update} />
+        {/if}
       {/each}
     {/if}
   </main>
 
-  <Composer />
+  <UnifiedBar />
 
   {#if relaySheetPostId}
     <RelaySheet postId={relaySheetPostId} onClose={() => (relaySheetPostId = null)} />
+  {/if}
+  {#if menuOpen}
+    <MenuSheet onClose={() => (menuOpen = false)} />
   {/if}
 </div>
 
@@ -58,15 +78,18 @@
   .top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.6rem 1rem 0.1rem;
-    padding-top: max(0.6rem, env(safe-area-inset-top));
+    gap: 0.25rem;
+    padding: 0.35rem 0 0 0.6rem;
+    padding-top: max(0.35rem, env(safe-area-inset-top));
   }
-  .signout {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    padding: 0.35rem 0.5rem;
+  .menu {
+    padding: 0.5rem;
+    border-radius: 0.6rem;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-shrink: 0;
   }
   .feed {
     flex: 1;
