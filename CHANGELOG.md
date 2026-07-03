@@ -4,6 +4,27 @@
 
 ### Added
 
+- Spaces can be added any time (menu / sidebar), and sign-in works for
+  accounts with no space — onboarding then starts by connecting one.
+- Feed renders incrementally (recycler-style window over the newest ~80
+  items, "show older" on scroll-up) and stays pinned to the newest message
+  through hydration bursts and resizes.
+
+### Changed
+
+- **Topics are now shared relay events** (addressable kind 30177, see
+  `docs/nip-topics.md`): every user of a space sees the same topics, newest
+  definition per name wins across authors, deletion per NIP-09. Pinned state
+  stays personal (stored per account next to pinned channels). Topics unfold
+  under any of their selected channels; the primary channel only drives
+  auto-selection and the sidebar placement. Selecting a channel switches
+  over from a selected topic instead of stacking.
+- Documented all Nodex protocol conventions in `docs/nostr-extensions.md`
+  (NIP-34 task-kind divergences, `parent` reply marker, NIP-38 presence
+  usage, noas well-known extension, per-relay attribution).
+- Removed the remaining layout width caps — the timeline uses the full
+  window at every size.
+
 - **Topics**: named, composable tag combinations instead of sub-channels
   ("Nodex User Stories" = #design + #nodex). Each topic has a primary
   channel plus secondary channels, picked freely in the creation sheet (no

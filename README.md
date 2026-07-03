@@ -74,14 +74,16 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
 - **Channels are hashtags** (no NIP-28); **spaces are relays**; empty space
   selection means "All spaces", never "no relays". Channel filters are AND.
 - **Topics** are named, composable tag combinations (not sub-channels), each
-  with a primary channel and secondary channels. They render as subitems of
-  their primary channel (unfolding after the selected chip, nested in the
-  sidebar); pinned topics are always visible, and selecting one with no
-  channel active auto-selects its primary channel. Selecting a topic
-  includes all its tags — filtering the feed and tagging posted messages.
-  Create via the + chip (primary/secondary pickers, free-text tags);
-  long-press to pin/delete. Topics are stored per account in localStorage
-  (`nodex-next.prefs.v1.<pubkey>`), device-local for now.
+  with a primary channel and secondary channels. They are **shared**: each
+  topic is an addressable kind-30177 event on the relay (spec:
+  `docs/nip-topics.md`), visible to every user of the space; the newest
+  definition per name wins across authors, and NIP-09 deletion removes your
+  own. Topics unfold under any of their channels once selected; the primary
+  channel decides auto-selection (topic tapped with no channel active) and
+  where it lives in the sidebar. Selecting a channel switches over from a
+  selected topic rather than stacking. Pinned state is personal, stored per
+  account in localStorage next to pinned channels. All other protocol
+  conventions are surveyed in `docs/nostr-extensions.md`.
 - **Chat orientation**: newest messages at the bottom with auto-scroll;
   long-press any channel chip to pin it. The sign-in card also offers
   account creation (key generated on-device, NIP-49-encrypted); `user@domain`
