@@ -1,0 +1,51 @@
+{
+  "extractHashtags": [
+    { "name": "basic lowercasing", "content": "kickoff for #General tomorrow", "expected": ["general"] },
+    { "name": "embedded and punctuation-prefixed ignored", "content": "alpha#beta #gamma (#delta)", "expected": ["gamma"] },
+    { "name": "uppercase hex colors excluded", "content": "bg #FEE fg #FE0F accent #123FEF alpha #A1B2C3D4 keep #fee #abc123", "expected": ["fee", "abc123"] },
+    { "name": "mixed case, non-hex, len-5 and pure digits survive", "content": "mix #Fee odd #GHI len5 #ABCDE pure #123", "expected": ["fee", "ghi", "abcde", "123"] },
+    { "name": "dedupes repeats", "content": "#dev then #dev again", "expected": ["dev"] },
+    { "name": "underscore and dash allowed", "content": "#user_stories #cal-dav", "expected": ["user_stories", "cal-dav"] },
+    { "name": "unicode letters allowed", "content": "#über #日本", "expected": ["über", "日本"] },
+    { "name": "start of content counts", "content": "#dev standup", "expected": ["dev"] },
+    { "name": "lone hash ignored", "content": "# nothing #", "expected": [] }
+  ],
+  "isHexColorToken": [
+    { "name": "uppercase 3", "token": "FEE", "expected": true },
+    { "name": "uppercase 4", "token": "FE0F", "expected": true },
+    { "name": "uppercase 6", "token": "123FEF", "expected": true },
+    { "name": "uppercase 8", "token": "A1B2C3D4", "expected": true },
+    { "name": "lowercase is a tag", "token": "fee", "expected": false },
+    { "name": "mixed case is a tag", "token": "Fee", "expected": false },
+    { "name": "pure digits are a tag", "token": "123", "expected": false },
+    { "name": "non-hex letters", "token": "GHI", "expected": false },
+    { "name": "length 5", "token": "ABCDE", "expected": false },
+    { "name": "length 2", "token": "AB", "expected": false }
+  ],
+  "deriveChannelTags": [
+    {
+      "name": "union of t-tags and content hashtags",
+      "tags": [["t", "Design"], ["p", "alice"]],
+      "content": "kickoff for #General tomorrow",
+      "expected": ["design", "general"]
+    },
+    {
+      "name": "uppercase T tags count and lowercase",
+      "tags": [["T", "backend"], ["t", "ops"]],
+      "content": "",
+      "expected": ["backend", "ops"]
+    },
+    {
+      "name": "dedupes tag also typed in content",
+      "tags": [["t", "general"]],
+      "content": "hi #general",
+      "expected": ["general"]
+    },
+    {
+      "name": "empty and whitespace t-tags dropped",
+      "tags": [["t", "  "], ["t", ""], ["t", "dev"]],
+      "content": "",
+      "expected": ["dev"]
+    }
+  ]
+}

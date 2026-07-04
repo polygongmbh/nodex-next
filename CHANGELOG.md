@@ -20,6 +20,10 @@
 
 ### Changed
 
+- Hashtag/color rule aligned with the original nodex: only UPPERCASE hex
+  tokens (3/4/6/8 chars, ≥1 A–F) are colors — `#fee` and `#123` are
+  channels again, `#FEE` is not. Uppercase `T`/`P`/`E` tags now count as
+  channel/mention/deletion tags.
 - **Topics are now shared relay events** (addressable kind 30177, see
   `docs/nip-topics.md`): every user of a space sees the same topics, newest
   definition per channel set wins across authors (a topic is identified by the channels it contains, not its name), deletion per NIP-09. Pinned state

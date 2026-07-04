@@ -1,0 +1,51 @@
+{
+  "topicId": [
+    { "name": "sorted deduped lowercase plus-joined", "channels": ["nodex", "Design", "design"], "expected": "design+nodex" },
+    { "name": "order insensitive", "channels": ["persona", "design", "nodex"], "expected": "design+nodex+persona" },
+    { "name": "whitespace trimmed and empties dropped", "channels": [" dev ", "", "nostr"], "expected": "dev+nostr" },
+    { "name": "single channel", "channels": ["dev"], "expected": "dev" }
+  ],
+  "buildTopicEvent": [
+    {
+      "name": "primary first, canonical d, title carries name",
+      "topicName": "Nodex User Stories",
+      "primary": "Design",
+      "secondary": ["nodex", "persona", "design"],
+      "expected": {
+        "kind": 30177,
+        "d": "design+nodex+persona",
+        "title": "Nodex User Stories",
+        "tTags": ["design", "nodex", "persona"]
+      }
+    },
+    {
+      "name": "same channels different name and primary give same d",
+      "topicName": "Nutzergeschichten",
+      "primary": "nodex",
+      "secondary": ["design", "persona"],
+      "expected": {
+        "kind": 30177,
+        "d": "design+nodex+persona",
+        "title": "Nutzergeschichten",
+        "tTags": ["nodex", "design", "persona"]
+      }
+    }
+  ],
+  "parseTopicEvent": [
+    {
+      "name": "identity derived from t-tags not d",
+      "tags": [["d", "whatever-a-sloppy-client-wrote"], ["title", "User Stories"], ["t", "design"], ["t", "nodex"]],
+      "expected": { "id": "design+nodex", "name": "User Stories", "primary": "design", "secondary": ["nodex"] }
+    },
+    {
+      "name": "missing title falls back to channel list",
+      "tags": [["d", "design+nodex"], ["t", "design"], ["t", "nodex"]],
+      "expected": { "id": "design+nodex", "name": "#design #nodex", "primary": "design", "secondary": ["nodex"] }
+    },
+    {
+      "name": "no channels is invalid",
+      "tags": [["d", "x"], ["title", "Empty"]],
+      "expected": null
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "note": "now/date are ISO local-time strings; bucket logic is calendar-based, not 24h-based.",
+  "cases": [
+    { "name": "same day earlier", "now": "2026-07-03T14:00:00", "date": "2026-07-03T09:05:00", "expected": "time" },
+    { "name": "same day later (future)", "now": "2026-07-03T14:00:00", "date": "2026-07-03T18:00:00", "expected": "time" },
+    { "name": "calendar yesterday within hours", "now": "2026-07-03T00:10:00", "date": "2026-07-02T23:55:00", "expected": "yesterday" },
+    { "name": "yesterday evening", "now": "2026-07-03T14:00:00", "date": "2026-07-02T22:30:00", "expected": "yesterday" },
+    { "name": "two days ago", "now": "2026-07-03T14:00:00", "date": "2026-07-01T10:00:00", "expected": "monthDay" },
+    { "name": "three months ago", "now": "2026-07-03T14:00:00", "date": "2026-04-10T10:00:00", "expected": "monthDay" },
+    { "name": "nine months ago stays monthDay", "now": "2026-07-03T14:00:00", "date": "2025-10-15T10:00:00", "expected": "monthDay" },
+    { "name": "ten months hits shortDate", "now": "2026-07-03T14:00:00", "date": "2025-09-03T10:00:00", "expected": "shortDate" },
+    { "name": "years ago", "now": "2026-07-03T14:00:00", "date": "2024-01-15T10:00:00", "expected": "shortDate" }
+  ]
+}

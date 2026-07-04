@@ -1,0 +1,22 @@
+{
+  "normalize": [
+    { "name": "bare host gets wss and trailing slash", "input": "one.example", "expected": "wss://one.example/" },
+    { "name": "idempotent on canonical form", "input": "wss://one.example/", "expected": "wss://one.example/" },
+    { "name": "host lowercased", "input": "wss://Relay.Example", "expected": "wss://relay.example/" },
+    { "name": "ws scheme preserved", "input": "ws://Demo.example", "expected": "ws://demo.example/" },
+    { "name": "whitespace trimmed", "input": "  wss://one.example  ", "expected": "wss://one.example/" },
+    { "name": "empty input rejected", "input": "   ", "expected": "" }
+  ],
+  "relayId": [
+    { "name": "scheme stripped, dots dashed, lowercased", "input": "wss://Relay.Example", "expected": "relay-example" },
+    { "name": "bare host equals canonical url id", "input": "one.example", "expected": "one-example" },
+    { "name": "trailing slash irrelevant", "input": "wss://one.example/", "expected": "one-example" }
+  ],
+  "displayName": [
+    { "name": "relay prefix and tld stripped", "input": "wss://relay.damus.io", "expected": "damus" },
+    { "name": "multi-label host keeps middle labels", "input": "ws://base.janetzko.us", "expected": "base.janetzko" },
+    { "name": "two-label host drops only tld", "input": "wss://nodex.nexus", "expected": "nodex" },
+    { "name": "prefix-only host falls back to remaining label", "input": "wss://nostr.wine", "expected": "wine" },
+    { "name": "feed prefix stripped", "input": "wss://feed.polygon.example", "expected": "polygon" }
+  ]
+}

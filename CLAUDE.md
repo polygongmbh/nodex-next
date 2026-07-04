@@ -63,6 +63,11 @@ nodex/mostr on the same relay (kinds 0, 1, 5, 1621, 1630–1633).
 - Tests: vitest, node environment, behavior over implementation detail.
   Fixtures in `src/test/fixtures.ts` (realistic hex pubkeys/ids). Domain and
   store logic must be testable without a DOM.
+- **Cross-client spec vectors** live in `spec/vectors/*.json`
+  (see `spec/README.md`) and are consumed by `src/test/vectors-*.test.ts`;
+  the mobile client runs the same vectors. Behavior changes to domain/store
+  semantics land in the vectors FIRST, then in the code; never edit an
+  existing vector expectation without flagging it as a breaking spec change.
 
 ## Workflow
 

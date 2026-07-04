@@ -1,0 +1,100 @@
+{
+  "cases": [
+    {
+      "name": "kind 1 message with union channels and attribution",
+      "event": { "id": "m1", "pubkey": "alice", "kind": 1, "content": "ship it #general", "tags": [["t", "launch"]], "created_at": 100 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "post", "channels": ["general", "launch"], "relays": ["relay-a"], "parentId": null, "mentions": [] }
+    },
+    {
+      "name": "parent marker preferred over reply",
+      "event": { "id": "m2", "pubkey": "alice", "kind": 1, "content": "re #dev", "tags": [["e", "other", "", "reply"], ["e", "root", "", "parent"]], "created_at": 100 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "post", "parentId": "root" }
+    },
+    {
+      "name": "reply marker used when no parent marker",
+      "event": { "id": "m3", "pubkey": "alice", "kind": 1, "content": "re #dev", "tags": [["e", "root", "", "reply"]], "created_at": 100 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "post", "parentId": "root" }
+    },
+    {
+      "name": "unmarked e-tag is not a parent",
+      "event": { "id": "m4", "pubkey": "alice", "kind": 1, "content": "quote #dev", "tags": [["e", "root"]], "created_at": 100 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "post", "parentId": null }
+    },
+    {
+      "name": "mentions from p-tags deduped",
+      "event": { "id": "m5", "pubkey": "alice", "kind": 1, "content": "hi #dev", "tags": [["p", "bob"], ["p", "bob"], ["p", "carol"]], "created_at": 100 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "post", "mentions": ["bob", "carol"] }
+    },
+    {
+      "name": "kind 1621 is a task post",
+      "event": { "id": "t1", "pubkey": "alice", "kind": 1621, "content": "fix login #dev", "tags": [], "created_at": 100 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "post", "kind": 1621, "channels": ["dev"] }
+    },
+    {
+      "name": "state event targets first e-tag",
+      "event": { "id": "s1", "pubkey": "alice", "kind": 1631, "content": "", "tags": [["e", "t1"]], "created_at": 200 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "state", "targetId": "t1", "stateKind": 1631 }
+    },
+    {
+      "name": "state event without e-tag ignored",
+      "event": { "id": "s2", "pubkey": "alice", "kind": 1631, "content": "", "tags": [], "created_at": 200 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "ignored" }
+    },
+    {
+      "name": "deletion collects all e-tag targets",
+      "event": { "id": "d1", "pubkey": "alice", "kind": 5, "content": "", "tags": [["e", "m1"], ["e", "m2"]], "created_at": 300 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "deletion", "byPubkey": "alice", "targetIds": ["m1", "m2"] }
+    },
+    {
+      "name": "deletion accepts uppercase E targets, ignores p and k tags",
+      "event": { "id": "d2", "pubkey": "alice", "kind": 5, "content": "", "tags": [["e", "id-a"], ["p", "bob"], ["E", "id-b"], ["k", "1"]], "created_at": 300 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "deletion", "byPubkey": "alice", "targetIds": ["id-a", "id-b"] }
+    },
+    {
+      "name": "uppercase T channel tags and P mentions accepted",
+      "event": { "id": "m6", "pubkey": "alice", "kind": 1, "content": "hi", "tags": [["T", "Backend"], ["P", "bob"]], "created_at": 100 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "post", "channels": ["backend"], "mentions": ["bob"] }
+    },
+    {
+      "name": "kind 0 metadata parsed with alias fields",
+      "event": { "id": "p1", "pubkey": "alice", "kind": 0, "content": "{\"display_name\":\"Alice\",\"name\":\"alice\",\"about\":\"hi\",\"picture\":\"https://x/p.png\",\"website\":\"https://a.example\",\"nip05\":\"alice@x\"}", "tags": [], "created_at": 100 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "person", "displayName": "Alice", "personName": "alice", "about": "hi", "nip05": "alice@x" }
+    },
+    {
+      "name": "kind 0 username alias for name",
+      "event": { "id": "p2", "pubkey": "alice", "kind": 0, "content": "{\"username\":\"al\"}", "tags": [], "created_at": 100 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "person", "personName": "al" }
+    },
+    {
+      "name": "malformed kind 0 ignored",
+      "event": { "id": "p3", "pubkey": "alice", "kind": 0, "content": "not json", "tags": [], "created_at": 100 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "ignored" }
+    },
+    {
+      "name": "topic event classified",
+      "event": { "id": "top1", "pubkey": "alice", "kind": 30177, "content": "", "tags": [["d", "design+nodex"], ["title", "User Stories"], ["t", "design"], ["t", "nodex"]], "created_at": 100 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "topic", "topicId": "design+nodex", "topicName": "User Stories", "primary": "design" }
+    },
+    {
+      "name": "unknown kind ignored",
+      "event": { "id": "x1", "pubkey": "alice", "kind": 7, "content": "+", "tags": [["e", "m1"]], "created_at": 100 },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "ignored" }
+    }
+  ]
+}

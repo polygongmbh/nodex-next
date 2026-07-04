@@ -19,6 +19,7 @@ npm run test    # vitest
 - [docs/nodex-parity.md](docs/nodex-parity.md) — faithful / needs work / missing / out of scope vs. nodex
 - [docs/nip-topics.md](docs/nip-topics.md) — NIP draft for shared topics (kind 30177)
 - [docs/nostr-extensions.md](docs/nostr-extensions.md) — survey of all protocol conventions in use
+- [spec/README.md](spec/README.md) — cross-client test vectors (shared with the mobile client); behavior changes land there first
 
 ## Framework decisions (vs. the React/Tailwind original)
 

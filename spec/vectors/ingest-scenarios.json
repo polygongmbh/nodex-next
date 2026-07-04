@@ -1,0 +1,91 @@
+{
+  "relayUrls": ["wss://one.example/", "wss://two.example/"],
+  "scenarios": [
+    {
+      "name": "duplicate delivery unions relay attribution",
+      "steps": [
+        { "event": { "id": "m1", "pubkey": "alice", "kind": 1, "content": "hi #dev", "tags": [], "created_at": 100 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "m1", "pubkey": "alice", "kind": 1, "content": "hi #dev", "tags": [], "created_at": 100 }, "relayUrl": "wss://two.example/" }
+      ],
+      "expected": { "posts": { "m1": { "relays": ["one-example", "two-example"] } } }
+    },
+    {
+      "name": "event without delivering relay is dropped",
+      "steps": [
+        { "event": { "id": "m1", "pubkey": "alice", "kind": 1, "content": "hi #dev", "tags": [], "created_at": 100 }, "relayUrl": null }
+      ],
+      "expected": { "absentPosts": ["m1"] }
+    },
+    {
+      "name": "re-ingest keeps folded state while adding attribution",
+      "steps": [
+        { "event": { "id": "t1", "pubkey": "alice", "kind": 1621, "content": "task #dev", "tags": [], "created_at": 100 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "s1", "pubkey": "alice", "kind": 1631, "content": "", "tags": [["e", "t1"]], "created_at": 200 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "t1", "pubkey": "alice", "kind": 1621, "content": "task #dev", "tags": [], "created_at": 100 }, "relayUrl": "wss://two.example/" }
+      ],
+      "expected": { "posts": { "t1": { "relays": ["one-example", "two-example"], "status": "done", "stateUpdates": 1 } } }
+    },
+    {
+      "name": "state updates arriving before their task replay on landing",
+      "steps": [
+        { "event": { "id": "s1", "pubkey": "alice", "kind": 1630, "content": "Review", "tags": [["e", "t1"]], "created_at": 200 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "t1", "pubkey": "alice", "kind": 1621, "content": "task #dev", "tags": [], "created_at": 100 }, "relayUrl": "wss://one.example/" }
+      ],
+      "expected": { "posts": { "t1": { "status": "active", "stateUpdates": 1 } } }
+    },
+    {
+      "name": "newest state wins regardless of arrival order",
+      "steps": [
+        { "event": { "id": "t1", "pubkey": "alice", "kind": 1621, "content": "task #dev", "tags": [], "created_at": 100 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "s2", "pubkey": "alice", "kind": 1631, "content": "", "tags": [["e", "t1"]], "created_at": 300 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "s1", "pubkey": "alice", "kind": 1630, "content": "", "tags": [["e", "t1"]], "created_at": 200 }, "relayUrl": "wss://one.example/" }
+      ],
+      "expected": { "posts": { "t1": { "status": "done", "stateUpdates": 2 } } }
+    },
+    {
+      "name": "duplicate state event ids fold once",
+      "steps": [
+        { "event": { "id": "t1", "pubkey": "alice", "kind": 1621, "content": "task #dev", "tags": [], "created_at": 100 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "s1", "pubkey": "alice", "kind": 1631, "content": "", "tags": [["e", "t1"]], "created_at": 200 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "s1", "pubkey": "alice", "kind": 1631, "content": "", "tags": [["e", "t1"]], "created_at": 200 }, "relayUrl": "wss://two.example/" }
+      ],
+      "expected": { "posts": { "t1": { "stateUpdates": 1 } } }
+    },
+    {
+      "name": "only own-author deletions tombstone, and tombstones block re-ingest",
+      "steps": [
+        { "event": { "id": "m1", "pubkey": "alice", "kind": 1, "content": "hi #dev", "tags": [], "created_at": 100 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "d1", "pubkey": "bob", "kind": 5, "content": "", "tags": [["e", "m1"]], "created_at": 150 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "d2", "pubkey": "alice", "kind": 5, "content": "", "tags": [["e", "m1"]], "created_at": 200 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "m1", "pubkey": "alice", "kind": 1, "content": "hi #dev", "tags": [], "created_at": 100 }, "relayUrl": "wss://two.example/" }
+      ],
+      "expected": { "absentPosts": ["m1"] }
+    },
+    {
+      "name": "newest kind-0 wins across arrival order",
+      "steps": [
+        { "event": { "id": "p1", "pubkey": "alice", "kind": 0, "content": "{\"name\":\"old\"}", "tags": [], "created_at": 100 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "p2", "pubkey": "alice", "kind": 0, "content": "{\"name\":\"new\"}", "tags": [], "created_at": 300 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "p3", "pubkey": "alice", "kind": 0, "content": "{\"name\":\"stale\"}", "tags": [], "created_at": 200 }, "relayUrl": "wss://one.example/" }
+      ],
+      "expected": { "people": { "alice": { "name": "new" } } }
+    },
+    {
+      "name": "topics replace by channel set across authors, newest wins",
+      "steps": [
+        { "event": { "id": "top1", "pubkey": "alice", "kind": 30177, "content": "", "tags": [["d", "design+nodex"], ["title", "Old Name"], ["t", "design"], ["t", "nodex"]], "created_at": 100 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "top2", "pubkey": "bob", "kind": 30177, "content": "", "tags": [["d", "design+nodex"], ["title", "New Name"], ["t", "nodex"], ["t", "design"]], "created_at": 200 }, "relayUrl": "wss://one.example/" }
+      ],
+      "expected": { "topics": { "design+nodex": { "name": "New Name", "primary": "nodex", "pubkey": "bob" } } }
+    },
+    {
+      "name": "topic deletion removes own definition only",
+      "steps": [
+        { "event": { "id": "top1", "pubkey": "alice", "kind": 30177, "content": "", "tags": [["d", "dev+nostr"], ["title", "CalDav"], ["t", "dev"], ["t", "nostr"]], "created_at": 100 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "d1", "pubkey": "bob", "kind": 5, "content": "", "tags": [["e", "top1"]], "created_at": 150 }, "relayUrl": "wss://one.example/" },
+        { "event": { "id": "d2", "pubkey": "alice", "kind": 5, "content": "", "tags": [["e", "top1"]], "created_at": 200 }, "relayUrl": "wss://one.example/" }
+      ],
+      "expected": { "absentTopics": ["dev+nostr"] }
+    }
+  ]
+}

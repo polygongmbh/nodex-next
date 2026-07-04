@@ -1,0 +1,98 @@
+{
+  "keys": {
+    "note": "Deterministic key material for crypto cases. The ncryptsec was produced once with nostr-tools nip49; decryption is deterministic.",
+    "secretHex": "5c0c523f52a5b6fad39ed2403092df8cebc36318b39383bca6c00808626fab3a",
+    "pubkeyHex": "87d3561f19b74adbe8bf840682992466068830a9d8c36b4a0c99d36f826cb6cb",
+    "npub": "npub1slf4v8ceka9dh69lssrg9xfyvcrgsv9fmrpkkjsvn8fklqnvkm9s65qu2t",
+    "nsec": "nsec1tsx9y06j5km045u76fqrpykl3n4uxccckwfc809xcqyqscn04vaq02ch55",
+    "password": "correct horse battery staple",
+    "ncryptsec": "ncryptsec1qggwv3a2kssa0jdlgwjkwznjcslwtgz959d8fp9vup4kjyjum0r6kztr8696vs5vdwqqyj72xuywvdqfs26tfkrf7u5gtcud34234zyram6at5v5ydfrn62wvztm6htfqcpy0jp5ms5qkqvgvuxrayte"
+  },
+  "passwordHash": [
+    { "name": "sha256 hex of raw password", "password": "hunter2", "expected": "f52fbd32b2b3b86ff88ef6c490628285f482af15ddcb29541f94bcf526a3f6c7" }
+  ],
+  "splitCredentials": [
+    { "name": "user@domain fills the host", "username": "alice@polygon.example", "host": "", "expected": { "username": "alice", "host": "polygon.example" } },
+    { "name": "explicit host wins over domain", "username": "alice@polygon.example", "host": "other.example", "expected": { "username": "alice", "host": "other.example" } },
+    { "name": "plain username untouched", "username": "alice", "host": "polygon.example", "expected": { "username": "alice", "host": "polygon.example" } },
+    { "name": "at without dot is not a domain", "username": "alice@localhost", "host": "", "expected": { "username": "alice@localhost", "host": "" } }
+  ],
+  "decryptPrivateKey": [
+    { "name": "ncryptsec decrypts with raw password", "input": "ncryptsec", "password": "correct horse battery staple", "expected": "secretHex" },
+    { "name": "raw hex passes through", "input": "secretHex", "password": "irrelevant", "expected": "secretHex" },
+    { "name": "nsec decodes", "input": "nsec", "password": "irrelevant", "expected": "secretHex" },
+    { "name": "wrong password errors", "input": "ncryptsec", "password": "wrong", "expectedError": "error.decrypt" }
+  ],
+  "signInResponses": [
+    {
+      "name": "snake_case fields with raw hex key",
+      "status": 200,
+      "body": { "success": true, "private_key_encrypted": "secretHex", "public_key": "pubkeyHex", "relays": ["wss://one.example"] },
+      "password": "irrelevant",
+      "expected": { "pubkeyHex": "pubkeyHex", "privateKeyHex": "secretHex", "relayUrls": ["wss://one.example"] }
+    },
+    {
+      "name": "camelCase alias with npub public key and ncryptsec",
+      "status": 200,
+      "body": { "success": true, "encryptedPrivateKey": "ncryptsec", "public_npub": "npub", "relays": ["wss://one.example", "wss://two.example"] },
+      "password": "correct horse battery staple",
+      "expected": { "pubkeyHex": "pubkeyHex", "relayUrls": ["wss://one.example", "wss://two.example"] }
+    },
+    {
+      "name": "fields nested under user",
+      "status": 200,
+      "body": { "success": true, "user": { "private_key_encrypted": "secretHex", "publicKey": "pubkeyHex", "relays": ["wss://one.example"] } },
+      "password": "irrelevant",
+      "expected": { "pubkeyHex": "pubkeyHex", "relayUrls": ["wss://one.example"] }
+    },
+    {
+      "name": "zero relays is valid",
+      "status": 200,
+      "body": { "success": true, "private_key_encrypted": "secretHex", "public_key": "pubkeyHex" },
+      "password": "irrelevant",
+      "expected": { "pubkeyHex": "pubkeyHex", "relayUrls": [] }
+    },
+    {
+      "name": "401 maps to invalid credentials",
+      "status": 401,
+      "body": { "success": false },
+      "password": "irrelevant",
+      "expectedError": "error.invalidCredentials"
+    },
+    {
+      "name": "403 passes the server message through",
+      "status": 403,
+      "body": { "success": false, "error": "Account pending verification" },
+      "password": "irrelevant",
+      "expectedError": "Account pending verification"
+    },
+    {
+      "name": "key mismatch rejected",
+      "status": 200,
+      "body": { "success": true, "private_key_encrypted": "secretHex", "public_key": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "relays": [] },
+      "password": "irrelevant",
+      "expectedError": "error.keyMismatch"
+    },
+    {
+      "name": "missing key rejected",
+      "status": 200,
+      "body": { "success": true, "public_key": "pubkeyHex" },
+      "password": "irrelevant",
+      "expectedError": "error.noKey"
+    }
+  ],
+  "profileMerge": [
+    {
+      "name": "unknown fields survive, edits override",
+      "base": { "name": "alice", "display_name": "Old Alice", "about": "old bio", "lud16": "alice@wallet.example", "banner": "https://x/banner.png" },
+      "edits": { "displayName": "Alice", "about": "new bio" },
+      "expected": { "name": "alice", "display_name": "Alice", "about": "new bio", "lud16": "alice@wallet.example", "banner": "https://x/banner.png" }
+    },
+    {
+      "name": "cleared fields removed, untouched fields kept",
+      "base": { "name": "alice", "display_name": "Old", "about": "old bio", "website": "https://a.example" },
+      "edits": { "displayName": "Alice", "about": "" },
+      "expected": { "name": "alice", "display_name": "Alice", "website": "https://a.example" }
+    }
+  ]
+}

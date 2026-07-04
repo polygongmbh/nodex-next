@@ -1,0 +1,81 @@
+{
+  "relayUrls": ["wss://one.example/", "wss://two.example/"],
+  "events": [
+    { "event": { "id": "m1", "pubkey": "alice", "kind": 1, "content": "kickoff #dev", "tags": [], "created_at": 100 }, "relayUrl": "wss://one.example/" },
+    { "event": { "id": "m2", "pubkey": "bob", "kind": 1, "content": "reply #other", "tags": [["e", "m1", "", "parent"]], "created_at": 150 }, "relayUrl": "wss://one.example/" },
+    { "event": { "id": "m3", "pubkey": "alice", "kind": 1, "content": "mockups #design", "tags": [["p", "bob"]], "created_at": 200 }, "relayUrl": "wss://one.example/" },
+    { "event": { "id": "m4", "pubkey": "carol", "kind": 1, "content": "noise #random", "tags": [], "created_at": 250 }, "relayUrl": "wss://two.example/" },
+    { "event": { "id": "t1", "pubkey": "alice", "kind": 1621, "content": "fix login #dev", "tags": [], "created_at": 300 }, "relayUrl": "wss://one.example/" },
+    { "event": { "id": "s1", "pubkey": "bob", "kind": 1630, "content": "Review", "tags": [["e", "t1"]], "created_at": 400 }, "relayUrl": "wss://one.example/" }
+  ],
+  "scenarios": [
+    {
+      "name": "no filters shows everything oldest-first with state rows",
+      "scope": {},
+      "expected": [
+        { "type": "post", "id": "m1" },
+        { "type": "post", "id": "m2" },
+        { "type": "post", "id": "m3" },
+        { "type": "post", "id": "m4" },
+        { "type": "post", "id": "t1" },
+        { "type": "state", "id": "s1" }
+      ]
+    },
+    {
+      "name": "included channel is AND scoped",
+      "scope": { "channelStates": { "dev": "included" } },
+      "expected": [
+        { "type": "post", "id": "m1" },
+        { "type": "post", "id": "t1" },
+        { "type": "state", "id": "s1" }
+      ]
+    },
+    {
+      "name": "excluded channel removes carriers only",
+      "scope": { "channelStates": { "design": "excluded" } },
+      "expected": [
+        { "type": "post", "id": "m1" },
+        { "type": "post", "id": "m2" },
+        { "type": "post", "id": "m4" },
+        { "type": "post", "id": "t1" },
+        { "type": "state", "id": "s1" }
+      ]
+    },
+    {
+      "name": "pinned default scope is pinned channels plus mentions plus own posts",
+      "scope": { "pinnedChannels": ["design"], "myPubkey": "bob" },
+      "expected": [
+        { "type": "post", "id": "m2" },
+        { "type": "post", "id": "m3" }
+      ]
+    },
+    {
+      "name": "explicit include overrides the pinned default",
+      "scope": { "pinnedChannels": ["design"], "myPubkey": "bob", "channelStates": { "random": "included" } },
+      "expected": [{ "type": "post", "id": "m4" }]
+    },
+    {
+      "name": "relay scope keeps only posts delivered by the active space",
+      "scope": { "activeRelayId": "two-example" },
+      "expected": [{ "type": "post", "id": "m4" }]
+    },
+    {
+      "name": "search matches post content case-insensitively",
+      "scope": { "searchQuery": "KICKOFF" },
+      "expected": [{ "type": "post", "id": "m1" }]
+    },
+    {
+      "name": "state rows match on their update label",
+      "scope": { "searchQuery": "review" },
+      "expected": [{ "type": "state", "id": "s1" }]
+    },
+    {
+      "name": "thread focus shows the conversation and bypasses channel scope",
+      "scope": { "focusedPostId": "m1", "channelStates": { "design": "included" } },
+      "expected": [
+        { "type": "post", "id": "m1" },
+        { "type": "post", "id": "m2" }
+      ]
+    }
+  ]
+}

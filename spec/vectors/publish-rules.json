@@ -1,0 +1,40 @@
+{
+  "relays": [
+    { "id": "one-example", "url": "wss://one.example/", "connected": true },
+    { "id": "two-example", "url": "wss://two.example/", "connected": true },
+    { "id": "three-example", "url": "wss://three.example/", "connected": false }
+  ],
+  "resolvePublishRelay": [
+    { "name": "active space wins", "activeRelayId": "two-example", "expected": { "relayId": "two-example" } },
+    { "name": "sole connected relay fallback", "relaySubset": ["one-example", "three-example"], "activeRelayId": null, "expected": { "relayId": "one-example" } },
+    { "name": "ambiguous without selection errors", "activeRelayId": null, "expected": { "error": "error.selectSpace" } },
+    { "name": "nothing connected errors", "relaySubset": ["three-example"], "activeRelayId": null, "expected": { "error": "error.noSpaceConnected" } },
+    { "name": "unknown active space errors", "activeRelayId": "gone-example", "expected": { "error": "error.spaceUnavailable" } },
+    {
+      "name": "reply pins to parent origin over active selection",
+      "activeRelayId": "one-example",
+      "parent": { "id": "root", "pubkey": "alice", "relays": ["two-example", "one-example"] },
+      "expected": { "relayId": "two-example" }
+    },
+    {
+      "name": "parent origin space unavailable errors",
+      "activeRelayId": "one-example",
+      "parent": { "id": "root", "pubkey": "alice", "relays": ["gone-example"] },
+      "expected": { "error": "error.parentSpaceUnavailable" }
+    }
+  ],
+  "buildMessageTags": [
+    { "name": "channels become lowercased t-tags", "channels": ["General", "design"], "expected": { "tags": [["t", "general"], ["t", "design"]] } },
+    { "name": "at least one channel required", "channels": [], "expected": { "error": "error.needChannel" } },
+    {
+      "name": "reply adds parent-marked e-tag and p-tag",
+      "channels": ["general"],
+      "parent": { "id": "root", "pubkey": "alice", "relays": ["one-example"] },
+      "expected": { "tags": [["t", "general"], ["e", "root", "", "parent"], ["p", "alice"]] }
+    }
+  ],
+  "resolveDraftChannels": [
+    { "name": "included chips union typed hashtags", "content": "ship #Launch today", "included": ["general"], "expected": ["general", "launch"] },
+    { "name": "uppercase hex color in draft is not a channel", "content": "color #FFF", "included": [], "expected": [] }
+  ]
+}

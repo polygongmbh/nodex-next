@@ -65,8 +65,10 @@ Implement exactly the semantics of rebuild-prompt.md §"Nostr semantics",
   no ndk imports): post/person/channel/topic models, event classification,
   hashtag + content tokenizing, relay identity (id/name/color slot), publish
   rules, timestamp formatting, profile merging, topic event build/parse.
-  Port the vitest suites as `flutter test` behavior tests — same cases,
-  same fixtures (realistic hex ids).
+  **Consume the shared spec vectors** (`nodex-next/spec/vectors/*.json`,
+  contract in `spec/README.md`) via a thin `flutter test` adapter mirroring
+  nodex-next's `src/test/vectors-*.test.ts` — that suite, not prose, is the
+  wire-compatibility gate.
 - `lib/application/`: riverpod Notifiers — auth controller
   (restoring/signedOut/signedIn), timeline controller (start/stop/restart,
   sendMessage, createTopic/deleteTopic, fetchOwnProfile/publishProfile with

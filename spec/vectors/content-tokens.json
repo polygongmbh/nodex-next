@@ -1,0 +1,48 @@
+{
+  "tokenize": [
+    {
+      "name": "urls and hashtags split out of text",
+      "content": "deploy on https://nocal.example now #dev",
+      "expected": [
+        { "type": "text", "value": "deploy on " },
+        { "type": "url", "value": "https://nocal.example" },
+        { "type": "text", "value": " now" },
+        { "type": "text", "value": " " },
+        { "type": "hashtag", "value": "dev" }
+      ]
+    },
+    {
+      "name": "uppercase hex colors stay plain text",
+      "content": "use #FEE here",
+      "expected": [{ "type": "text", "value": "use #FEE here" }]
+    },
+    {
+      "name": "lowercase hex-like token is a hashtag",
+      "content": "keep #fee",
+      "expected": [
+        { "type": "text", "value": "keep" },
+        { "type": "text", "value": " " },
+        { "type": "hashtag", "value": "fee" }
+      ]
+    },
+    {
+      "name": "plain content is one token",
+      "content": "hello world",
+      "expected": [{ "type": "text", "value": "hello world" }]
+    },
+    {
+      "name": "url with path and query kept whole until whitespace",
+      "content": "see https://x.example/a/b?c=1&d=2 ok",
+      "expected": [
+        { "type": "text", "value": "see " },
+        { "type": "url", "value": "https://x.example/a/b?c=1&d=2" },
+        { "type": "text", "value": " ok" }
+      ]
+    },
+    {
+      "name": "http scheme accepted",
+      "content": "http://plain.example",
+      "expected": [{ "type": "url", "value": "http://plain.example" }]
+    }
+  ]
+}
