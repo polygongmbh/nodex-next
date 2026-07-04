@@ -1,5 +1,6 @@
 import type { Person } from "@/domain/person";
 import type { Topic } from "@/domain/channel";
+import { calendarAddress, type CalendarEvent } from "@/domain/calendar-events";
 import type { Post } from "@/domain/post";
 import { foldStateUpdate, type TaskStateUpdate } from "@/domain/post";
 import { classifyEvent, type RawNostrEvent } from "@/domain/event-to-post";
@@ -36,6 +37,8 @@ class TimelineStore {
   peopleByPubkey = $state<Record<string, Person>>({});
   /** Shared topics (kind 30177), keyed by slug — newest definition wins. */
   topicsById = $state<Record<string, Topic>>({});
+  /** NIP-52 calendar events keyed by (pubkey, d) — newest per address wins. */
+  calendarEventsByAddress = $state<Record<string, CalendarEvent>>({});
   relays = $state<RelayInfo[]>([]);
   hydrating = $state(true);
 
@@ -81,6 +84,9 @@ class TimelineStore {
       case "topic":
         this.ingestTopic(classified.topic);
         break;
+      case "calendarEvent":
+        this.ingestCalendarEvent(classified.event);
+        break;
       case "state":
         this.applyStateUpdate(classified.targetId, classified.update);
         break;
@@ -124,6 +130,20 @@ class TimelineStore {
     return Object.values(this.topicsById).sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  /** Same event id from another relay only adds attribution; else newest per (pubkey, d). */
+  private ingestCalendarEvent(event: CalendarEvent): void {
+    if (this.deletionsByAuthor.get(event.pubkey)?.has(event.eventId)) return;
+    const address = calendarAddress(event);
+    const existing = this.calendarEventsByAddress[address];
+    if (existing && existing.eventId === event.eventId) {
+      const unseen = event.relays.filter((relay) => !existing.relays.includes(relay));
+      if (unseen.length > 0) existing.relays.push(...unseen);
+      return;
+    }
+    if (existing && existing.createdAt >= event.createdAt) return;
+    this.calendarEventsByAddress[address] = event;
+  }
+
   /** Newest kind-0 wins. Public so one-shot profile fetches can land too. */
   upsertPerson(person: Person): void {
     const existing = this.peopleByPubkey[person.pubkey];
@@ -161,6 +181,11 @@ class TimelineStore {
           delete this.topicsById[topic.id];
         }
       }
+      for (const [address, calendarEvent] of Object.entries(this.calendarEventsByAddress)) {
+        if (calendarEvent.eventId === targetId && calendarEvent.pubkey === byPubkey) {
+          delete this.calendarEventsByAddress[address];
+        }
+      }
       const pending = this.pendingFoldsByTargetId.get(targetId);
       if (pending) {
         this.pendingFoldsCount -= pending.length;
@@ -182,6 +207,7 @@ class TimelineStore {
     this.postsById = {};
     this.peopleByPubkey = {};
     this.topicsById = {};
+    this.calendarEventsByAddress = {};
     this.relays = [];
     this.hydrating = true;
     this.deletionsByAuthor.clear();

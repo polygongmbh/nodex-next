@@ -4,15 +4,13 @@
 const HASHTAG_CONTENT_REGEX = /(^|\s)#([\p{L}\p{N}_-]+)/gu;
 
 /**
- * Canonical rule (from nodex): a color token is UPPERCASE hex of length
- * 3/4/6/8 with at least one A–F — so lowercase tags like `#fee` stay
- * hashtags while colors are written `#FEE` naturally; pure digits (`#123`)
- * are hashtags too.
+ * A color token is UPPERCASE hex or pure digits of length 3/4/6/8 — so
+ * lowercase tags like `#fee` stay hashtags while colors are written `#FEE`,
+ * and digit-only sequences (`#123`, `#123456`) read as colors, not tags.
  */
 export function isHexColorToken(raw: string): boolean {
   if (raw.length !== 3 && raw.length !== 4 && raw.length !== 6 && raw.length !== 8) return false;
-  if (!/^[0-9A-F]+$/.test(raw)) return false;
-  return /[A-F]/.test(raw);
+  return /^[0-9A-F]+$/.test(raw);
 }
 
 export function extractHashtagsFromContent(content: string): string[] {

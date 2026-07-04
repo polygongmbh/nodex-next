@@ -46,6 +46,21 @@ active in, and interpreted per-relay by the sidebar people list. NIP-38
 compliant on the wire; the relay-scoped interpretation is a Nodex convention
 worth a remark.
 
+## Media attachments — imeta (NIP-92) / NIP-94-style tags — **remark**
+
+On publish, Nodex turns body media URLs into `imeta` tags (an intentional
+contract carried over from nodex). On parse, posts collect attachments from
+`imeta` tags (space-separated `url` / `m` / `x` / `size` entries) plus a
+single NIP-94-style attachment from top-level `url`/`m`/`x`/`size` tags.
+
+## Calendar events — kinds 31922/31923 (NIP-52) — **remark**
+
+Standard NIP-52 date-based/time-based calendar events, addressable per
+`(pubkey, d)` (NOT relay-communal like topics). Nodex conventions: `title`
+falls back to the first content line, channels derive from `t` tags ∪
+content hashtags like any post, and the CalDav bridge consumes these events
+for the "post an event → calendar sync" flow.
+
 ## Channels are hashtags — **remark**
 
 No NIP-28 channels. A post's channels are its `t` tags ∪ in-content

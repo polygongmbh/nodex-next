@@ -33,6 +33,7 @@ export function post(overrides: Partial<Post> = {}): Post {
     relays: ["relay-one-example"],
     timestamp: 1_750_000_000,
     mentions: [],
+    attachments: [],
     stateUpdates: [],
     ...overrides,
   };

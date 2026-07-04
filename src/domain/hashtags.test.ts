@@ -10,7 +10,7 @@ describe("deriveChannelTags", () => {
     expect(channels.sort()).toEqual(["design", "general"]);
   });
 
-  it("excludes uppercase hex colors, keeps lowercase and digit tags", () => {
+  it("excludes uppercase hex and digit-only colors, keeps lowercase tags", () => {
     expect(
       extractHashtagsFromContent("bg #FEE fg #FE0F accent #123FEF alpha #A1B2C3D4 keep #fee #abc123")
     ).toEqual(["fee", "abc123"]);
@@ -18,7 +18,6 @@ describe("deriveChannelTags", () => {
       "fee",
       "ghi",
       "abcde",
-      "123",
     ]);
   });
 

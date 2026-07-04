@@ -1,4 +1,5 @@
 import { NOSTR_KINDS } from "./nostr-kinds";
+import type { Attachment } from "./attachments";
 
 export type TaskStatus = "open" | "active" | "done" | "closed";
 
@@ -21,6 +22,8 @@ export interface Post {
   timestamp: number; // unix seconds
   parentId?: string;
   mentions: string[];
+  /** Media attachments from imeta / NIP-94-style tags. */
+  attachments: Attachment[];
   /** State events (kinds 1630–1633) folded in, sorted newest-first. */
   stateUpdates: TaskStateUpdate[];
 }

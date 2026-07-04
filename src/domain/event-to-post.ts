@@ -6,6 +6,8 @@ import type { Person } from "./person";
 import type { Post, TaskStateUpdate } from "./post";
 import type { Topic } from "./channel";
 import { deriveChannelTags } from "./hashtags";
+import { parseAttachments } from "./attachments";
+import { isCalendarKind, parseCalendarEvent, type CalendarEvent } from "./calendar-events";
 import { parseTopicEvent } from "./topic-events";
 
 export interface RawNostrEvent {
@@ -21,6 +23,7 @@ export type ClassifiedEvent =
   | { type: "post"; post: Post }
   | { type: "person"; person: Person }
   | { type: "topic"; topic: Topic }
+  | { type: "calendarEvent"; event: CalendarEvent }
   | { type: "state"; targetId: string; update: TaskStateUpdate }
   | { type: "deletion"; byPubkey: string; targetIds: string[] }
   | { type: "ignored" };
@@ -60,6 +63,7 @@ export function classifyEvent(event: RawNostrEvent, relayIds: string[]): Classif
         timestamp: event.created_at,
         parentId: resolveParentId(event.tags),
         mentions: resolveMentions(event.tags),
+        attachments: parseAttachments(event.tags),
         stateUpdates: [],
       },
     };
@@ -97,6 +101,11 @@ export function classifyEvent(event: RawNostrEvent, relayIds: string[]): Classif
   if (event.kind === NOSTR_KINDS.topic) {
     const topic = parseTopicEvent(event);
     return topic ? { type: "topic", topic } : { type: "ignored" };
+  }
+
+  if (isCalendarKind(event.kind)) {
+    const calendarEvent = parseCalendarEvent(event, relayIds);
+    return calendarEvent ? { type: "calendarEvent", event: calendarEvent } : { type: "ignored" };
   }
 
   return { type: "ignored" };

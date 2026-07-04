@@ -50,6 +50,16 @@ describe("vectors: ingest scenarios", () => {
     for (const id of expected.absentTopics ?? []) {
       expect(timelineStore.topicsById[id]).toBeUndefined();
     }
+    for (const [address, want] of Object.entries(expected.calendar ?? {})) {
+      const calendarEvent = timelineStore.calendarEventsByAddress[address];
+      expect(calendarEvent, `calendar ${address}`).toBeDefined();
+      const { relays, ...rest } = want as Record<string, unknown> & { relays?: string[] };
+      expect(calendarEvent).toMatchObject(rest);
+      if (relays) expect(calendarEvent.relays.sort()).toEqual([...relays].sort());
+    }
+    for (const address of expected.absentCalendar ?? []) {
+      expect(timelineStore.calendarEventsByAddress[address]).toBeUndefined();
+    }
   });
 });
 

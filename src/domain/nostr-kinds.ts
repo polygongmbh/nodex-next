@@ -10,6 +10,10 @@ export const NOSTR_KINDS = {
   stateReopen: 1633,
   /** Addressable shared topic definition — see docs/nip-topics.md. */
   topic: 30177,
+  /** NIP-52 date-based calendar event (start/end = YYYY-MM-DD). */
+  calendarDate: 31922,
+  /** NIP-52 time-based calendar event (start/end = unix seconds). */
+  calendarTime: 31923,
 } as const;
 
 export const TASK_STATE_KINDS = [1630, 1631, 1632, 1633] as const;
@@ -26,6 +30,7 @@ export const PROFILE_SUBSCRIPTION_FILTERS = [
 export const CONTENT_SUBSCRIPTION_FILTERS = [
   { kinds: [NOSTR_KINDS.message, NOSTR_KINDS.task] as number[], limit: 1000 },
   { kinds: [NOSTR_KINDS.deletion, ...TASK_STATE_KINDS] as number[], limit: 1000 },
+  { kinds: [NOSTR_KINDS.calendarDate, NOSTR_KINDS.calendarTime] as number[], limit: 500 },
 ];
 
 export function isTaskStateKind(kind: number): boolean {

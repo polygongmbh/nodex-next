@@ -89,6 +89,12 @@ describe("vectors: event classification", () => {
       if (expected.mentions) expect(post.mentions).toEqual(expected.mentions);
       if (expected.kind) expect(post.kind).toBe(expected.kind);
       if ("parentId" in expected) expect(post.parentId ?? null).toBe(expected.parentId);
+      if (expected.attachments) {
+        expect(post.attachments).toHaveLength(expected.attachments.length);
+        expected.attachments.forEach((attachment: Record<string, unknown>, index: number) => {
+          expect(post.attachments[index]).toMatchObject(attachment);
+        });
+      }
     } else if (classified.type === "state") {
       expect(classified.targetId).toBe(expected.targetId);
       if (expected.stateKind) expect(classified.update.kind).toBe(expected.stateKind);
@@ -106,6 +112,8 @@ describe("vectors: event classification", () => {
       if (expected.topicId) expect(topic.id).toBe(expected.topicId);
       if (expected.topicName) expect(topic.name).toBe(expected.topicName);
       if (expected.primary) expect(topic.primary).toBe(expected.primary);
+    } else if (classified.type === "calendarEvent") {
+      expect(classified.event).toMatchObject(expected.calendar as Record<string, unknown>);
     }
   });
 });
