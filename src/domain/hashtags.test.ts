@@ -10,8 +10,16 @@ describe("deriveChannelTags", () => {
     expect(channels.sort()).toEqual(["design", "general"]);
   });
 
-  it("does not treat hex colors as hashtags", () => {
-    expect(extractHashtagsFromContent("use #fff and #1a2b3c but keep #brand")).toEqual(["brand"]);
+  it("excludes uppercase hex colors, keeps lowercase and digit tags", () => {
+    expect(
+      extractHashtagsFromContent("bg #FEE fg #FE0F accent #123FEF alpha #A1B2C3D4 keep #fee #abc123")
+    ).toEqual(["fee", "abc123"]);
+    expect(extractHashtagsFromContent("mix #Fee odd #GHI len5 #ABCDE pure #123")).toEqual([
+      "fee",
+      "ghi",
+      "abcde",
+      "123",
+    ]);
   });
 
   it("dedupes a tag that is also typed in the content", () => {

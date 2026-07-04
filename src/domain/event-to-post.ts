@@ -38,7 +38,7 @@ export function resolveParentId(tags: string[][]): string | undefined {
 
 function resolveMentions(tags: string[][]): string[] {
   return Array.from(
-    new Set(tags.filter((tag) => tag[0] === "p" && tag[1]).map((tag) => tag[1]))
+    new Set(tags.filter((tag) => (tag[0] === "p" || tag[0] === "P") && tag[1]).map((tag) => tag[1]))
   );
 }
 
@@ -82,7 +82,9 @@ export function classifyEvent(event: RawNostrEvent, relayIds: string[]): Classif
   }
 
   if (event.kind === NOSTR_KINDS.deletion) {
-    const targetIds = event.tags.filter((tag) => tag[0] === "e" && tag[1]).map((tag) => tag[1]);
+    const targetIds = event.tags
+      .filter((tag) => (tag[0] === "e" || tag[0] === "E") && tag[1])
+      .map((tag) => tag[1]);
     if (targetIds.length === 0) return { type: "ignored" };
     return { type: "deletion", byPubkey: event.pubkey, targetIds };
   }

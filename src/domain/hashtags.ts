@@ -1,10 +1,18 @@
 // Channels are hashtags: a post's channels = `t`-tags ∪ in-content #hashtags,
-// lowercased. Hex color tokens (#fff, #1a2b3c) are not hashtags.
+// lowercased. Hex color tokens (#FEE, #123FEF) are not hashtags.
 
 const HASHTAG_CONTENT_REGEX = /(^|\s)#([\p{L}\p{N}_-]+)/gu;
 
+/**
+ * Canonical rule (from nodex): a color token is UPPERCASE hex of length
+ * 3/4/6/8 with at least one A–F — so lowercase tags like `#fee` stay
+ * hashtags while colors are written `#FEE` naturally; pure digits (`#123`)
+ * are hashtags too.
+ */
 export function isHexColorToken(raw: string): boolean {
-  return /^(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(raw);
+  if (raw.length !== 3 && raw.length !== 4 && raw.length !== 6 && raw.length !== 8) return false;
+  if (!/^[0-9A-F]+$/.test(raw)) return false;
+  return /[A-F]/.test(raw);
 }
 
 export function extractHashtagsFromContent(content: string): string[] {
@@ -17,11 +25,11 @@ export function extractHashtagsFromContent(content: string): string[] {
   return Array.from(hashtags);
 }
 
-/** Union of `t`-tags and in-content hashtags, lowercased and deduped. */
+/** Union of `t`/`T` tags and in-content hashtags, lowercased and deduped. */
 export function deriveChannelTags(tags: string[][], content: string): string[] {
   const channels = new Set<string>();
   for (const tag of tags) {
-    if (tag[0] === "t" && tag[1]?.trim()) {
+    if ((tag[0] === "t" || tag[0] === "T") && tag[1]?.trim()) {
       channels.add(tag[1].trim().toLowerCase());
     }
   }

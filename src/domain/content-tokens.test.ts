@@ -12,8 +12,13 @@ describe("tokenizeContent", () => {
     ]);
   });
 
-  it("keeps hex colors as plain text", () => {
-    expect(tokenizeContent("use #fff here")).toEqual([{ type: "text", value: "use #fff here" }]);
+  it("keeps uppercase hex colors as plain text, lowercase stays a hashtag", () => {
+    expect(tokenizeContent("use #FEE here")).toEqual([{ type: "text", value: "use #FEE here" }]);
+    expect(tokenizeContent("use #fee")).toEqual([
+      { type: "text", value: "use" },
+      { type: "text", value: " " },
+      { type: "hashtag", value: "fee" },
+    ]);
   });
 
   it("returns plain content as one token", () => {

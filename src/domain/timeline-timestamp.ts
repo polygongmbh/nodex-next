@@ -17,21 +17,35 @@ function formatTime(date: Date, locale?: string): string {
   return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
+export type TimestampBucket = "time" | "yesterday" | "monthDay" | "shortDate";
+
+/**
+ * Locale-independent bucket decision — the cross-client contract (see
+ * spec/vectors/timestamps.json); rendering per bucket is locale-specific.
+ */
+export function timelineTimestampBucket(date: Date, now: Date): TimestampBucket {
+  const dayDelta = calendarDayDelta(now, date);
+  if (dayDelta <= 0) return "time";
+  if (dayDelta === 1) return "yesterday";
+  if (monthDelta(now, date) >= 10) return "shortDate";
+  return "monthDay";
+}
+
 export function formatTimelineTimestamp(
   date: Date,
   locale?: string,
   now: Date = new Date()
 ): string {
-  const dayDelta = calendarDayDelta(now, date);
-  if (dayDelta <= 0) {
-    return formatTime(date, locale);
+  switch (timelineTimestampBucket(date, now)) {
+    case "time":
+      return formatTime(date, locale);
+    case "yesterday": {
+      const yesterday = new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(-1, "day");
+      return `${yesterday} ${formatTime(date, locale)}`;
+    }
+    case "shortDate":
+      return new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(date);
+    case "monthDay":
+      return new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(date);
   }
-  if (dayDelta === 1) {
-    const yesterday = new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(-1, "day");
-    return `${yesterday} ${formatTime(date, locale)}`;
-  }
-  if (monthDelta(now, date) >= 10) {
-    return new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(date);
-  }
-  return new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(date);
 }
