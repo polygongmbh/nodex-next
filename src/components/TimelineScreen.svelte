@@ -69,14 +69,20 @@
     });
   }
 
-  // why: with a tail window, every appended item would silently shift the
-  // window while reading history — grow the window instead so the visible
-  // slice keeps covering the same messages; when pinned, follow the bottom.
-  $effect(() => {
+  // why: with a tail window, every ingested batch would shift the window
+  // while reading history — grow the window BEFORE the DOM updates (pre) so
+  // the visible slice keeps covering the same messages with no transient
+  // slid frame.
+  $effect.pre(() => {
     const count = items.length;
     const grewBy = count - lastItemCount;
     lastItemCount = count;
     if (grewBy > 0 && !pinnedToBottom) visibleCount += grewBy;
+  });
+
+  // why: when pinned, every rendered items change must land at the bottom —
+  // runs after the DOM update so scrollHeight includes the new content.
+  $effect(() => {
     void windowed.length;
     if (pinnedToBottom) scrollToBottom();
   });

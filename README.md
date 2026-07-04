@@ -94,7 +94,10 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   account in localStorage next to pinned channels. All other protocol
   conventions are surveyed in `docs/nostr-extensions.md`.
 - **Chat orientation**: newest messages at the bottom with auto-scroll;
-  long-press any channel chip to pin it. The sign-in card also offers
+  long-press any channel chip to pin it. The feed renders a window over the
+  newest ~80 items ("show older" appears on scroll-up), and the hydration
+  backfill applies in coarse batches — a fast first paint, then ~2 updates/s
+  until EOSE — so scrolling stays steady while history streams in. The sign-in card also offers
   account creation (key generated on-device, NIP-49-encrypted); `user@domain`
   makes the server field optional. UI in English and German (`src/lib/i18n`).
 - **Profiles** stream on a dedicated subscription before the content

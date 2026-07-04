@@ -12,6 +12,7 @@ import {
   resolveDraftChannels,
   resolvePublishRelay,
 } from "@/domain/publish-rules";
+import { createIngestBatcher, type IngestBatcher } from "@/infrastructure/nostr/ingest-batcher";
 import { startNdkService, type NdkService } from "@/infrastructure/nostr/ndk-service";
 import type { StoredSession } from "@/infrastructure/noas/session";
 import { filterStore } from "./filters.svelte";
@@ -20,6 +21,7 @@ import { timelineStore } from "./timeline.svelte";
 class TimelineController {
   draft = $state("");
   private service: NdkService | null = null;
+  private batcher: IngestBatcher | null = null;
   private sessionPubkey: string | null = null;
   // Merge bases per scope: "*" = all spaces, else a relay id. Per-space
   // profiles are separate kind-0 events living only on that relay.
@@ -29,10 +31,18 @@ class TimelineController {
     if (this.service) return;
     this.sessionPubkey = session.pubkeyHex;
     timelineStore.initRelays(session.relayUrls);
+    // The hydration backfill streams thousands of events; batching keeps the
+    // reactive timeline from rebuilding per event (scroll jitter). After EOSE
+    // the batcher settles into immediate pass-through for live traffic.
+    const batcher = createIngestBatcher((raw, relayUrl) =>
+      timelineStore.ingestEvent(raw, relayUrl)
+    );
+    this.batcher = batcher;
     this.service = startNdkService(session.relayUrls, session.privateKeyHex, {
-      onEvent: (event, relayUrl) => timelineStore.ingestEvent(event, relayUrl),
+      onEvent: (event, relayUrl) => batcher.push(event, relayUrl),
       onRelayStatus: (relayUrl, connected) => timelineStore.setRelayConnected(relayUrl, connected),
       onEose: () => {
+        batcher.settle();
         timelineStore.markHydrated();
         void this.backfillMissingProfiles();
       },
@@ -62,6 +72,8 @@ class TimelineController {
   }
 
   stop(): void {
+    this.batcher?.dispose();
+    this.batcher = null;
     this.service?.stop();
     this.service = null;
     this.sessionPubkey = null;

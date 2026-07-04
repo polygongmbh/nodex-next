@@ -10,6 +10,14 @@
   items, "show older" on scroll-up) and stays pinned to the newest message
   through hydration bursts and resizes.
 
+### Fixed
+
+- Smooth scrolling during hydration: the backfill now applies in coarse
+  batches (fast first paint, then ~2 flushes/s until EOSE) instead of
+  rebuilding the timeline per incoming event, and the history window is
+  adjusted before render so arriving batches no longer shift what you are
+  reading.
+
 ### Changed
 
 - **Topics are now shared relay events** (addressable kind 30177, see
