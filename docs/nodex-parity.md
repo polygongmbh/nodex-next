@@ -69,6 +69,12 @@ grouped by status. "Faithful" means behavior-compatible, not line-ported.
 
 ## Deliberately omitted / out of scope for now
 
+- **New mobile UX investment**: the responsive mobile layout stays
+  functional as the link-opening fallback (frozen, fixes only); the
+  polished phone experience is nodex-talk's job (see
+  [mobile-app-prompt.md](./mobile-app-prompt.md) "Platform split"). This
+  app's design focus is web + desktop.
+
 - **All non-timeline views**: tree, kanban, calendar, status, home — the
   entire point of this rewrite (nodex-talk.md) is one excellent Timeline.
 - **Task creation and state changes**: tasks render faithfully but are

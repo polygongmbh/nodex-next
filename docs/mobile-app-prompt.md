@@ -79,6 +79,21 @@ Implement exactly the semantics of rebuild-prompt.md §"Nostr semantics",
 - `lib/ui/`: one widget per file, ~300-line cap, no golden tests for
   complex screens.
 
+## Platform split (division of labor with nodex-next)
+
+Two genuinely different applications, one behavior spec:
+
+- **nodex-talk (this app) owns the phone experience** — gestures, native
+  scrolling, haptics, notifications, share sheet. Do not build tablet/desktop
+  layouts here.
+- **nodex-next owns web and desktop** — sidebar layout, density, hover,
+  keyboard. Its mobile layout is FROZEN as a functional fallback (shared
+  links inevitably open in mobile browsers), receiving fixes but no new
+  mobile UX investment; polished phone UX lives here.
+- The shared spec vectors (`nodex-next/spec/`) are the sync mechanism:
+  behavior changes land there first, then in both clients. UI divergence is
+  expected and healthy; wire/behavior divergence is a bug.
+
 ## Out of scope (same as the web app)
 
 Tree/kanban/calendar/status views, task creation and state changes,

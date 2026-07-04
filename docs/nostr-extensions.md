@@ -68,6 +68,16 @@ No NIP-28 channels. A post's channels are its `t` tags ∪ in-content
 Purely conventional, but central to interop expectations between Nodex
 clients.
 
+## Case-insensitive tag names on ingest (`T`/`P`/`E`) — **remark**
+
+Inherited from nodex (commit "normalize nostr mention/tag parsing on
+ingest"): tag NAMES are compared case-insensitively when reading, so `T`
+counts as a channel tag, `P` as a mention, `E` as a deletion target. This is
+pure liberal-input robustness against clients that uppercase tag names — it
+carries NO NIP-22 root/parent semantics (NIP-22's uppercase tags live on
+kind-1111 comments, which Nodex does not ingest, so there is no collision).
+Writing always uses lowercase tag names.
+
 ## Noas discovery — `.well-known/nostr.json` `noas` extension — **needs documentation**
 
 Noas (username+password custodial key server) extends the NIP-05 well-known
