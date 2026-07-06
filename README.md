@@ -72,7 +72,10 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   relays, prefills picture/display name/bio/website, and publishes edits
   merged into that base (unknown fields like `lud16` survive). Picked
   channels are pinned: they lead the chips row and form the default feed
-  scope together with posts that mention you.
+  scope together with posts that mention you. On a mobile browser (and not
+  already installed) the channel step also shows a PWA install hint with
+  the OS's own steps — Safari share sheet on iOS, ⋮ menu on Android; the
+  app ships a web manifest and icons so it installs standalone.
 - **Desktop (≥900px)** gets a persistent sidebar — spaces with connection
   dots, vertical channel list, user card — while phones keep the hamburger
   and chips row.

@@ -7,6 +7,7 @@
   import { timelineStore } from "@/stores/timeline.svelte";
   import AddSpace from "./AddSpace.svelte";
   import Avatar from "./Avatar.svelte";
+  import PwaInstallHint from "./PwaInstallHint.svelte";
 
   import { onMount } from "svelte";
 
@@ -169,6 +170,7 @@
             ? t("onboarding.showOne")
             : t("onboarding.showCount", { count: selected.length })}
       </button>
+      <PwaInstallHint />
     </div>
   {/if}
 </div>

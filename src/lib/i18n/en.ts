@@ -43,6 +43,12 @@ export default {
   "onboarding.spaceHint":
     "Your account has no space yet. Enter your organization's space address (a relay) to get started.",
 
+  "pwa.recommend": "Tip: add Nodex to your home screen for the full app experience.",
+  "pwa.iosShare": "Tap Share in Safari",
+  "pwa.iosAdd": "Choose “Add to Home Screen”",
+  "pwa.androidMenu": "Tap the ⋮ menu in Chrome",
+  "pwa.androidAdd": "Choose “Add to Home screen”",
+
   "profile.edit": "Edit profile",
   "profile.scope": "Scope",
   "profile.picture": "Picture URL",
