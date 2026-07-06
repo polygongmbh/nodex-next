@@ -33,11 +33,8 @@ nodex/mostr on the same relay (kinds 0, 1, 5, 1621, 1630–1633).
   Design tokens live in `src/app.css`.
 - `src/lib/` — shared helpers outside the layer stack: i18n (every
   user-facing string goes through `t()` and needs entries in both `en.ts`
-  and `de.ts`), splash, long-press. Static assets (PWA manifest, icons)
-  live in `public/`; the PNG icons are rendered from `public/icons/icon.svg`
-  (via `sharp` in a scratch script or `rsvg-convert`) — regenerate ALL of
-  them whenever the SVG changes, and keep `manifest.webmanifest` +
-  `theme-color` in sync with the token colors.
+  and `de.ts`), splash, long-press. Static assets live in `public/`;
+  before touching icons read `public/icons/README.md`.
 
 ### Non-negotiable invariants
 
