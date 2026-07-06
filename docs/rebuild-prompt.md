@@ -114,6 +114,19 @@ behind the content backfill:
   the fetched content so unknown fields (lud16, banner…) survive; cleared
   fields are removed. Merge bases tracked per scope ("*" or relay id).
 
+## Color scheme (design tokens)
+
+Light: background #FAFAFC, surface #FFFFFF, text #131315, muted text
+#6E6E73, main accent #4785FF (buttons/CTAs), muted accent #C7D9FF
+(tags/chips), accent contrast white. Dark: the main background is FULL
+BLACK #000000 (OLED-friendly — deliberate deviation from the sheet's
+#131315, which becomes the elevated-surface color instead), text #FFFFFF,
+and the accents are the light values composited at 57% opacity over
+#131315. A separate `--brand` token keeps the logo at full #4785FF in BOTH
+modes — the glyph never dims. Known deviation: dark muted text is #8B8B90
+(the sheet's #6E6E73 fails contrast on pure black). Favicon/app icons: the
+two-stroke N glyph, #4785FF on black.
+
 ## Screens and behavior
 
 - **Sign-in card**: glyph (the splash logo glides into it when signed

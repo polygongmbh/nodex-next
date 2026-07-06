@@ -35,7 +35,9 @@ nodex/mostr on the same relay (kinds 0, 1, 5, 1621, 1630–1633).
   user-facing string goes through `t()` and needs entries in both `en.ts`
   and `de.ts`), splash, long-press. Static assets (PWA manifest, icons)
   live in `public/`; the PNG icons are rendered from `public/icons/icon.svg`
-  via `rsvg-convert` — regenerate them when the SVG changes.
+  (via `sharp` in a scratch script or `rsvg-convert`) — regenerate ALL of
+  them whenever the SVG changes, and keep `manifest.webmanifest` +
+  `theme-color` in sync with the token colors.
 
 ### Non-negotiable invariants
 
