@@ -65,8 +65,11 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
 - **Noas sign-in is the entry dialogue** right after the splash (the same
   two-stroke "N" glyph animation as nodex, ≥450 ms, painted from `index.html`
   before JS loads). It is the only auth path; the decrypted key persists in
-  `localStorage` (web equivalent of "trust this browser"). A `user@domain`
-  username fills the server automatically, so the server field is optional.
+  `localStorage` (web equivalent of "trust this browser"). There is no
+  server field: `user@domain` picks the host, plain usernames use the
+  deployment default host. Registration adapts to the discovered host and
+  offers full key handling (paste hex/nsec with npub preview, or vanity-mine
+  a key from the username's initials).
 - **Onboarding** runs after the first sign-in on a device: welcome → profile
   → channel picks. The profile step fetches your existing kind-0 from the
   relays, prefills picture/display name/bio/website, and publishes edits
@@ -99,12 +102,13 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   account in localStorage next to pinned channels. All other protocol
   conventions are surveyed in `docs/nostr-extensions.md`.
 - **Chat orientation**: newest messages at the bottom with auto-scroll;
-  long-press any channel chip to pin it. The feed renders a window over the
+  long-press any channel chip to pin it — pins are per-space (the selected
+  spaces with content in the channel at pin time). The feed renders a window over the
   newest ~80 items ("show older" appears on scroll-up), and the hydration
   backfill applies in coarse batches — a fast first paint, then ~2 updates/s
   until EOSE — so scrolling stays steady while history streams in. The sign-in card also offers
-  account creation (key generated on-device, NIP-49-encrypted); `user@domain`
-  makes the server field optional. UI in English and German (`src/lib/i18n`).
+  account creation (key generated or mined on-device, NIP-49-encrypted).
+  UI in English and German (`src/lib/i18n`).
 - **Profiles** stream on a dedicated subscription before the content
   backfill, with a targeted post-EOSE fetch for stragglers; "Edit profile"
   works per space (a separate kind-0 per relay) or across all spaces.
