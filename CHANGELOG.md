@@ -4,6 +4,22 @@
 
 ### Added
 
+- New design tokens: light #FAFAFC/#FFFFFF with #4785FF main and #C7D9FF
+  muted accents; dark mode is OLED-friendly full black with 57%-composited
+  accents. The logo always renders in the full accent color; favicon and
+  PWA icons match.
+- The startup animation inverts: the two strokes now slide together, and
+  when signed out the assembled logo glides into the sign-in card's glyph.
+- Sign-in and registration lost the server field: user@domain picks the
+  server, plain usernames use the default host. Registration adapts to the
+  discovered host (email only when verification is required) and gains
+  nodex's key handling — paste hex/nsec with npub preview, or mine a vanity
+  key from your username's initials (auto after 4+ chars, worker-backed).
+- Pinned channels are per-space: pinning applies to the selected spaces
+  that have content in the channel at pin time; display and default feed
+  scope follow the current space selection.
+- The space-switcher pill is back in the mobile top bar next to the menu.
+
 - PWA manifest with app icons — the app can be installed to the home screen
   (standalone display, dark splash matching the theme). The onboarding's
   channel step now shows a short install hint with per-OS steps (share
