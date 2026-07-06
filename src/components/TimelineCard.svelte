@@ -180,13 +180,8 @@
     font-size: 0.75rem;
     padding: 0.1rem 0.5rem;
     border-radius: 0.5rem;
-    background: var(--surface-sunken);
-  }
-  .chip.mention {
-    color: var(--accent);
-  }
-  .chip.channel {
-    color: var(--accent-strong);
+    background: var(--accent-muted);
+    color: var(--text);
   }
   time {
     margin-left: auto;

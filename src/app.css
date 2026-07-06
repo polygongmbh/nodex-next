@@ -1,18 +1,28 @@
 /* Design tokens + base. Mobile-first: layouts are single-column by default;
    wider screens only get more breathing room. Light/dark follows the system. */
 
+/* Design-token sheet (see docs/rebuild-prompt.md → color scheme):
+   color.background #FAFAFC/#131315, color.background.accent #FFFFFF (57% in
+   dark), color.text.primary #131315/#FFFFFF, color.text.muted #6E6E73,
+   color.accent.main #4785FF (57% in dark), color.accent.muted #C7D9FF (57%
+   in dark). Dark-mode 57% values are composited over the background here so
+   surfaces stay solid. --brand is the FULL accent in both modes — the logo
+   never dims. */
 :root {
-  --bg: hsl(210 28% 98%);
-  --surface: hsl(0 0% 100%);
-  --surface-sunken: hsl(210 20% 94%);
-  --text: hsl(220 25% 12%);
-  --text-muted: hsl(220 10% 45%);
-  --border: hsl(215 18% 88%);
-  --accent: hsl(210 100% 45%);
-  --accent-strong: hsl(210 100% 38%);
-  --accent-contrast: hsl(0 0% 100%);
+  --brand: #4785ff;
+
+  --bg: #fafafc;
+  --surface: #ffffff;
+  --surface-sunken: #fafafc;
+  --text: #131315;
+  --text-muted: #6e6e73;
+  --border: #e7e7ec;
+  --accent: #4785ff;
+  --accent-strong: #2e6bff;
+  --accent-muted: #c7d9ff;
+  --accent-contrast: #ffffff;
   --danger: hsl(0 72% 48%);
-  --shadow: 0 1px 3px hsl(220 25% 12% / 0.08);
+  --shadow: 0 1px 3px rgb(19 19 21 / 0.08);
 
   --relay-0: hsl(210 90% 52%);
   --relay-1: hsl(150 60% 40%);
@@ -24,18 +34,21 @@
   --relay-7: hsl(320 60% 52%);
 }
 
+/* OLED-friendly dark: the main background is FULL BLACK; the sheet's #131315
+   becomes the elevated-surface base instead. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: hsl(220 20% 10%);
-    --surface: hsl(220 18% 14%);
-    --surface-sunken: hsl(220 20% 8%);
-    --text: hsl(210 20% 92%);
-    --text-muted: hsl(215 12% 62%);
-    --border: hsl(218 14% 24%);
-    --accent: hsl(210 100% 60%);
-    --accent-strong: hsl(210 100% 68%);
-    --accent-contrast: hsl(220 25% 10%);
-    --shadow: 0 1px 3px hsl(0 0% 0% / 0.4);
+    --bg: #000000;
+    --surface: #131315;
+    --surface-sunken: #000000;
+    --text: #ffffff;
+    --text-muted: #8b8b90;
+    --border: color-mix(in srgb, #ffffff 12%, #000000);
+    --accent: color-mix(in srgb, #4785ff 57%, #131315);
+    --accent-strong: #4785ff;
+    --accent-muted: color-mix(in srgb, #c7d9ff 57%, #131315);
+    --accent-contrast: #ffffff;
+    --shadow: 0 1px 3px rgb(0 0 0 / 0.4);
   }
 }
 
