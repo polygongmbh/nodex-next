@@ -31,6 +31,11 @@ nodex/mostr on the same relay (kinds 0, 1, 5, 1621, 1630–1633).
   `timeline-controller` (commands only — controllers never expose setters).
 - `src/components/` — one component per file, scoped styles, no CSS framework.
   Design tokens live in `src/app.css`.
+- `src/lib/` — shared helpers outside the layer stack: i18n (every
+  user-facing string goes through `t()` and needs entries in both `en.ts`
+  and `de.ts`), splash, long-press. Static assets (PWA manifest, icons)
+  live in `public/`; the PNG icons are rendered from `public/icons/icon.svg`
+  via `rsvg-convert` — regenerate them when the SVG changes.
 
 ### Non-negotiable invariants
 
