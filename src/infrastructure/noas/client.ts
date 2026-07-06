@@ -137,17 +137,21 @@ export interface NoasRegisterResult {
 }
 
 /**
- * Register a new account: generate a fresh key locally, encrypt it with the
- * password (NIP-49), and hand the server only the hash and the ciphertext —
- * the raw key and password never leave the device.
+ * Register a new account: use the provided private key (mined or pasted) or
+ * generate a fresh one, encrypt it with the password (NIP-49), and hand the
+ * server only the hash and the ciphertext — the raw key and password never
+ * leave the device.
  */
 export async function registerWithNoas(
   apiBaseUrl: string,
   username: string,
   password: string,
-  email?: string
+  options?: { email?: string; privateKeyHex?: string }
 ): Promise<NoasRegisterResult> {
-  const secretKey = generateSecretKey();
+  const email = options?.email;
+  const secretKey = options?.privateKeyHex
+    ? hexToBytes(options.privateKeyHex)
+    : generateSecretKey();
   const pubkeyHex = getPublicKey(secretKey);
   const payload: Record<string, string> = {
     username,

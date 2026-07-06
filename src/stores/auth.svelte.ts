@@ -1,4 +1,5 @@
 import { normalizeRelayUrl } from "@/domain/relay-identity";
+import { DEFAULT_NOAS_HOST } from "@/infrastructure/noas/config";
 import { resolveNoasApiBaseUrl } from "@/infrastructure/noas/discovery";
 import {
   NoasAuthError,
@@ -34,12 +35,14 @@ class AuthStore {
     }
   }
 
-  /** Throws NoasAuthError with a user-readable message on failure. */
-  async signIn(hostInput: string, usernameInput: string, password: string): Promise<void> {
-    const { username, host } = splitNoasCredentials(usernameInput, hostInput);
-    if (!host) {
-      throw new NoasAuthError("error.needHost");
-    }
+  /**
+   * The host comes from a user@domain username, else the deployment default —
+   * there is no server field. Throws NoasAuthError on failure.
+   */
+  async signIn(usernameInput: string, password: string): Promise<void> {
+    const split = splitNoasCredentials(usernameInput, "");
+    const username = split.username;
+    const host = split.host || DEFAULT_NOAS_HOST;
     const apiBaseUrl = await resolveNoasApiBaseUrl(host);
     if (!apiBaseUrl) throw new NoasAuthError("error.invalidServer");
     const result = await signInWithNoas(apiBaseUrl, username, password);
@@ -59,25 +62,23 @@ class AuthStore {
   }
 
   /**
-   * Create an account, then try to sign straight in. Returns a server
-   * message (e.g. "verify your email") when the account isn't active yet.
-   * Throws NoasAuthError on failure.
+   * Create an account (optionally with a mined/pasted private key), then try
+   * to sign straight in. Returns a server message (e.g. "verify your email")
+   * when the account isn't active yet. Throws NoasAuthError on failure.
    */
   async register(
-    hostInput: string,
     usernameInput: string,
     password: string,
-    email?: string
+    options?: { email?: string; privateKeyHex?: string }
   ): Promise<string | null> {
-    const { username, host } = splitNoasCredentials(usernameInput, hostInput);
-    if (!host) {
-      throw new NoasAuthError("error.needHost");
-    }
+    const split = splitNoasCredentials(usernameInput, "");
+    const username = split.username;
+    const host = split.host || DEFAULT_NOAS_HOST;
     const apiBaseUrl = await resolveNoasApiBaseUrl(host);
     if (!apiBaseUrl) throw new NoasAuthError("error.invalidServer");
-    const result = await registerWithNoas(apiBaseUrl, username, password, email);
+    const result = await registerWithNoas(apiBaseUrl, username, password, options);
     try {
-      await this.signIn(host, username, password);
+      await this.signIn(usernameInput, password);
       return null;
     } catch {
       // Account created but not signed in (e.g. pending email verification).

@@ -34,14 +34,31 @@ function fallbackApiBaseUrl(host: string): string {
   }
 }
 
-export async function resolveNoasApiBaseUrl(host: string): Promise<string> {
+export type NoasEmailVerificationMode = "required" | "optional" | "none";
+
+export interface NoasDiscovery {
+  apiBaseUrl: string;
+  emailVerificationMode: NoasEmailVerificationMode;
+}
+
+function resolveEmailMode(raw: unknown): NoasEmailVerificationMode {
+  if (raw === "required" || raw === "optional") return raw;
+  return "none";
+}
+
+/**
+ * Full discovery: api_base plus the host's email_verification_mode from the
+ * `noas` extension of `.well-known/nostr.json` (fallback: conventional
+ * /api/v1 path, mode "none").
+ */
+export async function resolveNoasDiscovery(host: string): Promise<NoasDiscovery> {
   const normalized = normalizeNoasBaseUrl(host);
-  if (!isValidNoasBaseUrl(normalized)) return "";
+  if (!isValidNoasBaseUrl(normalized)) return { apiBaseUrl: "", emailVerificationMode: "none" };
   let origin: string;
   try {
     origin = new URL(normalized).origin;
   } catch {
-    return "";
+    return { apiBaseUrl: "", emailVerificationMode: "none" };
   }
 
   try {
@@ -49,18 +66,28 @@ export async function resolveNoasApiBaseUrl(host: string): Promise<string> {
       headers: { Accept: "application/nostr+json, application/json" },
     });
     if (response.ok) {
-      const document = (await response.json()) as { noas?: { api_base?: unknown } };
+      const document = (await response.json()) as {
+        noas?: { api_base?: unknown; email_verification_mode?: unknown };
+      };
+      const emailVerificationMode = resolveEmailMode(document.noas?.email_verification_mode);
       const rawApiBase = document.noas?.api_base;
       if (typeof rawApiBase === "string" && rawApiBase.trim()) {
         const apiBase = rawApiBase.trim().startsWith("/")
           ? `${origin}${rawApiBase.trim()}`
           : rawApiBase.trim();
         const normalizedApiBase = normalizeNoasBaseUrl(apiBase);
-        if (isValidNoasBaseUrl(normalizedApiBase)) return normalizedApiBase;
+        if (isValidNoasBaseUrl(normalizedApiBase)) {
+          return { apiBaseUrl: normalizedApiBase, emailVerificationMode };
+        }
       }
+      return { apiBaseUrl: fallbackApiBaseUrl(normalized), emailVerificationMode };
     }
   } catch {
     // Discovery is best-effort; fall through to the conventional path.
   }
-  return fallbackApiBaseUrl(normalized);
+  return { apiBaseUrl: fallbackApiBaseUrl(normalized), emailVerificationMode: "none" };
+}
+
+export async function resolveNoasApiBaseUrl(host: string): Promise<string> {
+  return (await resolveNoasDiscovery(host)).apiBaseUrl;
 }
