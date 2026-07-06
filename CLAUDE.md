@@ -36,29 +36,24 @@ nodex/mostr on the same relay (kinds 0, 1, 5, 1621, 1630–1633).
   and `de.ts`), splash, long-press. Static assets live in `public/`;
   before touching icons read `public/icons/README.md`.
 
-### Non-negotiable invariants
+### Repo-specific invariant mechanics
 
-- **Per-relay attribution.** Every post tracks which relay ids delivered it.
-  The NDK event cache stays disabled; ingest listens to both `event` and
-  `event:dup` and union-merges relays (`timeline.svelte.ts › ingestPost`).
-  Events without a delivering relay are dropped. Never "simplify" this away.
-- **Channels are hashtags** (`t`-tags ∪ content hashtags, lowercased, no
-  NIP-28); **spaces are relays**; empty space selection = "All spaces",
-  never "no relays". Channel filters are AND.
-- **Publish rules** (`domain/publish-rules.ts`): ≥1 channel required; new
-  posts target exactly one relay (active space → sole connected → error);
-  replies pin to the parent's origin relay. Profiles (kind 0) go to all spaces.
-- **Deletions** (kind 5) tombstone only the author's own events (NIP-09).
-  State events 1630–1633 fold into their task's `stateUpdates` (newest-first)
-  and render as compact rows, never as post cards.
+The cross-cutting invariants live in the workspace `../CLAUDE.md`; the
+normative behavior spec is `docs/rebuild-prompt.md`. Implementation notes
+specific to this codebase:
+
+- Attribution: NDK's event cache stays disabled; ingest listens to both
+  `event` AND `event:dup` and union-merges relays
+  (`timeline.svelte.ts › ingestPost`); relay-less events are dropped.
+- State events 1630–1633 fold into `stateUpdates` newest-first and render
+  as compact rows, never as post cards. Kind-0 profiles publish to all
+  session relays (or one relay for per-space profiles).
 
 ## Code Standards
 
 - Max ~300 lines per file; split at natural boundaries.
 - New `$effect` calls need a one-line `// why:` comment (trigger + observable
   result).
-- localStorage holds caches/preferences the app can rebuild. Reject malformed
-  entries — never write migration code; bump the key prefix for a clean cut.
 - No `aria-*` attributes (visual-only app). Query tests by visible fixture
   data first, `data-testid` last-resort. `<!-- svelte-ignore a11y_* -->` is
   the sanctioned way to silence the compiler's a11y warnings.
@@ -67,23 +62,15 @@ nodex/mostr on the same relay (kinds 0, 1, 5, 1621, 1630–1633).
 - Tests: vitest, node environment, behavior over implementation detail.
   Fixtures in `src/test/fixtures.ts` (realistic hex pubkeys/ids). Domain and
   store logic must be testable without a DOM.
-- **Cross-client spec vectors** live in `spec/vectors/*.json`
-  (see `spec/README.md`) and are consumed by `src/test/vectors-*.test.ts`;
-  the mobile client runs the same vectors. Behavior changes to domain/store
-  semantics land in the vectors FIRST, then in the code; never edit an
-  existing vector expectation without flagging it as a breaking spec change.
+- Spec-vector adapters live in `src/test/vectors-*.test.ts` (governance:
+  workspace `../CLAUDE.md` and `spec/README.md`); never edit an existing
+  vector expectation without flagging a breaking spec change.
 
 ## Workflow
 
-- Use Conventional Commits: `feat:`, `fix:`, `enhance:`, `refactor:`,
-  `test:`, `docs:`, `chore:`
-- Commit after each self-contained change; for multi-step work commit at each
-  natural checkpoint rather than batching.
-- Prefer `git commit -m "..." <explicit file list>`; `git add` new files
-  first (a pathspec commit errors on untracked paths), and run `git status`
-  afterwards to confirm nothing was left behind.
-- Keep `CHANGELOG.md` updated: user-visible changes go to `## [Unreleased]`
-  as you go. Skip internal-only changes.
-- When user-observable behavior changes, update `README.md`'s behavior notes
-  in the same commit.
+Commit/changelog conventions: workspace `../CLAUDE.md`. Repo-specific:
+
+- `git add` new files before a pathspec commit (it errors on untracked
+  paths); run `git status` afterwards to confirm nothing was left behind.
+- Behavior changes update `README.md`'s behavior notes in the same commit.
 - `npm run check` and `npx vitest run` must both be clean before finishing.
