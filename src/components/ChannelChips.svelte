@@ -9,6 +9,7 @@
   import { longpress } from "@/lib/longpress";
   import { filterStore } from "@/stores/filters.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
+  import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import TopicManager from "./TopicManager.svelte";
 
@@ -23,7 +24,7 @@
   const chipItems = $derived.by(() => {
     const channels = partitionPinnedChannels(
       deriveChannels(Object.values(timelineStore.postsById)),
-      preferencesStore.pinnedChannels
+      preferencesStore.pinnedChannelNamesFor(timelineController.scopeRelayIds)
     );
     const items: ChipItem[] = [];
     const shownTopics = new Set<string>();
@@ -80,7 +81,7 @@
         class:included={filterStore.channelStates[channel.name] === "included"}
         class:excluded={filterStore.channelStates[channel.name] === "excluded"}
         onclick={() => filterStore.tapChannelChip(channel.name)}
-        use:longpress={() => preferencesStore.togglePinned(channel.name)}
+        use:longpress={() => timelineController.togglePinnedChannel(channel.name)}
       >
         {#if item.pinned}
           <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">

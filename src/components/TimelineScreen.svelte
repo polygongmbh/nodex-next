@@ -9,6 +9,7 @@
   import MenuSheet from "./MenuSheet.svelte";
   import RelaySheet from "./RelaySheet.svelte";
   import Sidebar from "./Sidebar.svelte";
+  import SpaceSelector from "./SpaceSelector.svelte";
   import StateRow from "./StateRow.svelte";
   import TimelineCard from "./TimelineCard.svelte";
   import UnifiedBar from "./UnifiedBar.svelte";
@@ -18,7 +19,7 @@
       channelStates: timelineController.effectiveChannelStates,
       activeRelayId: filterStore.activeRelayId,
       searchQuery: timelineController.searchText,
-      pinnedChannels: preferencesStore.pinnedChannels,
+      pinnedChannels: preferencesStore.pinnedChannelNamesFor(timelineController.scopeRelayIds),
       myPubkey: authStore.session?.pubkeyHex ?? null,
       focusedPostId: filterStore.focusedPostId,
     })
@@ -114,6 +115,7 @@
           <path d="M4 7h16M4 12h16M4 17h16" />
         </svg>
       </button>
+      <SpaceSelector />
       <ChannelChips />
     </header>
 

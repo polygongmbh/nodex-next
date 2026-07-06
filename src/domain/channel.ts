@@ -46,6 +46,23 @@ export function deriveChannels(posts: Post[]): Channel[] {
 }
 
 /**
+ * Pins are per-space: pinning a channel applies to the spaces in scope that
+ * HAVE CONTENT in that channel at pin time. Returns those relay ids; when
+ * none of the scoped spaces carry content, falls back to the whole scope so
+ * pinning never silently no-ops.
+ */
+export function spacesToPinChannelFor(
+  posts: Post[],
+  channel: string,
+  scopeRelayIds: string[]
+): string[] {
+  const withContent = scopeRelayIds.filter((relayId) =>
+    posts.some((post) => post.channels.includes(channel) && post.relays.includes(relayId))
+  );
+  return withContent.length > 0 ? withContent : scopeRelayIds;
+}
+
+/**
  * Pinned channels lead (including ones with no posts yet, at count 0), the
  * rest keep their most-used-first order. Shared by the mobile chips row and
  * the desktop sidebar list.

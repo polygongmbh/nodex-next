@@ -5,6 +5,7 @@
   import { longpress } from "@/lib/longpress";
   import { authStore } from "@/stores/auth.svelte";
   import { filterStore } from "@/stores/filters.svelte";
+  import { timelineController } from "@/stores/timeline-controller.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
@@ -19,7 +20,7 @@
   const channels = $derived(
     partitionPinnedChannels(
       deriveChannels(Object.values(timelineStore.postsById)),
-      preferencesStore.pinnedChannels
+      preferencesStore.pinnedChannelNamesFor(timelineController.scopeRelayIds)
     )
   );
   // In the sidebar a topic LIVES under its primary channel: pinned ones show
@@ -66,13 +67,13 @@
   <h2>{t("sidebar.channels")}</h2>
   <nav class="channels">
     {#each [...channels.pinned, ...channels.rest] as channel (channel.name)}
-      {@const pinned = preferencesStore.pinnedChannels.includes(channel.name)}
+      {@const pinned = preferencesStore.isChannelPinned(channel.name, timelineController.scopeRelayIds)}
       <button
         class="channel"
         class:included={filterStore.channelStates[channel.name] === "included"}
         class:excluded={filterStore.channelStates[channel.name] === "excluded"}
         onclick={() => filterStore.tapChannelChip(channel.name)}
-        use:longpress={() => preferencesStore.togglePinned(channel.name)}
+        use:longpress={() => timelineController.togglePinnedChannel(channel.name)}
       >
         <span class="name">#{channel.name}</span>
         {#if pinned}
@@ -159,7 +160,7 @@
     overflow: visible;
   }
   .glyph path {
-    stroke: var(--accent);
+    stroke: var(--brand);
   }
   .relays {
     list-style: none;

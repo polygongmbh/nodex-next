@@ -2,7 +2,12 @@
 // Exposes commands only (start/stop/sendMessage); state lives in the stores.
 
 import { NOSTR_KINDS } from "@/domain/nostr-kinds";
-import { topicTags, type ChannelFilterState, type Topic } from "@/domain/channel";
+import {
+  spacesToPinChannelFor,
+  topicTags,
+  type ChannelFilterState,
+  type Topic,
+} from "@/domain/channel";
 import { buildTopicEvent } from "@/domain/topic-events";
 import { mergeProfileContent, type ProfileEdits } from "@/domain/person";
 import { classifyEvent } from "@/domain/event-to-post";
@@ -16,6 +21,7 @@ import { createIngestBatcher, type IngestBatcher } from "@/infrastructure/nostr/
 import { startNdkService, type NdkService } from "@/infrastructure/nostr/ndk-service";
 import type { StoredSession } from "@/infrastructure/noas/session";
 import { filterStore } from "./filters.svelte";
+import { preferencesStore } from "./preferences.svelte";
 import { timelineStore } from "./timeline.svelte";
 
 class TimelineController {
@@ -121,6 +127,30 @@ class TimelineController {
   restart(session: StoredSession): void {
     this.stop();
     this.start(session);
+  }
+
+  /** The spaces the user is currently looking at (active one, else all). */
+  get scopeRelayIds(): string[] {
+    return filterStore.activeRelayId
+      ? [filterStore.activeRelayId]
+      : timelineStore.relays.map((relay) => relay.id);
+  }
+
+  /**
+   * Pins are per-space: pinning applies to the scoped spaces that have
+   * content in the channel right now; unpinning removes the scoped spaces
+   * from the pin.
+   */
+  togglePinnedChannel(name: string): void {
+    const scope = this.scopeRelayIds;
+    if (preferencesStore.isChannelPinned(name, scope)) {
+      preferencesStore.unpinChannel(name, scope);
+      return;
+    }
+    preferencesStore.pinChannel(
+      name,
+      spacesToPinChannelFor(Object.values(timelineStore.postsById), name, scope)
+    );
   }
 
   /**

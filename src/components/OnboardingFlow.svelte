@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { deriveChannels } from "@/domain/channel";
+  import { deriveChannels, spacesToPinChannelFor } from "@/domain/channel";
   import { t } from "@/lib/i18n/index.svelte";
   import { authStore } from "@/stores/auth.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
@@ -81,7 +81,13 @@
   }
 
   function finish() {
-    preferencesStore.completeOnboarding(selected);
+    const posts = Object.values(timelineStore.postsById);
+    const allRelayIds = timelineStore.relays.map((relay) => relay.id);
+    preferencesStore.completeOnboarding(
+      Object.fromEntries(
+        selected.map((name) => [name, spacesToPinChannelFor(posts, name, allRelayIds)])
+      )
+    );
   }
 </script>
 
@@ -200,7 +206,7 @@
     overflow: visible;
   }
   .glyph path {
-    stroke: var(--accent);
+    stroke: var(--brand);
   }
   h1 {
     margin: 0;

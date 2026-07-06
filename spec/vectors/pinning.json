@@ -1,0 +1,37 @@
+{
+  "note": "Pins are per-space: pinning a channel applies to the scoped spaces that have content in it at pin time; with no content anywhere in scope, the whole scope is pinned so the action never no-ops.",
+  "spacesToPinChannelFor": [
+    {
+      "name": "all-spaces pin applies to content-bearing spaces only",
+      "posts": [
+        { "channels": ["dev"], "relays": ["one-example"] },
+        { "channels": ["dev"], "relays": ["two-example"] },
+        { "channels": ["design"], "relays": ["three-example"] }
+      ],
+      "channel": "dev",
+      "scope": ["one-example", "two-example", "three-example"],
+      "expected": ["one-example", "two-example"]
+    },
+    {
+      "name": "single active space pins that space when it has content",
+      "posts": [{ "channels": ["dev"], "relays": ["one-example"] }],
+      "channel": "dev",
+      "scope": ["one-example"],
+      "expected": ["one-example"]
+    },
+    {
+      "name": "no content anywhere falls back to the whole scope",
+      "posts": [{ "channels": ["design"], "relays": ["one-example"] }],
+      "channel": "dev",
+      "scope": ["one-example", "two-example"],
+      "expected": ["one-example", "two-example"]
+    },
+    {
+      "name": "content outside the scope does not count",
+      "posts": [{ "channels": ["dev"], "relays": ["three-example"] }],
+      "channel": "dev",
+      "scope": ["one-example"],
+      "expected": ["one-example"]
+    }
+  ]
+}

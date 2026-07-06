@@ -8,9 +8,12 @@ import relayIdentity from "../../spec/vectors/relay-identity.json";
 import timestamps from "../../spec/vectors/timestamps.json";
 import topicIdentity from "../../spec/vectors/topic-identity.json";
 import classifyVectors from "../../spec/vectors/classify-events.json";
+import pinningVectors from "../../spec/vectors/pinning.json";
 import { deriveChannelTags, extractHashtagsFromContent, isHexColorToken } from "@/domain/hashtags";
 import { tokenizeContent } from "@/domain/content-tokens";
+import { spacesToPinChannelFor } from "@/domain/channel";
 import { normalizeRelayUrl, relayDisplayName, relayUrlToId } from "@/domain/relay-identity";
+import { post as postFixture } from "@/test/fixtures";
 import { timelineTimestampBucket } from "@/domain/timeline-timestamp";
 import { buildTopicEvent, parseTopicEvent, topicIdForChannels } from "@/domain/topic-events";
 import { classifyEvent, type RawNostrEvent } from "@/domain/event-to-post";
@@ -75,6 +78,13 @@ describe("vectors: topic identity", () => {
     });
     if (expected === null) expect(parsed).toBeNull();
     else expect(parsed).toMatchObject(expected);
+  });
+});
+
+describe("vectors: per-space pinning", () => {
+  it.each(pinningVectors.spacesToPinChannelFor)("$name", ({ posts, channel, scope, expected }) => {
+    const built = posts.map((partial) => postFixture(partial));
+    expect(spacesToPinChannelFor(built, channel, scope)).toEqual(expected);
   });
 });
 
