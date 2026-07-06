@@ -1,0 +1,33 @@
+# Co-op Cloud style stack file. Deploy with abra (as a recipe) or directly:
+#   docker build -t nodex-next:latest .
+#   set -a; source deploy/.env; set +a
+#   docker stack deploy -c compose.yml nodex-next
+version: "3.8"
+
+services:
+  app:
+    image: ${IMAGE:-nodex-next:latest}
+    networks:
+      - proxy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      restart_policy:
+        condition: on-failure
+      update_config:
+        order: start-first
+        failure_action: rollback
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.${STACK_NAME}.rule=Host(`${DOMAIN}`)"
+        - "traefik.http.routers.${STACK_NAME}.entrypoints=web-secure"
+        - "traefik.http.routers.${STACK_NAME}.tls.certresolver=${LETS_ENCRYPT_ENV}"
+        - "traefik.http.services.${STACK_NAME}.loadbalancer.server.port=80"
+        - "coop-cloud.${STACK_NAME}.version=0.1.0+0.1.0"
+
+networks:
+  proxy:
+    external: true
