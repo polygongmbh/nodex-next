@@ -44,10 +44,10 @@ export default {
     "Your account has no space yet. Enter your organization's space address (a relay) to get started.",
 
   "pwa.recommend": "Tip: add Nodex to your home screen for the full app experience.",
-  "pwa.iosShare": "Tap Share in Safari",
+  "pwa.iosShare": "Tap the Share button",
   "pwa.iosAdd": "Choose “Add to Home Screen”",
-  "pwa.androidMenu": "Tap the ⋮ menu in Chrome",
-  "pwa.androidAdd": "Choose “Add to Home screen”",
+  "pwa.androidMenu": "Open your browser's menu",
+  "pwa.androidAdd": "Choose “Add to Home screen” or “Install”",
 
   "profile.edit": "Edit profile",
   "profile.scope": "Scope",

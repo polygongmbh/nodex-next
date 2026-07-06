@@ -44,10 +44,10 @@ export default {
     "Dein Konto hat noch keinen Space. Gib die Space-Adresse (ein Relay) deiner Organisation ein, um loszulegen.",
 
   "pwa.recommend": "Tipp: Füge Nodex deinem Home-Bildschirm hinzu — für das volle App-Erlebnis.",
-  "pwa.iosShare": "Tippe in Safari auf Teilen",
+  "pwa.iosShare": "Tippe auf „Teilen“",
   "pwa.iosAdd": "Wähle „Zum Home-Bildschirm“",
-  "pwa.androidMenu": "Tippe in Chrome auf das ⋮-Menü",
-  "pwa.androidAdd": "Wähle „Zum Startbildschirm hinzufügen“",
+  "pwa.androidMenu": "Öffne das Browser-Menü",
+  "pwa.androidAdd": "Wähle „Zum Startbildschirm hinzufügen“ oder „Installieren“",
 
   "profile.edit": "Profil bearbeiten",
   "profile.scope": "Geltungsbereich",

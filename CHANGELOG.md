@@ -6,9 +6,9 @@
 
 - PWA manifest with app icons — the app can be installed to the home screen
   (standalone display, dark splash matching the theme). The onboarding's
-  channel step now shows a short install hint with per-OS steps (Safari
-  share sheet on iOS, ⋮ menu on Android), hidden when already installed or
-  on desktop.
+  channel step now shows a short install hint with per-OS steps (share
+  sheet on iOS, browser menu on Android — browser-neutral wording), hidden
+  when already installed or on desktop.
 - Spaces can be added any time (menu / sidebar), and sign-in works for
   accounts with no space — onboarding then starts by connecting one.
 - Feed renders incrementally (recycler-style window over the newest ~80

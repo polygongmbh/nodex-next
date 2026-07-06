@@ -74,8 +74,9 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   channels are pinned: they lead the chips row and form the default feed
   scope together with posts that mention you. On a mobile browser (and not
   already installed) the channel step also shows a PWA install hint with
-  the OS's own steps — Safari share sheet on iOS, ⋮ menu on Android; the
-  app ships a web manifest and icons so it installs standalone.
+  the OS's own steps — share sheet on iOS, browser menu on Android, worded
+  browser-neutrally so Firefox/Brave users aren't misdirected; the app
+  ships a web manifest and icons so it installs standalone.
 - **Desktop (≥900px)** gets a persistent sidebar — spaces with connection
   dots, vertical channel list, user card — while phones keep the hamburger
   and chips row.
