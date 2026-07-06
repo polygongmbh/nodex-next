@@ -42,12 +42,10 @@ The cross-cutting invariants live in the workspace `../CLAUDE.md`; the
 normative behavior spec is `docs/rebuild-prompt.md`. Implementation notes
 specific to this codebase:
 
-- Attribution: NDK's event cache stays disabled; ingest listens to both
-  `event` AND `event:dup` and union-merges relays
+- Attribution mechanics (JS-NDK-specific — dart-ndk needs per-relay
+  subscriptions instead): NDK's event cache stays disabled; ingest listens
+  to both `event` AND `event:dup` and union-merges relays
   (`timeline.svelte.ts › ingestPost`); relay-less events are dropped.
-- State events 1630–1633 fold into `stateUpdates` newest-first and render
-  as compact rows, never as post cards. Kind-0 profiles publish to all
-  session relays (or one relay for per-space profiles).
 
 ## Code Standards
 
