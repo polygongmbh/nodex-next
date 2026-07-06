@@ -111,9 +111,17 @@ behind the content backfill:
 
 ## Screens and behavior
 
-- **Sign-in card**: glyph, tabs Sign in / Create account; username (with
-  user@domain hint), optional server, password (+ email and confirm on
-  register).
+- **Sign-in card**: glyph (the splash logo glides into it when signed
+  out), tabs Sign in / Create account; NO server field — a user@domain
+  username picks the host, plain usernames use the deployment default
+  (VITE_NOAS_HOST_URL, fallback nodex.nexus), with a hint naming the
+  effective host. Password min 8 on register. Email appears only when the
+  discovered host's email_verification_mode is "required" (re-discovered
+  as the username changes). Optional private key field: 64-hex/nsec with
+  live npub preview, plus vanity mining — npub prefix from the username's
+  first ≤3 bech32 letters, run in a worker; auto-mine after 500ms once the
+  local part has ≥4 chars and the field is empty, impatient re-click drops
+  to a 2-char prefix, never overwrite typed input.
 - **Onboarding** (first sign-in per device, per pubkey, in localStorage):
   optional "connect your space" step when the account has no relays →
   welcome ("Hey {name}…") → profile (picture URL with live avatar preview,
@@ -152,10 +160,14 @@ behind the content backfill:
     status name), author, task content one-line, time.
 - **Filtering model**: channel chip tap = exclusive include (tap the sole
   included channel to clear); long-press (or right-click) any channel chip
-  or sidebar entry pins/unpins (persisted per account). Excludes supported
-  in the model. With NO explicit includes, the default scope = pinned
-  channels ∪ posts mentioning me ∪ my own posts (everything when nothing is
-  pinned). Topics: selecting one includes all its tags; selecting a topic
+  or sidebar entry pins/unpins. Pins are PER-SPACE (spec vector
+  pinning.json): pinning applies to the scoped spaces that have content in
+  the channel at pin time (whole scope as fallback), unpinning removes the
+  scoped spaces; pinned display and default scope resolve against the
+  current space selection (persisted per account as channel → relay ids).
+  Excludes supported in the model. With NO explicit includes, the default
+  scope = pinned channels ∪ posts mentioning me ∪ my own posts (everything
+  when nothing is pinned). Topics: selecting one includes all its tags; selecting a topic
   with no channel included auto-selects its primary channel; **tapping a
   channel clears selected topics (switch over, never stack)** — topic on
   top of an already-selected channel composes. Topic pinned state is
