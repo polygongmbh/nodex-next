@@ -37,8 +37,10 @@ It must be event-compatible with nodex/mostr on the same relay.
    (stable 8-slot palette hashed from relay id) opening a "Delivered by"
    bottom sheet.
 2. **Noas sign-in is the entry dialogue**, right after the splash: a
-   two-stroke "N" glyph animation painted inline in `index.html` before JS
-   loads (≥450 ms, strokes glide apart diagonally on dismiss).
+   two-stroke "N" glyph painted inline in `index.html` before JS loads,
+   strokes CONVERGING diagonally on startup (~700ms), always in the full
+   accent color. Dismissal fades in place when signed in; when signed out
+   the assembled logo glides and zooms into the sign-in card's glyph.
 3. Timeline view only. No tree/kanban/calendar views.
 
 ## Nostr semantics
@@ -48,8 +50,9 @@ It must be event-compatible with nodex/mostr on the same relay.
   event's content is non-empty; the content doubles as a custom status
   label, e.g. "Review"), 30177 shared topics (see below).
 - **Channels are hashtags**: a post's channels = `t` tags ∪ in-content
-  `#hashtags`, lowercased; hex color tokens (#fff, #1a2b3c) are not
-  hashtags. No NIP-28. **Spaces are relays**; empty space selection = "All
+  `#hashtags`, lowercased; color tokens — UPPERCASE hex or digit-only
+  runs of length 3/4/6/8 (#FEE, #123) — are not hashtags, lowercase #fee
+  is. No NIP-28. **Spaces are relays**; empty space selection = "All
   spaces", never "no relays".
 - **Replies** link via `e` tag with marker `parent` (preferred) or `reply`.
 - **Publishing**: a post MUST carry ≥1 channel (written as lowercased `t`
@@ -86,12 +89,14 @@ It must be event-compatible with nodex/mostr on the same relay.
    (mismatch = error). Persist session in localStorage (pubkey, private key
    hex, username, apiBase, relayUrls); reject malformed entries, never
    migrate. Profile picture URL: `<api_base>/picture/<pubkeyHex>`.
-4. Registration: generate key on-device, NIP-49-encrypt with the password,
-   `POST /auth/register` `{username, password_hash, public_key,
-   private_key_encrypted, redirect: origin, email?}`; then attempt sign-in,
-   surfacing the server's verification message if it fails.
-5. `user@domain` usernames auto-fill the server (explicit host wins); the
-   server field is optional. Zero configured relays is a valid sign-in.
+4. Registration: use the provided/mined key or generate one on-device,
+   NIP-49-encrypt with the password, `POST /auth/register` `{username,
+   password_hash, public_key, private_key_encrypted, redirect: origin,
+   email?}`; then attempt sign-in, surfacing the server's verification
+   message if it fails.
+5. There is NO server field: `user@domain` usernames pick the host, plain
+   usernames use the deployment default. Zero configured relays is a valid
+   sign-in.
 
 ## Subscriptions
 
@@ -126,7 +131,8 @@ behind the content backfill:
   optional "connect your space" step when the account has no relays →
   welcome ("Hey {name}…") → profile (picture URL with live avatar preview,
   display name, bio, website — prefilled from the fetched kind-0) → channel
-  picks (live channels with counts) which become **pinned channels**.
+  picks (live channels with counts) which become **pinned channels**,
+  pinned per space via the content-at-pin-time rule.
 - **Timeline screen**:
   - Mobile top bar: hamburger (menu sheet: user + edit profile + sign-out,
     space selector, per-relay status, add-space, language) + chips row.
