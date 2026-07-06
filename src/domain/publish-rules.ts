@@ -25,7 +25,8 @@ export function resolveDraftChannels(content: string, includedChannels: string[]
 export function resolvePublishRelay(
   relays: PublishRelayCandidate[],
   activeRelayId: string | null,
-  parent?: Post
+  parent?: Post,
+  candidateSpaceIds?: string[]
 ): PublishRelayCandidate {
   if (parent) {
     const originId = parent.relays[0];
@@ -39,8 +40,15 @@ export function resolvePublishRelay(
     throw new PublishRuleError("error.spaceUnavailable");
   }
   const connected = relays.filter((relay) => relay.connected);
-  if (connected.length === 1) return connected[0];
   if (connected.length === 0) throw new PublishRuleError("error.noSpaceConnected");
+  if (connected.length === 1) return connected[0];
+  // No active space and several connected: derive the target from where the
+  // draft's channels live. Exactly one candidate space is unambiguous; zero or
+  // several means the user must pick a space first.
+  const candidates = candidateSpaceIds
+    ? connected.filter((relay) => candidateSpaceIds.includes(relay.id))
+    : [];
+  if (candidates.length === 1) return candidates[0];
   throw new PublishRuleError("error.selectSpace");
 }
 

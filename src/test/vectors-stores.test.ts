@@ -69,7 +69,7 @@ describe("vectors: timeline scope", () => {
   });
 
   it.each(scopeVectors.scenarios)("$name", ({ scope, expected }) => {
-    const items = buildTimeline(timelineStore.postsById, {
+    const items = buildTimeline(timelineStore.postsById, timelineStore.calendarEventsByAddress, {
       channelStates: {},
       activeRelayId: null,
       searchQuery: "",
@@ -81,7 +81,12 @@ describe("vectors: timeline scope", () => {
     expect(
       items.map((item) => ({
         type: item.type,
-        id: item.type === "post" ? item.post.id : item.update.id,
+        id:
+          item.type === "post"
+            ? item.post.id
+            : item.type === "state"
+              ? item.update.id
+              : item.event.eventId,
       }))
     ).toEqual(expected);
   });
@@ -95,12 +100,13 @@ describe("vectors: publish rules", () => {
       ? allRelays.filter((relay) => vector.relaySubset!.includes(relay.id))
       : allRelays;
     const parent = vector.parent ? (vector.parent as unknown as Post) : undefined;
+    const channelSpaceIds = "channelSpaceIds" in vector ? vector.channelSpaceIds : undefined;
     if ("error" in vector.expected) {
-      expect(() => resolvePublishRelay(relays, vector.activeRelayId, parent)).toThrowError(
-        new PublishRuleError(vector.expected.error!)
-      );
+      expect(() =>
+        resolvePublishRelay(relays, vector.activeRelayId, parent, channelSpaceIds)
+      ).toThrowError(new PublishRuleError(vector.expected.error!));
     } else {
-      expect(resolvePublishRelay(relays, vector.activeRelayId, parent).id).toBe(
+      expect(resolvePublishRelay(relays, vector.activeRelayId, parent, channelSpaceIds).id).toBe(
         vector.expected.relayId
       );
     }

@@ -4,6 +4,16 @@
 
 ### Added
 
+- The composer sends to the current context. With no space selected it now
+  resolves the target space from where the draft's channels live: a channel
+  that exists on a single space posts there with no prompt; a channel that
+  spans several spaces shows a space picker in the bar and requires a pick.
+- Attach a calendar event to a message: the composer's calendar button opens
+  a form (title, all-day/timed, start, optional end and location) and the
+  message posts as a NIP-52 event (kind 31922/31923) carrying the draft's
+  channels, to the resolved space. Posted events render as calendar cards in
+  the timeline.
+
 - New design tokens: light #FAFAFC/#FFFFFF with #4785FF main and #C7D9FF
   muted accents; dark mode is OLED-friendly full black with 57%-composited
   accents. The logo always renders in the full accent color; favicon and

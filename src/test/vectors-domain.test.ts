@@ -9,6 +9,7 @@ import timestamps from "../../spec/vectors/timestamps.json";
 import topicIdentity from "../../spec/vectors/topic-identity.json";
 import classifyVectors from "../../spec/vectors/classify-events.json";
 import pinningVectors from "../../spec/vectors/pinning.json";
+import calendarVectors from "../../spec/vectors/calendar-events.json";
 import { deriveChannelTags, extractHashtagsFromContent, isHexColorToken } from "@/domain/hashtags";
 import { tokenizeContent } from "@/domain/content-tokens";
 import { spacesToPinChannelFor } from "@/domain/channel";
@@ -17,6 +18,7 @@ import { post as postFixture } from "@/test/fixtures";
 import { timelineTimestampBucket } from "@/domain/timeline-timestamp";
 import { buildTopicEvent, parseTopicEvent, topicIdForChannels } from "@/domain/topic-events";
 import { classifyEvent, type RawNostrEvent } from "@/domain/event-to-post";
+import { buildCalendarEvent } from "@/domain/calendar-events";
 
 describe("vectors: channels", () => {
   it.each(channels.extractHashtags)("$name", ({ content, expected }) => {
@@ -85,6 +87,16 @@ describe("vectors: per-space pinning", () => {
   it.each(pinningVectors.spacesToPinChannelFor)("$name", ({ posts, channel, scope, expected }) => {
     const built = posts.map((partial) => postFixture(partial));
     expect(spacesToPinChannelFor(built, channel, scope)).toEqual(expected);
+  });
+});
+
+describe("vectors: calendar events", () => {
+  it.each(calendarVectors.buildCalendarEvent)("$name", ({ input, expected }) => {
+    const { d, ...rest } = input;
+    const built = buildCalendarEvent(rest, d);
+    expect(built.kind).toBe(expected.kind);
+    expect(built.content).toBe(expected.content);
+    expect(built.tags).toEqual(expected.tags);
   });
 });
 

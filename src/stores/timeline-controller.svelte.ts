@@ -3,11 +3,17 @@
 
 import { NOSTR_KINDS } from "@/domain/nostr-kinds";
 import {
+  spacesForChannels,
   spacesToPinChannelFor,
   topicTags,
   type ChannelFilterState,
   type Topic,
 } from "@/domain/channel";
+import {
+  buildCalendarEvent,
+  encodeCalendarWhen,
+  type CalendarDraft,
+} from "@/domain/calendar-events";
 import { buildTopicEvent } from "@/domain/topic-events";
 import { mergeProfileContent, type ProfileEdits } from "@/domain/person";
 import { classifyEvent } from "@/domain/event-to-post";
@@ -22,10 +28,12 @@ import { startNdkService, type NdkService } from "@/infrastructure/nostr/ndk-ser
 import type { StoredSession } from "@/infrastructure/noas/session";
 import { filterStore } from "./filters.svelte";
 import { preferencesStore } from "./preferences.svelte";
-import { timelineStore } from "./timeline.svelte";
+import { timelineStore, type RelayInfo } from "./timeline.svelte";
 
 class TimelineController {
   draft = $state("");
+  /** A calendar event attached to the draft; when set, sending posts NIP-52. */
+  calendarDraft = $state<CalendarDraft | null>(null);
   private service: NdkService | null = null;
   private batcher: IngestBatcher | null = null;
   private sessionPubkey: string | null = null;
@@ -87,6 +95,15 @@ class TimelineController {
     timelineStore.reset();
     filterStore.reset();
     this.draft = "";
+    this.calendarDraft = null;
+  }
+
+  setCalendarDraft(draft: CalendarDraft): void {
+    this.calendarDraft = draft;
+  }
+
+  clearCalendarDraft(): void {
+    this.calendarDraft = null;
   }
 
   private relayUrlsForScope(relayId?: string): string[] {
@@ -200,6 +217,38 @@ class TimelineController {
     return resolveDraftChannels(this.draft, included);
   }
 
+  /** Connected spaces that already carry the draft's channels (candidate targets). */
+  private get channelSpaceIds(): string[] {
+    return spacesForChannels(
+      Object.values(timelineStore.postsById),
+      this.draftChannels,
+      this.scopeRelayIds
+    );
+  }
+
+  /**
+   * Where a send would go, for the composer: a resolved single space, the
+   * candidate spaces to choose from when ambiguous, or why it can't send yet.
+   * Mirrors resolvePublishRelay so the preview matches the actual result.
+   */
+  get sendTarget():
+    | { type: "noChannel" }
+    | { type: "noneConnected" }
+    | { type: "resolved"; relayId: string }
+    | { type: "ambiguous"; candidates: RelayInfo[] } {
+    if (this.draftChannels.length === 0) return { type: "noChannel" };
+    if (filterStore.activeRelayId) {
+      return { type: "resolved", relayId: filterStore.activeRelayId };
+    }
+    const connected = timelineStore.relays.filter((relay) => relay.connected);
+    if (connected.length === 0) return { type: "noneConnected" };
+    if (connected.length === 1) return { type: "resolved", relayId: connected[0].id };
+    const ids = this.channelSpaceIds;
+    const candidates = connected.filter((relay) => ids.includes(relay.id));
+    if (candidates.length === 1) return { type: "resolved", relayId: candidates[0].id };
+    return { type: "ambiguous", candidates: candidates.length > 1 ? candidates : connected };
+  }
+
   /** The draft with hashtag tokens removed — what the unified bar searches for. */
   get searchText(): string {
     return this.draft.replace(/(^|\s)#[\p{L}\p{N}_-]+/gu, " ").trim();
@@ -225,15 +274,40 @@ class TimelineController {
    */
   async sendMessage(): Promise<string> {
     if (!this.service) throw new PublishRuleError("error.notConnected");
+    const channels = this.draftChannels;
+    if (channels.length === 0) throw new PublishRuleError("error.needChannel");
+    // Same channel-aware resolution for messages and calendar events.
+    const relay = resolvePublishRelay(
+      timelineStore.relays,
+      filterStore.activeRelayId,
+      undefined,
+      this.channelSpaceIds
+    );
+    if (this.calendarDraft) {
+      const when = encodeCalendarWhen(this.calendarDraft);
+      const event = buildCalendarEvent(
+        {
+          title: this.calendarDraft.title,
+          allDay: this.calendarDraft.allDay,
+          start: when.start,
+          end: when.end,
+          location: this.calendarDraft.location,
+          content: this.draft.trim(),
+          channels,
+        },
+        crypto.randomUUID()
+      );
+      await this.service.publish({ ...event, relayUrls: [relay.url] });
+      this.calendarDraft = null;
+      this.draft = "";
+      return relay.id;
+    }
     const content = this.draft.trim();
     if (!content) throw new PublishRuleError("error.emptyMessage");
-    const channels = this.draftChannels;
-    const tags = buildMessageTags(channels);
-    const relay = resolvePublishRelay(timelineStore.relays, filterStore.activeRelayId);
     await this.service.publish({
       kind: NOSTR_KINDS.message,
       content,
-      tags,
+      tags: buildMessageTags(channels),
       relayUrls: [relay.url],
     });
     this.draft = "";

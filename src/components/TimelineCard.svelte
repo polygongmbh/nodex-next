@@ -21,7 +21,7 @@
     post: Post;
     parent?: Post;
     replyCount: number;
-    onRelayDots: (postId: string) => void;
+    onRelayDots: (relays: string[]) => void;
   } = $props();
 
   const author = $derived(timelineStore.peopleByPubkey[post.pubkey]);
@@ -106,7 +106,7 @@
           </button>
         {/if}
         <span class="spacer"></span>
-        <button class="dots" data-testid="relay-dots" onclick={() => onRelayDots(post.id)}>
+        <button class="dots" data-testid="relay-dots" onclick={() => onRelayDots(post.relays)}>
           {#each post.relays as relayId (relayId)}
             <span class="dot" style="background: var(--relay-{relayColorSlot(relayId)})"></span>
           {/each}

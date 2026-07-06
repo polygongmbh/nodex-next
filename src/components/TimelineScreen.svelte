@@ -12,10 +12,11 @@
   import SpaceSelector from "./SpaceSelector.svelte";
   import StateRow from "./StateRow.svelte";
   import TimelineCard from "./TimelineCard.svelte";
+  import CalendarCard from "./CalendarCard.svelte";
   import UnifiedBar from "./UnifiedBar.svelte";
 
   const items = $derived(
-    buildTimeline(timelineStore.postsById, {
+    buildTimeline(timelineStore.postsById, timelineStore.calendarEventsByAddress, {
       channelStates: timelineController.effectiveChannelStates,
       activeRelayId: filterStore.activeRelayId,
       searchQuery: timelineController.searchText,
@@ -36,7 +37,7 @@
     filterStore.focusedPostId ? timelineStore.postsById[filterStore.focusedPostId] : null
   );
 
-  let relaySheetPostId = $state<string | null>(null);
+  let relaySheetRelays = $state<string[] | null>(null);
   let menuOpen = $state(false);
 
   let feedElement = $state<HTMLElement | null>(null);
@@ -138,16 +139,18 @@
           {#if visibleCount < items.length}
             <button class="older" onclick={revealOlder}>{t("timeline.older")}</button>
           {/if}
-          {#each windowed as item (item.type === "post" ? item.post.id : item.update.id)}
+          {#each windowed as item (item.type === "post" ? item.post.id : item.type === "state" ? item.update.id : item.event.eventId)}
             {#if item.type === "post"}
               <TimelineCard
                 post={item.post}
                 parent={item.parent}
                 replyCount={item.replyCount}
-                onRelayDots={(postId) => (relaySheetPostId = postId)}
+                onRelayDots={(relays) => (relaySheetRelays = relays)}
               />
-            {:else}
+            {:else if item.type === "state"}
               <StateRow post={item.post} update={item.update} />
+            {:else}
+              <CalendarCard event={item.event} onRelayDots={(relays) => (relaySheetRelays = relays)} />
             {/if}
           {/each}
         {/if}
@@ -157,8 +160,8 @@
     <UnifiedBar />
   </div>
 
-  {#if relaySheetPostId}
-    <RelaySheet postId={relaySheetPostId} onClose={() => (relaySheetPostId = null)} />
+  {#if relaySheetRelays}
+    <RelaySheet relays={relaySheetRelays} onClose={() => (relaySheetRelays = null)} />
   {/if}
   {#if menuOpen}
     <MenuSheet onClose={() => (menuOpen = false)} />

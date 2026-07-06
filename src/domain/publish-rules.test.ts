@@ -28,6 +28,22 @@ describe("resolvePublishRelay", () => {
     expect(() => resolvePublishRelay([RELAYS[2]], null)).toThrow(PublishRuleError);
   });
 
+  it("auto-targets the sole space carrying the draft's channels", () => {
+    expect(resolvePublishRelay(RELAYS, null, undefined, ["two-example"]).id).toBe("two-example");
+  });
+
+  it("still forces a pick when channels span multiple connected spaces", () => {
+    expect(() =>
+      resolvePublishRelay(RELAYS, null, undefined, ["one-example", "two-example"])
+    ).toThrow(PublishRuleError);
+  });
+
+  it("ignores channel spaces when a space is actively selected", () => {
+    expect(resolvePublishRelay(RELAYS, "one-example", undefined, ["two-example"]).id).toBe(
+      "one-example"
+    );
+  });
+
   it("pins replies to the parent's origin relay", () => {
     const parent = post({ relays: ["two-example", "one-example"] });
     expect(resolvePublishRelay(RELAYS, "one-example", parent).id).toBe("two-example");

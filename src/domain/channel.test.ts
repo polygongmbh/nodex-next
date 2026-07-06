@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveChannels, postMatchesChannelFilters } from "./channel";
+import { deriveChannels, postMatchesChannelFilters, spacesForChannels } from "./channel";
 import { post } from "@/test/fixtures";
 
 describe("postMatchesChannelFilters", () => {
@@ -37,5 +37,27 @@ describe("deriveChannels", () => {
       { name: "general", postCount: 2 },
       { name: "design", postCount: 1 },
     ]);
+  });
+});
+
+describe("spacesForChannels", () => {
+  const posts = [
+    post({ channels: ["dev"], relays: ["one"] }),
+    post({ channels: ["design"], relays: ["two"] }),
+    post({ channels: ["dev", "ops"], relays: ["two"] }),
+  ];
+  const scope = ["one", "two", "three"];
+
+  it("returns the scoped spaces carrying any of the channels", () => {
+    expect(spacesForChannels(posts, ["dev"], scope).sort()).toEqual(["one", "two"]);
+    expect(spacesForChannels(posts, ["design"], scope)).toEqual(["two"]);
+  });
+
+  it("unions across multiple channels", () => {
+    expect(spacesForChannels(posts, ["design", "ops"], scope)).toEqual(["two"]);
+  });
+
+  it("returns empty (no fallback) when no space carries the channels", () => {
+    expect(spacesForChannels(posts, ["unknown"], scope)).toEqual([]);
   });
 });

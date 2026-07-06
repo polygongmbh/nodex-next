@@ -63,6 +63,27 @@ export function spacesToPinChannelFor(
 }
 
 /**
+ * The spaces (relay ids in scope) that already carry content in ANY of the
+ * given channels — the candidate publish targets for a draft. Unlike
+ * spacesToPinChannelFor there is NO whole-scope fallback: an empty result means
+ * "no space is known to host these channels", which the publish rules treat as
+ * ambiguous (force a space pick).
+ */
+export function spacesForChannels(
+  posts: Post[],
+  channels: string[],
+  scopeRelayIds: string[]
+): string[] {
+  return scopeRelayIds.filter((relayId) =>
+    posts.some(
+      (post) =>
+        post.relays.includes(relayId) &&
+        channels.some((channel) => post.channels.includes(channel))
+    )
+  );
+}
+
+/**
  * Pinned channels lead (including ones with no posts yet, at count 0), the
  * rest keep their most-used-first order. Shared by the mobile chips row and
  * the desktop sidebar list.
@@ -87,7 +108,7 @@ export function partitionPinnedChannels(
  * excluded ones. No included channels = no positive constraint.
  */
 export function postMatchesChannelFilters(
-  post: Post,
+  post: Pick<Post, "channels">,
   states: Record<string, ChannelFilterState>
 ): boolean {
   for (const [name, state] of Object.entries(states)) {

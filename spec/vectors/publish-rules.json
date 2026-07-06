@@ -10,6 +10,11 @@
     { "name": "ambiguous without selection errors", "activeRelayId": null, "expected": { "error": "error.selectSpace" } },
     { "name": "nothing connected errors", "relaySubset": ["three-example"], "activeRelayId": null, "expected": { "error": "error.noSpaceConnected" } },
     { "name": "unknown active space errors", "activeRelayId": "gone-example", "expected": { "error": "error.spaceUnavailable" } },
+    { "name": "single candidate space auto-targets without selection", "activeRelayId": null, "channelSpaceIds": ["two-example"], "expected": { "relayId": "two-example" } },
+    { "name": "channels spanning multiple spaces force selection", "activeRelayId": null, "channelSpaceIds": ["one-example", "two-example"], "expected": { "error": "error.selectSpace" } },
+    { "name": "channel only on a disconnected space forces selection", "activeRelayId": null, "channelSpaceIds": ["three-example"], "expected": { "error": "error.selectSpace" } },
+    { "name": "channel space is ignored when a space is actively selected", "activeRelayId": "one-example", "channelSpaceIds": ["two-example"], "expected": { "relayId": "one-example" } },
+    { "name": "sole connected relay wins over channel spaces", "relaySubset": ["one-example", "three-example"], "activeRelayId": null, "channelSpaceIds": ["three-example"], "expected": { "relayId": "one-example" } },
     {
       "name": "reply pins to parent origin over active selection",
       "activeRelayId": "one-example",

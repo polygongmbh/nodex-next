@@ -3,11 +3,10 @@
   import { timelineStore } from "@/stores/timeline.svelte";
   import { relayColorSlot } from "@/domain/relay-identity";
 
-  let { postId, onClose }: { postId: string; onClose: () => void } = $props();
+  let { relays, onClose }: { relays: string[]; onClose: () => void } = $props();
 
-  const post = $derived(timelineStore.postsById[postId]);
   const entries = $derived(
-    (post?.relays ?? []).map((relayId) => {
+    relays.map((relayId) => {
       const known = timelineStore.relays.find((relay) => relay.id === relayId);
       return {
         id: relayId,

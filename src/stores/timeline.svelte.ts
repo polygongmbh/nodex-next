@@ -16,7 +16,8 @@ export interface RelayInfo {
 
 export type TimelineItem =
   | { type: "post"; post: Post; parent?: Post; replyCount: number; timestamp: number }
-  | { type: "state"; post: Post; update: TaskStateUpdate; timestamp: number };
+  | { type: "state"; post: Post; update: TaskStateUpdate; timestamp: number }
+  | { type: "calendarEvent"; event: CalendarEvent; timestamp: number };
 
 export interface TimelineScope {
   channelStates: Record<string, ChannelFilterState>;
@@ -230,6 +231,7 @@ export const timelineStore = new TimelineStore();
  */
 export function buildTimeline(
   postsById: Record<string, Post>,
+  calendarEventsByAddress: Record<string, CalendarEvent>,
   scope: TimelineScope
 ): TimelineItem[] {
   const posts = Object.values(postsById);
@@ -248,14 +250,22 @@ export function buildTimeline(
     ? collectThreadIds(postsById, posts, scope.focusedPostId)
     : null;
 
-  const inScope = (post: Post): boolean => {
-    if (scope.activeRelayId && !post.relays.includes(scope.activeRelayId)) return false;
-    if (threadIds) return threadIds.has(post.id);
-    if (!postMatchesChannelFilters(post, scope.channelStates)) return false;
+  // Shared across posts and calendar events (both carry relays/channels/pubkey);
+  // calendar events have no mentions and never belong to a focused thread.
+  const inScope = (item: {
+    id: string;
+    relays: string[];
+    channels: string[];
+    mentions: string[];
+    pubkey: string;
+  }): boolean => {
+    if (scope.activeRelayId && !item.relays.includes(scope.activeRelayId)) return false;
+    if (threadIds) return threadIds.has(item.id);
+    if (!postMatchesChannelFilters(item, scope.channelStates)) return false;
     if (!hasIncludes && scope.pinnedChannels.length > 0) {
-      const pinned = scope.pinnedChannels.some((channel) => post.channels.includes(channel));
-      const mentionsMe = scope.myPubkey ? post.mentions.includes(scope.myPubkey) : false;
-      const mine = scope.myPubkey !== null && post.pubkey === scope.myPubkey;
+      const pinned = scope.pinnedChannels.some((channel) => item.channels.includes(channel));
+      const mentionsMe = scope.myPubkey ? item.mentions.includes(scope.myPubkey) : false;
+      const mine = scope.myPubkey !== null && item.pubkey === scope.myPubkey;
       if (!pinned && !mentionsMe && !mine) return false;
     }
     return true;
@@ -278,6 +288,13 @@ export function buildTimeline(
       if (!contentMatches && !update.content.toLowerCase().includes(query)) continue;
       items.push({ type: "state", post, update, timestamp: update.timestamp });
     }
+  }
+  for (const event of Object.values(calendarEventsByAddress)) {
+    if (threadIds) continue;
+    if (!inScope({ ...event, mentions: [], id: event.eventId })) continue;
+    const haystack = `${event.title}\n${event.content}\n${event.location ?? ""}`.toLowerCase();
+    if (query && !haystack.includes(query)) continue;
+    items.push({ type: "calendarEvent", event, timestamp: event.createdAt });
   }
   // Chat orientation: oldest at the top, newest at the bottom. On ties the
   // task card comes before its state row (the update follows the task).

@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { buildTimeline, timelineStore, type TimelineScope } from "./timeline.svelte";
+import { buildTimeline, timelineStore, type TimelineItem, type TimelineScope } from "./timeline.svelte";
 import { ALICE, BOB, rawEvent } from "@/test/fixtures";
+
+const postIds = (items: TimelineItem[]): string[] =>
+  items.flatMap((item) => (item.type === "post" ? [item.post.id] : []));
 
 function scope(overrides: Partial<TimelineScope> = {}): TimelineScope {
   return {
@@ -105,7 +108,7 @@ describe("buildTimeline", () => {
     });
     timelineStore.ingestEvent(reply, RELAY_A);
 
-    const items = buildTimeline(timelineStore.postsById, scope());
+    const items = buildTimeline(timelineStore.postsById, timelineStore.calendarEventsByAddress, scope());
     const replyItem = items.find((item) => item.type === "post" && item.post.id === reply.id);
     const rootItem = items.find((item) => item.type === "post" && item.post.id === root.id);
     if (replyItem?.type !== "post" || rootItem?.type !== "post") throw new Error("missing items");
@@ -121,7 +124,7 @@ describe("buildTimeline", () => {
       rawEvent({ kind: 1630, content: "Review", tags: [["e", task.id]], created_at: 200 }),
       RELAY_A
     );
-    const items = buildTimeline(timelineStore.postsById, scope());
+    const items = buildTimeline(timelineStore.postsById, timelineStore.calendarEventsByAddress, scope());
     expect(items.map((item) => item.type)).toEqual(["post", "state"]);
   });
 
@@ -130,8 +133,8 @@ describe("buildTimeline", () => {
     const onB = rawEvent();
     timelineStore.ingestEvent(onA, RELAY_A);
     timelineStore.ingestEvent(onB, RELAY_B);
-    const items = buildTimeline(timelineStore.postsById, scope({ activeRelayId: "two-example" }));
-    expect(items.map((item) => item.post.id)).toEqual([onB.id]);
+    const items = buildTimeline(timelineStore.postsById, timelineStore.calendarEventsByAddress, scope({ activeRelayId: "two-example" }));
+    expect(postIds(items)).toEqual([onB.id]);
   });
 
   it("defaults to pinned channels plus mentions when nothing is included", () => {
@@ -142,16 +145,18 @@ describe("buildTimeline", () => {
 
     const items = buildTimeline(
       timelineStore.postsById,
+      timelineStore.calendarEventsByAddress,
       scope({ pinnedChannels: ["design"], myPubkey: BOB })
     );
-    expect(items.map((item) => item.post.id).sort()).toEqual([pinned.id, mention.id].sort());
+    expect(postIds(items).sort()).toEqual([pinned.id, mention.id].sort());
 
     // An explicit include overrides the pinned default scope.
     const included = buildTimeline(
       timelineStore.postsById,
+      timelineStore.calendarEventsByAddress,
       scope({ pinnedChannels: ["design"], myPubkey: BOB, channelStates: { random: "included" } })
     );
-    expect(included.map((item) => item.post.id).sort()).toEqual([mention.id, other.id].sort());
+    expect(postIds(included).sort()).toEqual([mention.id, other.id].sort());
   });
 
   it("thread focus shows the whole conversation and ignores channel scope", () => {
@@ -170,11 +175,10 @@ describe("buildTimeline", () => {
     }
     const items = buildTimeline(
       timelineStore.postsById,
+      timelineStore.calendarEventsByAddress,
       scope({ focusedPostId: reply.id, pinnedChannels: ["dev"] })
     );
-    expect(items.map((item) => item.post.id).sort()).toEqual(
-      [root.id, reply.id, nested.id].sort()
-    );
+    expect(postIds(items).sort()).toEqual([root.id, reply.id, nested.id].sort());
   });
 
   it("filters by search query, case-insensitively", () => {
@@ -182,7 +186,31 @@ describe("buildTimeline", () => {
     const miss = rawEvent({ content: "lunch plans #dev", tags: [] });
     timelineStore.ingestEvent(hit, RELAY_A);
     timelineStore.ingestEvent(miss, RELAY_A);
-    const items = buildTimeline(timelineStore.postsById, scope({ searchQuery: "deploy" }));
-    expect(items.map((item) => item.post.id)).toEqual([hit.id]);
+    const items = buildTimeline(timelineStore.postsById, timelineStore.calendarEventsByAddress, scope({ searchQuery: "deploy" }));
+    expect(postIds(items)).toEqual([hit.id]);
+  });
+
+  it("includes calendar events, scoped and searched like posts", () => {
+    const event = rawEvent({
+      kind: 31922,
+      content: "kickoff",
+      tags: [["d", "e1"], ["title", "Launch"], ["start", "2026-07-10"], ["t", "dev"]],
+      created_at: 500,
+    });
+    timelineStore.ingestEvent(event, RELAY_A);
+
+    const shown = buildTimeline(timelineStore.postsById, timelineStore.calendarEventsByAddress, scope());
+    const calItem = shown.find((item) => item.type === "calendarEvent");
+    expect(calItem?.type === "calendarEvent" && calItem.event.title).toBe("Launch");
+
+    // Matches its title/channel via search and relay scope; hidden otherwise.
+    expect(
+      buildTimeline(timelineStore.postsById, timelineStore.calendarEventsByAddress, scope({ searchQuery: "launch" }))
+        .some((item) => item.type === "calendarEvent")
+    ).toBe(true);
+    expect(
+      buildTimeline(timelineStore.postsById, timelineStore.calendarEventsByAddress, scope({ activeRelayId: "two-example" }))
+        .some((item) => item.type === "calendarEvent")
+    ).toBe(false);
   });
 });

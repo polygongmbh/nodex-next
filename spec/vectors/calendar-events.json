@@ -1,0 +1,72 @@
+{
+  "buildCalendarEvent": [
+    {
+      "name": "all-day event is kind 31922 with date start",
+      "input": {
+        "d": "evt-1",
+        "title": "Sprint review",
+        "start": "2026-07-10",
+        "allDay": true,
+        "content": "planning #dev",
+        "channels": ["dev"]
+      },
+      "expected": {
+        "kind": 31922,
+        "content": "planning #dev",
+        "tags": [
+          ["d", "evt-1"],
+          ["title", "Sprint review"],
+          ["start", "2026-07-10"],
+          ["t", "dev"]
+        ]
+      }
+    },
+    {
+      "name": "timed event is kind 31923 with unix start, end and location",
+      "input": {
+        "d": "evt-2",
+        "title": "Standup",
+        "start": "1751536800",
+        "end": "1751538600",
+        "location": "Room 4",
+        "allDay": false,
+        "content": "daily",
+        "channels": ["Ops", "dev"]
+      },
+      "expected": {
+        "kind": 31923,
+        "content": "daily",
+        "tags": [
+          ["d", "evt-2"],
+          ["title", "Standup"],
+          ["start", "1751536800"],
+          ["end", "1751538600"],
+          ["location", "Room 4"],
+          ["t", "ops"],
+          ["t", "dev"]
+        ]
+      }
+    },
+    {
+      "name": "title trimmed, channels lowercased, missing end and location omit those tags",
+      "input": {
+        "d": "evt-3",
+        "title": "  Launch  ",
+        "start": "2026-08-01",
+        "allDay": true,
+        "content": "",
+        "channels": ["Launch"]
+      },
+      "expected": {
+        "kind": 31922,
+        "content": "",
+        "tags": [
+          ["d", "evt-3"],
+          ["title", "Launch"],
+          ["start", "2026-08-01"],
+          ["t", "launch"]
+        ]
+      }
+    }
+  ]
+}

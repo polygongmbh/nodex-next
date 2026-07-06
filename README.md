@@ -121,7 +121,14 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   draft carries a channel.
 - **Publishing** requires ≥1 channel (included chip or typed `#hashtag`,
   written as lowercased `t`-tags) and targets exactly one relay: the active
-  space, else the sole connected relay, else a readable error.
+  space, else the sole connected relay, else the single space that carries
+  the draft's channels. Only when the channels span several spaces does the
+  bar show a space picker and require you to pick one first.
+- **Attach a calendar event** (📅 in the bar) to post a NIP-52 event (kind
+  31922 all-day / 31923 timed) instead of a plain message: fill in title,
+  start (and time/end/location), and send — it carries the draft's channels
+  and targets the resolved space, then renders as a calendar card. This is
+  the "post an event → calendar sync" path.
 - **Deletions** (kind 5) tombstone only the author's own events; state events
   1630–1633 fold into their task and render only as compact rows, never as
   post cards.
