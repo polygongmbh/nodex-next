@@ -40,7 +40,7 @@ release:
 	@$(MAKE) build
 	@$(MAKE) push
 
-# Expand DOMAINS and docker stack deploy (plain swarm). Deploy an older build
-# by overriding IMAGE, e.g.  make deploy IMAGE=$(REPO):20260701-abc1234
+# Deploy a prebuilt/pushed image (registry flow: run `make release` first). The
+# local single-node flow is `./deploy/deploy.sh` directly — it builds for you.
 deploy:
-	IMAGE=$(IMAGE) ./deploy/deploy.sh
+	SKIP_BUILD=1 IMAGE=$(IMAGE) ./deploy/deploy.sh

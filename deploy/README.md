@@ -21,15 +21,20 @@ later and is what changes per host.
 Single-node, locally built image — no registry needed:
 
 ```sh
-make build                       # docker build -t nodex-next:latest .
 cp deploy/.env.sample deploy/.env   # set DOMAINS=..., LETS_ENCRYPT_ENV=...
-make deploy                      # runs deploy/deploy.sh
+./deploy/deploy.sh                  # pull + build + deploy, one command
 ```
 
-`deploy/deploy.sh` expands the comma-separated `DOMAINS` list into a Traefik
-rule and calls `docker stack deploy`. Prereqs: the swarm's Traefik is on an
-external overlay network named `proxy` (the Co-op Cloud traefik recipe creates
-it; otherwise `docker network create -d overlay proxy`).
+`deploy/deploy.sh` runs `git pull`, builds a uniquely-tagged local image
+(`<repo>:<UTC-timestamp>-<sha>` plus `:latest`), expands `DOMAINS` into a
+Traefik rule, and calls `docker stack deploy`. The unique tag matters — Swarm
+skips a redeploy of an identical `:latest`, so it would never pick up a rebuild.
+A local build implies `--resolve-image never` automatically. Toggles:
+`SKIP_PULL=1`, `SKIP_BUILD=1`, `NO_CACHE=1` (bust a stale build cache).
+
+Prereqs: the swarm's Traefik is on an external overlay network named `proxy`
+(the Co-op Cloud traefik recipe creates it; otherwise
+`docker network create -d overlay proxy`).
 
 ### Multiple domains
 

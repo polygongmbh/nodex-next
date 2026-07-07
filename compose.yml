@@ -1,8 +1,8 @@
 # Co-op Cloud style stack file. Deploy with abra (as a recipe) or, on a plain
-# swarm, with ./deploy/deploy.sh — it derives ROUTER_RULE (the Traefik host
-# rule) from DOMAINS/DOMAIN and then runs `docker stack deploy`. Do NOT use a
-# bare `docker stack deploy`: ROUTER_RULE stays empty and Traefik builds no
-# router. Build the image first (`make build` / `docker build`).
+# swarm, with ./deploy/deploy.sh — it pulls, builds a uniquely-tagged local
+# image, derives ROUTER_RULE (the Traefik host rule) from DOMAINS/DOMAIN, and
+# runs `docker stack deploy`. Do NOT use a bare `docker stack deploy`:
+# ROUTER_RULE stays empty and Traefik builds no router.
 #
 # Two unrelated env files — do not confuse them:
 #   deploy/.env      - THIS stack's deployment config (DOMAIN, STACK_NAME,
