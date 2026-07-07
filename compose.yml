@@ -2,6 +2,17 @@
 #   docker build -t nodex-next:latest .
 #   set -a; source deploy/.env; set +a
 #   docker stack deploy -c compose.yml nodex-next
+#
+# Two unrelated env files — do not confuse them:
+#   deploy/.env      - THIS stack's deployment config (DOMAIN, STACK_NAME,
+#                      IMAGE, LETS_ENCRYPT_ENV). Sourced by the shell above,
+#                      consumed by docker/Traefik. See deploy/.env.sample.
+#   <repo root>/.env - the app's Vite build-time config (VITE_NOAS_HOST_URL,
+#                      VITE_SPACE_PROBE_SUBDOMAINS), baked into the JS bundle
+#                      when `docker build` runs `npm run build`. Must exist in
+#                      the build context BEFORE `docker build -t ...` runs;
+#                      this stack file and `docker stack deploy` never read
+#                      it. See .env.example.
 version: "3.8"
 
 services:
@@ -22,7 +33,9 @@ services:
         failure_action: rollback
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.${STACK_NAME}.rule=Host(`${DOMAIN}`)"
+        # ROUTER_RULE is built from the DOMAINS list by deploy/deploy.sh. When
+        # unset (single-domain abra deploys) it falls back to Host(`$DOMAIN`).
+        - "traefik.http.routers.${STACK_NAME}.rule=${ROUTER_RULE:-Host(`${DOMAIN}`)}"
         - "traefik.http.routers.${STACK_NAME}.entrypoints=web-secure"
         - "traefik.http.routers.${STACK_NAME}.tls.certresolver=${LETS_ENCRYPT_ENV}"
         - "traefik.http.services.${STACK_NAME}.loadbalancer.server.port=80"

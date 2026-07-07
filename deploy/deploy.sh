@@ -1,0 +1,42 @@
+#!/usr/bin/env sh
+# Expand a comma-separated DOMAINS list into a Traefik router rule, then run
+# `docker stack deploy`. This keeps deploy/.env free of Traefik rule syntax.
+#
+#   ./deploy/deploy.sh                      # reads deploy/.env
+#   ENV_FILE=/path/to/other.env ./deploy/deploy.sh
+set -eu
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ENV_FILE="${ENV_FILE:-$ROOT/deploy/.env}"
+
+# Load deploy config and export it so `docker stack deploy` can interpolate it
+# into compose.yml (a plain `.` sources without exporting; set -a fixes that).
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  . "$ENV_FILE"
+  set +a
+fi
+
+STACK_NAME="${STACK_NAME:-nodex-next}"
+: "${DOMAINS:?set DOMAINS in $ENV_FILE, e.g. DOMAINS=a.example.com,b.example.org}"
+
+# First entry is the canonical domain (coop-cloud version label + fallback rule).
+DOMAIN="${DOMAINS%%,*}"
+
+# Build:  Host(`a`) || Host(`b`) || ...
+RULE=""
+OLDIFS="$IFS"; IFS=','
+for d in $DOMAINS; do
+  d="$(printf '%s' "$d" | tr -d '[:space:]')"
+  [ -z "$d" ] && continue
+  if [ -z "$RULE" ]; then
+    RULE="Host(\`$d\`)"
+  else
+    RULE="$RULE || Host(\`$d\`)"
+  fi
+done
+IFS="$OLDIFS"
+
+export STACK_NAME DOMAIN ROUTER_RULE="$RULE"
+printf 'Deploying stack "%s"\n  rule: %s\n' "$STACK_NAME" "$ROUTER_RULE"
+exec docker stack deploy -c "$ROOT/compose.yml" "$STACK_NAME"

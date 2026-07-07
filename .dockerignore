@@ -5,4 +5,12 @@ docs
 spec
 *.md
 compose.yml
+compose.*.yml
+Makefile
+abra.sh
 deploy/.env*
+deploy/deploy.sh
+deploy/README.md
+
+# NOTE: the repo-root .env is intentionally NOT ignored — the Vite build
+# bakes VITE_* from it. Only deploy/.env* (deployment config) is excluded.
