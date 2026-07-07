@@ -1,7 +1,7 @@
 <script lang="ts">
   import { t } from "@/lib/i18n/index.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
-  import { relayColorSlot } from "@/domain/relay-identity";
+  import SpaceIcon from "./SpaceIcon.svelte";
 
   let { relays, onClose }: { relays: string[]; onClose: () => void } = $props();
 
@@ -13,7 +13,6 @@
         name: known?.name ?? relayId,
         url: known?.url ?? "",
         connected: known?.connected ?? false,
-        slot: relayColorSlot(relayId),
       };
     })
   );
@@ -27,7 +26,7 @@
   <ul>
     {#each entries as relay (relay.id)}
       <li>
-        <span class="dot" style="background: var(--relay-{relay.slot})"></span>
+        <SpaceIcon relayId={relay.id} url={relay.url} connected={relay.connected} size={22} />
         <div class="names">
           <span class="name">{relay.name}</span>
           {#if relay.url}<span class="url">{relay.url}</span>{/if}
@@ -92,12 +91,6 @@
     display: flex;
     align-items: center;
     gap: 0.65rem;
-  }
-  .dot {
-    width: 0.7rem;
-    height: 0.7rem;
-    border-radius: 50%;
-    flex-shrink: 0;
   }
   .names {
     display: flex;
