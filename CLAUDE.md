@@ -66,7 +66,10 @@ specific to this codebase:
 
 ## Workflow
 
-Commit/changelog conventions: workspace `../CLAUDE.md`. Repo-specific:
+Commit/changelog conventions: workspace `../CLAUDE.md`. Always commit cohesive
+changes — one self-contained change per commit, each left green
+(`npm run check` + `npx vitest run`), split larger work into an incremental
+series. Repo-specific:
 
 - `git add` new files before a pathspec commit (it errors on untracked
   paths); run `git status` afterwards to confirm nothing was left behind.
