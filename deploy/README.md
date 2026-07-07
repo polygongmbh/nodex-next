@@ -69,6 +69,54 @@ not expand the `DOMAINS` list — only `deploy.sh` does).
 
 Recipe files in this repo: `../compose.yml`, `../abra.sh`, `deploy/.env.sample`.
 
+## Registry & versioned images
+
+An image reference is `[registry-host/]namespace/name:tag[@sha256:digest]`. With
+no registry host it defaults to Docker Hub; otherwise it names your registry —
+`git.example.com/you/nodex-next:20260707-b4ef243` (Gitea/Forgejo),
+`ghcr.io/you/nodex-next:…` (GitHub), or a self-hosted `registry:2`.
+
+```sh
+docker login git.example.com                      # once; stores credentials
+make release REGISTRY=git.example.com/you         # build + push
+```
+
+`make release` builds and pushes two tags:
+
+- `:<commit-date>-<short-sha>` (e.g. `20260707-b4ef243`) — immutable, never
+  overwritten, sorts chronologically, traceable to the exact commit.
+- `:latest` — moving pointer to the newest build.
+
+It refuses to push a dirty tree, so every pushed tag rebuilds byte-for-byte
+from a known commit. The build id is also baked into the image and served at
+`https://<host>/version.txt`, so you can confirm which build is live.
+
+### Why a registry — and why it's the key to regression hunting
+
+Each Swarm node (and abra) pulls the image independently, so a locally built
+image only exists on the build node; the registry is the shared distribution
+point. It's also your regression time machine: because every build was pushed
+under an immutable tag, you jump to any prior version by *pulling* it — never
+rebuilding:
+
+```sh
+make deploy IMAGE=git.example.com/you/nodex-next:20260701-abc1234   # plain swarm
+# via abra: set IMAGE in the app env, then `abra app deploy <domain>`
+```
+
+`curl https://<host>/version.txt` confirms the rollback landed. To bisect a
+regression, deploy tags between the last-good and first-bad dates and check
+each. Tags are mutable pointers; for an absolutely pinned deploy use the digest
+form `name@sha256:…` (from `docker inspect` / the registry) — content-addressed
+and unable to move.
+
+Registries accumulate images, so set a retention/GC policy or prune old tags
+periodically (most registries expose a UI or API for it).
+
+> abra's `abra app deploy <domain> <version>` pins the *recipe* version (the
+> compose.yml), which is separate from the *image* tag. For app-code
+> regressions, change `IMAGE`.
+
 ## abra vs. plain `docker stack deploy`
 
 Neither is your dev loop — active development is `npm run dev` (Vite HMR);

@@ -9,6 +9,10 @@ set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="${ENV_FILE:-$ROOT/deploy/.env}"
 
+# An IMAGE passed in the environment (e.g. `make deploy IMAGE=repo:oldtag` to
+# test an older build) wins over the value in the env file.
+IMAGE_OVERRIDE="${IMAGE:-}"
+
 # Load deploy config and export it so `docker stack deploy` can interpolate it
 # into compose.yml (a plain `.` sources without exporting; set -a fixes that).
 if [ -f "$ENV_FILE" ]; then
@@ -16,6 +20,8 @@ if [ -f "$ENV_FILE" ]; then
   . "$ENV_FILE"
   set +a
 fi
+
+[ -n "$IMAGE_OVERRIDE" ] && export IMAGE="$IMAGE_OVERRIDE"
 
 STACK_NAME="${STACK_NAME:-nodex-next}"
 : "${DOMAINS:?set DOMAINS in $ENV_FILE, e.g. DOMAINS=a.example.com,b.example.org}"
