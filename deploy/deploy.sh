@@ -44,5 +44,17 @@ done
 IFS="$OLDIFS"
 
 export STACK_NAME DOMAIN ROUTER_RULE="$RULE"
+
+# Optional `docker stack deploy` flags (set in the environment or deploy/.env):
+#   REGISTRY_AUTH=1      -> --with-registry-auth: hand the node's registry
+#                          credentials to tasks so they can pull a PRIVATE image
+#                          (GHCR packages and most Forgejo registries default to
+#                          private).
+#   RESOLVE_IMAGE=never  -> --resolve-image never: skip the registry digest
+#                          lookup; use for a local-only image on a single node.
+set --
+[ -n "${REGISTRY_AUTH:-}" ] && set -- "$@" --with-registry-auth
+[ -n "${RESOLVE_IMAGE:-}" ] && set -- "$@" --resolve-image "$RESOLVE_IMAGE"
+
 printf 'Deploying stack "%s"\n  rule: %s\n' "$STACK_NAME" "$ROUTER_RULE"
-exec docker stack deploy -c "$ROOT/compose.yml" "$STACK_NAME"
+exec docker stack deploy "$@" -c "$ROOT/compose.yml" "$STACK_NAME"

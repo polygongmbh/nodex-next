@@ -73,13 +73,17 @@ Recipe files in this repo: `../compose.yml`, `../abra.sh`, `deploy/.env.sample`.
 
 An image reference is `[registry-host/]namespace/name:tag[@sha256:digest]`. With
 no registry host it defaults to Docker Hub; otherwise it names your registry —
-`git.example.com/you/nodex-next:20260707-b4ef243` (Gitea/Forgejo),
-`ghcr.io/you/nodex-next:…` (GitHub), or a self-hosted `registry:2`.
+`ghcr.io/polygongmbh/nodex-next:…` (GitHub, the default here), a self-hosted
+`git.example.com/you/nodex-next:…` (Forgejo), or a bare `registry:2`.
+
+The Makefile defaults `REGISTRY` to `ghcr.io/polygongmbh`:
 
 ```sh
-docker login git.example.com                      # once; stores credentials
-make release REGISTRY=git.example.com/you         # build + push
+docker login ghcr.io -u polygongmbh   # once; PAT with write:packages as the password
+make release                          # build + push ghcr.io/polygongmbh/nodex-next
 ```
+
+Override `REGISTRY=git.example.com/you` to push to a self-hosted registry.
 
 `make release` builds and pushes two tags:
 
@@ -100,7 +104,7 @@ under an immutable tag, you jump to any prior version by *pulling* it — never
 rebuilding:
 
 ```sh
-make deploy IMAGE=git.example.com/you/nodex-next:20260701-abc1234   # plain swarm
+make deploy IMAGE=ghcr.io/polygongmbh/nodex-next:20260701-abc1234   # plain swarm
 # via abra: set IMAGE in the app env, then `abra app deploy <domain>`
 ```
 
@@ -109,6 +113,12 @@ regression, deploy tags between the last-good and first-bad dates and check
 each. Tags are mutable pointers; for an absolutely pinned deploy use the digest
 form `name@sha256:…` (from `docker inspect` / the registry) — content-addressed
 and unable to move.
+
+GHCR packages are private by default, so tasks need credentials to pull —
+deploy with `REGISTRY_AUTH=1` (adds `--with-registry-auth`, bundling the node's
+login into the service). For a single node running a **local-only** image that
+was never pushed, deploy with `RESOLVE_IMAGE=never` to skip the registry
+lookup. Both are read by `deploy.sh` from the environment or `deploy/.env`.
 
 Registries accumulate images, so set a retention/GC policy or prune old tags
 periodically (most registries expose a UI or API for it).

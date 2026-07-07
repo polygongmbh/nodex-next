@@ -1,7 +1,7 @@
 # --- Image identity ---------------------------------------------------------
-# Set REGISTRY to your registry namespace (e.g. git.example.com/you or
-# ghcr.io/you) so images can be pushed and pulled by abra / a multi-node swarm.
-REGISTRY ?=
+# Registry namespace images are tagged/pushed under. Defaults to GitHub's
+# registry (GHCR); override to push to a self-hosted Forgejo/registry instead.
+REGISTRY ?= ghcr.io/polygongmbh
 NAME     ?= nodex-next
 
 # Version tag: <commit-date>-<short-sha>, plus -dirty when the tree has
