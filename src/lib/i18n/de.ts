@@ -109,6 +109,7 @@ export default {
   "space.add": "Hinzufügen",
   "space.addPlaceholder": "space.deine-org.example",
   "space.offline": "offline",
+  "space.connect": "Space hinzufügen",
   "menu.spaces": "Spaces",
   "menu.connected": "verbunden",
   "menu.signOut": "Abmelden",

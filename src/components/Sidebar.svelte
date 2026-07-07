@@ -1,6 +1,5 @@
 <script lang="ts">
   import { deriveChannels, partitionPinnedChannels, type Topic } from "@/domain/channel";
-  import { relayColorSlot } from "@/domain/relay-identity";
   import { i18n, t, type Locale } from "@/lib/i18n/index.svelte";
   import { longpress } from "@/lib/longpress";
   import { authStore } from "@/stores/auth.svelte";
@@ -10,8 +9,8 @@
   import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
   import ProfileHover from "./ProfileHover.svelte";
-  import AddSpace from "./AddSpace.svelte";
   import ProfileSheet from "./ProfileSheet.svelte";
+  import SpaceIcon from "./SpaceIcon.svelte";
   import SpaceSelector from "./SpaceSelector.svelte";
   import TopicManager from "./TopicManager.svelte";
 
@@ -53,16 +52,11 @@
   <ul class="relays">
     {#each timelineStore.relays as relay (relay.id)}
       <li>
-        <span
-          class="dot"
-          class:offline={!relay.connected}
-          style="background: var(--relay-{relayColorSlot(relay.id)})"
-        ></span>
-        {relay.name}
+        <SpaceIcon relayId={relay.id} url={relay.url} connected={relay.connected} size={18} />
+        <span class="relay-name" class:offline={!relay.connected}>{relay.name}</span>
       </li>
     {/each}
   </ul>
-  <AddSpace />
 
   <h2>{t("sidebar.channels")}</h2>
   <nav class="channels">
@@ -177,13 +171,8 @@
     align-items: center;
     gap: 0.45rem;
   }
-  .dot {
-    width: 0.55rem;
-    height: 0.55rem;
-    border-radius: 50%;
-  }
-  .dot.offline {
-    opacity: 0.35;
+  .relay-name.offline {
+    opacity: 0.5;
   }
   h2 {
     margin: 0.5rem 0 0;

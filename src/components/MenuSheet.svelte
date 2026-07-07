@@ -1,11 +1,10 @@
 <script lang="ts">
   import { authStore } from "@/stores/auth.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
-  import { relayColorSlot } from "@/domain/relay-identity";
   import { i18n, t, type Locale } from "@/lib/i18n/index.svelte";
-  import AddSpace from "./AddSpace.svelte";
   import Avatar from "./Avatar.svelte";
   import ProfileSheet from "./ProfileSheet.svelte";
+  import SpaceIcon from "./SpaceIcon.svelte";
   import SpaceSelector from "./SpaceSelector.svelte";
 
   let { onClose }: { onClose: () => void } = $props();
@@ -36,7 +35,7 @@
   <ul>
     {#each timelineStore.relays as relay (relay.id)}
       <li>
-        <span class="dot" style="background: var(--relay-{relayColorSlot(relay.id)})"></span>
+        <SpaceIcon relayId={relay.id} url={relay.url} connected={relay.connected} size={20} />
         <span class="name">{relay.name}</span>
         <span class="state" class:online={relay.connected}>
           {relay.connected ? t("menu.connected") : t("space.offline")}
@@ -44,7 +43,6 @@
       </li>
     {/each}
   </ul>
-  <AddSpace />
 
   <label class="language">
     <span>{t("menu.language")}</span>
@@ -151,11 +149,6 @@
     display: flex;
     align-items: center;
     gap: 0.6rem;
-  }
-  .dot {
-    width: 0.65rem;
-    height: 0.65rem;
-    border-radius: 50%;
   }
   .name {
     flex: 1;

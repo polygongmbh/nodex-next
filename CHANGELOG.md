@@ -20,6 +20,16 @@
 
 ### Changed
 
+- The space selector is now an icon-first dropdown: the collapsed pill shows
+  only the active space's host-derived icon (a neutral layers glyph for "All
+  spaces"), space names appear once it's open, "Add a space" is inline at the
+  bottom, and the connected-count badge is gone. The same per-space icons
+  replace the colored attribution dots throughout (space lists, "Delivered by"
+  sheet).
+- Feed cards only show per-space attribution when the feed spans more than one
+  space — with a single space in scope the marker was redundant. The task/event
+  icon no longer sits in its own leading column before the avatar; it renders
+  inline in the message body, before the text.
 - Onboarding lost its standalone welcome/"let's go" screen — the greeting is
   now the profile step's heading — and drops the website field (it stays in the
   full profile editor). Display name defaults to the username with a capital
