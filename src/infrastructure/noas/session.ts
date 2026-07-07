@@ -12,6 +12,15 @@ export interface StoredSession {
   username: string;
   apiBaseUrl: string;
   relayUrls: string[];
+  /**
+   * sha256-hex of the password, kept so profile-picture uploads (which noas
+   * authenticates with the password hash) work after a session restore, not
+   * only right after a fresh sign-in. Absent on sessions saved before this
+   * field existed and on any malformed value — uploads then fall back to the
+   * image-URL field until the next sign-in. The private key hex is already
+   * stored here, so this is no additional secret at rest.
+   */
+  passwordHash?: string;
 }
 
 function isStoredSession(value: unknown): value is StoredSession {
@@ -25,7 +34,8 @@ function isStoredSession(value: unknown): value is StoredSession {
     typeof session.username === "string" &&
     typeof session.apiBaseUrl === "string" &&
     Array.isArray(session.relayUrls) &&
-    session.relayUrls.every((url) => typeof url === "string")
+    session.relayUrls.every((url) => typeof url === "string") &&
+    (session.passwordHash === undefined || /^[a-f0-9]{64}$/.test(session.passwordHash as string))
   );
 }
 

@@ -1,7 +1,9 @@
 import { normalizeRelayUrl } from "@/domain/relay-identity";
 import { DEFAULT_NOAS_HOST } from "@/infrastructure/noas/config";
-import { resolveNoasApiBaseUrl } from "@/infrastructure/noas/discovery";
+import { resolveNoasDiscovery } from "@/infrastructure/noas/discovery";
+import { detectSpace } from "@/infrastructure/nostr/space-probe";
 import {
+  hashNoasPassword,
   NoasAuthError,
   noasProfilePictureUrl,
   registerWithNoas,
@@ -43,22 +45,42 @@ class AuthStore {
     const split = splitNoasCredentials(usernameInput, "");
     const username = split.username;
     const host = split.host || DEFAULT_NOAS_HOST;
-    const apiBaseUrl = await resolveNoasApiBaseUrl(host);
-    if (!apiBaseUrl) throw new NoasAuthError("error.invalidServer");
-    const result = await signInWithNoas(apiBaseUrl, username, password);
-    // Zero spaces is fine — onboarding asks for one before the timeline.
+    const discovery = await resolveNoasDiscovery(host);
+    if (!discovery.apiBaseUrl) throw new NoasAuthError("error.invalidServer");
+    const result = await signInWithNoas(discovery.apiBaseUrl, username, password);
+    const relayUrls = await this.detectSpaces(host, result.relayUrls, discovery.relays);
     const session: StoredSession = {
       pubkeyHex: result.pubkeyHex,
       privateKeyHex: result.privateKeyHex,
       username,
-      apiBaseUrl,
-      relayUrls: result.relayUrls,
+      apiBaseUrl: discovery.apiBaseUrl,
+      relayUrls,
+      // Kept for later picture uploads; the private key hex already persists
+      // alongside, so this adds no new secret at rest.
+      passwordHash: hashNoasPassword(password),
     };
     saveSession(session);
     saveLastHost(host);
     this.lastHost = host;
     this.session = session;
     this.status = "signedIn";
+  }
+
+  /**
+   * Space auto-detection ladder: the account's own relays, else the tenant
+   * defaults noas advertises at discovery, else a reachable relay probed under
+   * the noas host's root domain. Empty only when all three come up dry — then
+   * onboarding asks for a space.
+   */
+  private async detectSpaces(
+    host: string,
+    accountRelays: string[],
+    discoveryRelays: string[]
+  ): Promise<string[]> {
+    if (accountRelays.length > 0) return accountRelays;
+    if (discoveryRelays.length > 0) return discoveryRelays;
+    const detected = await detectSpace(host);
+    return detected ? [detected] : [];
   }
 
   /**
@@ -74,7 +96,7 @@ class AuthStore {
     const split = splitNoasCredentials(usernameInput, "");
     const username = split.username;
     const host = split.host || DEFAULT_NOAS_HOST;
-    const apiBaseUrl = await resolveNoasApiBaseUrl(host);
+    const { apiBaseUrl } = await resolveNoasDiscovery(host);
     if (!apiBaseUrl) throw new NoasAuthError("error.invalidServer");
     const result = await registerWithNoas(apiBaseUrl, username, password, options);
     try {

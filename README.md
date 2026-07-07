@@ -70,10 +70,17 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   deployment default host. Registration adapts to the discovered host and
   offers full key handling (paste hex/nsec with npub preview, or vanity-mine
   a key from the username's initials).
+- **Space auto-detection** runs during sign-in so onboarding rarely has to
+  ask: the account's own relays win, else the tenant defaults noas advertises
+  at discovery (`noas.relays`), else a WebSocket probe of
+  `wss://<subdomain>.<root-domain-of-the-noas-host>` (default subdomains
+  `tasks, feed, relay, nostr`, `VITE_SPACE_PROBE_SUBDOMAINS` to override) that
+  adopts the first reachable one. Only when all three come up empty does the
+  optional "connect your space" step appear.
 - **Onboarding** runs after the first sign-in on a device: welcome → profile
-  → channel picks. The profile step fetches your existing kind-0 from the
-  relays, prefills picture/display name/bio/website, and publishes edits
-  merged into that base (unknown fields like `lud16` survive). Picked
+  → channel picks. The profile step fetches your existing kind-0
+  from the relays, prefills picture/display name/bio/website, and publishes
+  edits merged into that base (unknown fields like `lud16` survive). Picked
   channels are pinned: they lead the chips row and form the default feed
   scope together with posts that mention you. On a mobile browser (and not
   already installed) the channel step also shows a PWA install hint with

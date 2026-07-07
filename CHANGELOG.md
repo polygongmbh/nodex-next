@@ -4,6 +4,14 @@
 
 ### Added
 
+- Spaces are auto-detected during sign-in, so onboarding rarely asks for one:
+  the account's own relays, else the tenant defaults noas now advertises at
+  discovery (`noas.relays`), else a WebSocket probe of
+  `wss://<subdomain>.<root-domain-of-the-noas-host>` (default `tasks, feed,
+  relay, nostr`; `VITE_SPACE_PROBE_SUBDOMAINS` overrides) that adopts the first
+  reachable relay. The "connect your space" step now appears only when all
+  three come up empty.
+
 - The composer sends to the current context. With no space selected it now
   resolves the target space from where the draft's channels live: a channel
   that exists on a single space posts there with no prompt; a channel that

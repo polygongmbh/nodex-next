@@ -77,7 +77,9 @@ It must be event-compatible with nodex/mostr on the same relay.
 ## Noas auth
 
 1. Discovery: `GET https://<host>/.well-known/nostr.json` → `noas.api_base`
-   (absolute or origin-relative); fallback `https://<host>/api/v1`.
+   (absolute or origin-relative); fallback `https://<host>/api/v1`. The `noas`
+   object MAY also carry `relays` (an array of the tenant's domain-default
+   space URLs) and `email_verification_mode`; both may be absent.
 2. Sign-in: `POST <api_base>/auth/signin` with
    `{username, password_hash: sha256-hex(password)}`. Accept field aliases
    (`encryptedPrivateKey` / `encrypted_private_key` /
@@ -97,6 +99,14 @@ It must be event-compatible with nodex/mostr on the same relay.
 5. There is NO server field: `user@domain` usernames pick the host, plain
    usernames use the deployment default. Zero configured relays is a valid
    sign-in.
+6. Space auto-detection ladder (run during sign-in, before onboarding): use
+   the sign-in response `relays`; else the discovery `noas.relays`; else probe
+   `wss://<sub>.<root-domain-of-the-noas-host>` for each configured subdomain
+   (default `tasks, feed, relay, nostr`, overridable per deployment) and adopt
+   the first that is reachable — a WebSocket that opens. Candidate derivation
+   is `spec/vectors/space-detection.json`; the reachability probe is
+   client-local. Only when every rung comes up empty does onboarding ask for a
+   space. Subdomain probing is skipped for localhost/IP hosts.
 
 ## Subscriptions
 
@@ -141,11 +151,11 @@ two-stroke N glyph, #4785FF on black.
   local part has ≥4 chars and the field is empty, impatient re-click drops
   to a 2-char prefix, never overwrite typed input.
 - **Onboarding** (first sign-in per device, per pubkey, in localStorage):
-  optional "connect your space" step when the account has no relays →
-  welcome ("Hey {name}…") → profile (picture URL with live avatar preview,
-  display name, bio, website — prefilled from the fetched kind-0) → channel
-  picks (live channels with counts) which become **pinned channels**,
-  pinned per space via the content-at-pin-time rule.
+  optional "connect your space" step ONLY when the space-detection ladder
+  (§ Noas auth 6) found nothing → welcome ("Hey {name}…") → profile (picture
+  URL with live avatar preview, display name, bio, website — prefilled from
+  the fetched kind-0) → channel picks (live channels with counts) which become
+  **pinned channels**, pinned per space via the content-at-pin-time rule.
 - **Timeline screen**:
   - Mobile top bar: hamburger (menu sheet: user + edit profile + sign-out,
     space selector, per-relay status, add-space, language) + chips row.

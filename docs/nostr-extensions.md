@@ -84,13 +84,15 @@ Noas (username+password custodial key server) extends the NIP-05 well-known
 document with a top-level `noas` object:
 
 ```json
-{ "noas": { "api_base": "/api/v1", "email_verification_mode": "optional" } }
+{ "noas": { "api_base": "/api/v1", "email_verification_mode": "optional", "relays": ["wss://tasks.example.com"] } }
 ```
 
-Endpoints (`/auth/signin`, `/auth/register`, `/picture/<pubkey>`) exchange a
-sha256 `password_hash` and a NIP-49 `ncryptsec` private key that is only ever
-decrypted client-side. This is a distinct protocol riding on the NIP-05
-document and deserves its own spec document in the noas repository.
+`relays` (optional) lists the tenant's default spaces so a client can adopt a
+space with no per-account configuration. Endpoints (`/auth/signin`,
+`/auth/register`, `/picture/<pubkey>`) exchange a sha256 `password_hash` and a
+NIP-49 `ncryptsec` private key that is only ever decrypted client-side. This
+is a distinct protocol riding on the NIP-05 document and deserves its own spec
+document in the noas repository.
 
 ## Per-relay attribution — **client behavior, no NIP needed**
 
