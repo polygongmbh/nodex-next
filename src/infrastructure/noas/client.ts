@@ -192,6 +192,47 @@ export function noasProfilePictureUrl(apiBaseUrl: string, pubkeyHex: string): st
   return `${apiBaseUrl}/picture/${pubkeyHex}`;
 }
 
+/**
+ * Upload an avatar straight to noas — the only media endpoint accounts have.
+ * Authenticates with the password hash (same credential as sign-in); the image
+ * is a base64 / data-URL string (≤2 MB decoded). Returns the stable picture URL
+ * to store in kind-0. Throws NoasAuthError (e.g. 401 when the hash is stale).
+ */
+export async function uploadNoasProfilePicture(
+  apiBaseUrl: string,
+  username: string,
+  passwordHash: string,
+  pubkeyHex: string,
+  imageData: string,
+  contentType: string
+): Promise<string> {
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}/auth/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username,
+        password_hash: passwordHash,
+        updates: {
+          profile_picture_data: imageData,
+          profile_picture_content_type: contentType,
+        },
+      }),
+    });
+  } catch {
+    throw new NoasAuthError("error.connection");
+  }
+  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!response.ok || data.success === false) {
+    if (response.status === 401) throw new NoasAuthError("error.pictureUploadAuth");
+    throw new NoasAuthError(
+      typeof data.error === "string" ? data.error : "error.pictureUploadFailed"
+    );
+  }
+  return noasProfilePictureUrl(apiBaseUrl, pubkeyHex);
+}
+
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(32);
   for (let index = 0; index < 32; index += 1) {

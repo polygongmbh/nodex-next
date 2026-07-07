@@ -89,10 +89,13 @@ document with a top-level `noas` object:
 
 `relays` (optional) lists the tenant's default spaces so a client can adopt a
 space with no per-account configuration. Endpoints (`/auth/signin`,
-`/auth/register`, `/picture/<pubkey>`) exchange a sha256 `password_hash` and a
-NIP-49 `ncryptsec` private key that is only ever decrypted client-side. This
-is a distinct protocol riding on the NIP-05 document and deserves its own spec
-document in the noas repository.
+`/auth/register`, `/auth/update`, `/picture/<pubkey>`) exchange a sha256
+`password_hash` and a NIP-49 `ncryptsec` private key that is only ever
+decrypted client-side. Avatars are the one media path: uploaded as base64
+`profile_picture_data` on `/auth/register` or `/auth/update` and served at
+`/picture/<pubkey>` — there is no Blossom/NIP-96 endpoint. This is a distinct
+protocol riding on the NIP-05 document and deserves its own spec document in
+the noas repository.
 
 ## Per-relay attribution — **client behavior, no NIP needed**
 

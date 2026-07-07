@@ -107,6 +107,13 @@ It must be event-compatible with nodex/mostr on the same relay.
    is `spec/vectors/space-detection.json`; the reachability probe is
    client-local. Only when every rung comes up empty does onboarding ask for a
    space. Subdomain probing is skipped for localhost/IP hosts.
+7. Profile pictures upload straight to noas: `POST <api_base>/auth/update`
+   with `{username, password_hash, profile_picture_data (base64 or data-URL),
+   profile_picture_content_type}` (≤2 MB image); the stored image is served at
+   `<api_base>/picture/<pubkeyHex>`. Upload needs the `password_hash`, which
+   only exists after a fresh sign-in/registration — clients that persist it
+   with the session can upload after a restore, otherwise they fall back to an
+   image-URL field. There is no other media endpoint.
 
 ## Subscriptions
 
