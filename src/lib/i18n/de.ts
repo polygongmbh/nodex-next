@@ -27,10 +27,8 @@ export default {
   "signin.register": "Konto erstellen",
   "signin.registering": "Konto wird erstellt…",
 
-  "onboarding.welcome": "Hey {name}, willkommen an Bord!",
-  "onboarding.personalize": "Nehmen wir uns kurz Zeit, dein Erlebnis zu personalisieren.",
-  "onboarding.go": "Los geht's",
-  "onboarding.profileTitle": "Richte dein Profil ein",
+  "onboarding.profileHeading": "Hey {name}, richten wir dein Profil ein",
+  "onboarding.personalize": "Ein Foto und ein Name helfen deinem Team, dich zu erkennen.",
   "onboarding.fetching": "Dein bestehendes Profil wird geladen…",
   "onboarding.continue": "Weiter",
   "onboarding.skip": "Vorerst überspringen",
@@ -46,6 +44,9 @@ export default {
   "onboarding.spaceTitle": "Verbinde deinen Space",
   "onboarding.spaceHint":
     "Dein Konto hat noch keinen Space. Gib die Space-Adresse (ein Relay) deiner Organisation ein, um loszulegen.",
+  "onboarding.pwaTitle": "Nodex zum Home-Bildschirm hinzufügen",
+  "onboarding.pwaHint": "Installiere es für das volle App-Erlebnis — Vollbild, schnellerer Start, keine Browser-Leisten.",
+  "onboarding.pwaDone": "Los geht's",
 
   "pwa.recommend": "Tipp: Füge Nodex deinem Home-Bildschirm hinzu — für das volle App-Erlebnis.",
   "pwa.iosShare": "Tippe auf „Teilen“",

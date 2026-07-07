@@ -28,6 +28,18 @@ export function personInitials(label: string): string {
   return label.slice(0, 2).toUpperCase();
 }
 
+/**
+ * The display name a fresh profile defaults to: the username with an
+ * upper-cased initial (`alice` → `Alice`). Empty stays empty; an already
+ * capitalized or non-letter initial is left untouched. Overridden by an
+ * existing kind-0. Contract: spec/vectors/noas.json `defaultDisplayName`.
+ */
+export function defaultDisplayName(username: string): string {
+  const trimmed = username.trim();
+  if (!trimmed) return "";
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 export interface ProfileEdits {
   displayName: string;
   name?: string;

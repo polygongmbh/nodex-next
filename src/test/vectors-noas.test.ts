@@ -79,3 +79,10 @@ describe("vectors: profile merge", () => {
     expect(mergeProfileContent(base, edits)).toEqual(expected);
   });
 });
+
+describe("vectors: default display name", () => {
+  it.each(vectors.defaultDisplayName)("$name", async ({ username, expected }) => {
+    const { defaultDisplayName } = await import("@/domain/person");
+    expect(defaultDisplayName(username)).toBe(expected);
+  });
+});

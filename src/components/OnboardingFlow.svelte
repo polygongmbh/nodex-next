@@ -1,35 +1,47 @@
 <script lang="ts">
   import { deriveChannels, spacesToPinChannelFor } from "@/domain/channel";
+  import { defaultDisplayName } from "@/domain/person";
   import { t } from "@/lib/i18n/index.svelte";
+  import { detectMobileOS } from "@/lib/pwa";
   import { authStore } from "@/stores/auth.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
   import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import AddSpace from "./AddSpace.svelte";
-  import Avatar from "./Avatar.svelte";
+  import AvatarUpload from "./AvatarUpload.svelte";
   import PwaInstallHint from "./PwaInstallHint.svelte";
 
   import { onMount } from "svelte";
 
-  // (Space →) welcome → profile → channels. The space step only appears when
-  // the account has no space configured; the timeline service already runs
+  // (Space →) profile → channels → (pwa). The space step appears only when the
+  // detection ladder found nothing; the greeting lives in the profile heading
+  // (no standalone welcome screen); the PWA step appears only on a mobile
+  // browser that is not already installed. The timeline service already runs
   // behind this flow, so the channel step offers live channels.
-  let step = $state<"space" | "welcome" | "profile" | "channels">(
-    (authStore.session?.relayUrls.length ?? 0) > 0 ? "welcome" : "space"
+  const username = $derived(authStore.session?.username ?? "");
+
+  const showPwaStep = (() => {
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    return !standalone && detectMobileOS(navigator.userAgent, navigator.maxTouchPoints) !== null;
+  })();
+
+  let step = $state<"space" | "profile" | "channels" | "pwa">(
+    (authStore.session?.relayUrls.length ?? 0) > 0 ? "profile" : "space"
   );
 
   // why: adding the first space (via AddSpace) updates the session — advance
   // out of the space step as soon as one exists.
   $effect(() => {
     if (step === "space" && (authStore.session?.relayUrls.length ?? 0) > 0) {
-      step = "welcome";
+      step = "profile";
     }
   });
 
-  let displayName = $state(authStore.session?.username ?? "");
+  let displayName = $state(defaultDisplayName(authStore.session?.username ?? ""));
   let about = $state("");
   let picture = $state("");
-  let website = $state("");
   let profileLoading = $state(true);
   let profileError = $state("");
   let saving = $state(false);
@@ -45,13 +57,13 @@
         displayName =
           text(existing.display_name) || text(existing.name) || displayName;
         about = text(existing.about) || about;
-        website = text(existing.website) || website;
         picture = text(existing.picture) || authStore.profilePictureUrl || "";
       })
       .finally(() => (profileLoading = false));
   });
 
   let selected = $state<string[]>([]);
+  let pendingPins = $state<Record<string, string[]>>({});
   const channels = $derived(deriveChannels(Object.values(timelineStore.postsById)));
 
   async function saveProfile() {
@@ -59,12 +71,13 @@
     profileError = "";
     saving = true;
     try {
+      // Website stays out of onboarding (it lives in the full editor); omitting
+      // it here leaves any existing website on the kind-0 untouched.
       await timelineController.publishProfile({
         name: authStore.session?.username,
-        displayName: displayName.trim() || (authStore.session?.username ?? ""),
+        displayName: displayName.trim() || defaultDisplayName(username),
         about,
         picture: picture.trim(),
-        website,
       });
       step = "channels";
     } catch {
@@ -80,14 +93,24 @@
       : [...selected, name];
   }
 
-  function finish() {
+  // Channels complete onboarding — unless a PWA step follows, in which case the
+  // pins wait so flipping `onboarded` (which swaps in the timeline) happens last.
+  function completeChannels() {
     const posts = Object.values(timelineStore.postsById);
     const allRelayIds = timelineStore.relays.map((relay) => relay.id);
-    preferencesStore.completeOnboarding(
-      Object.fromEntries(
-        selected.map((name) => [name, spacesToPinChannelFor(posts, name, allRelayIds)])
-      )
+    const pins = Object.fromEntries(
+      selected.map((name) => [name, spacesToPinChannelFor(posts, name, allRelayIds)])
     );
+    if (showPwaStep) {
+      pendingPins = pins;
+      step = "pwa";
+    } else {
+      preferencesStore.completeOnboarding(pins);
+    }
+  }
+
+  function finishPwa() {
+    preferencesStore.completeOnboarding(pendingPins);
   }
 </script>
 
@@ -98,35 +121,18 @@
       <p class="hint">{t("onboarding.spaceHint")}</p>
       <AddSpace />
     </div>
-  {:else if step === "welcome"}
-    <div class="step center">
-      <svg class="glyph" viewBox="0 0 220 220">
-        <g transform="translate(-54.08,-13.59) scale(1.12)" fill="none" stroke-width="31.104" stroke-linecap="round">
-          <path d="M90.4329 180.698L90.0113 86.1228C89.9973 82.9897 93.8252 81.4563 95.9781 83.7326L166.928 158.748" />
-          <path d="M202.53 40.0443L202.952 134.619C202.966 137.752 199.138 139.286 196.985 137.01L126.035 61.9938" />
-        </g>
-      </svg>
-      <h1>{t("onboarding.welcome", { name: authStore.session?.username ?? "" })}</h1>
-      <p>{t("onboarding.personalize")}</p>
-      <button class="primary" onclick={() => (step = "profile")}>{t("onboarding.go")}</button>
-    </div>
   {:else if step === "profile"}
     <div class="step">
-      <h1>{t("onboarding.profileTitle")}</h1>
+      <h1>{t("onboarding.profileHeading", { name: username })}</h1>
+      <p class="hint">{t("onboarding.personalize")}</p>
       {#if profileLoading}
         <p class="hint">{t("onboarding.fetching")}</p>
       {:else}
-        <div class="avatar-row">
-          <Avatar
-            label={displayName || "?"}
-            pubkey={authStore.session?.pubkeyHex ?? ""}
-            picture={picture || undefined}
-          />
-          <label class="grow">
-            <span>{t("profile.picture")} <em>{t("common.optional")}</em></span>
-            <input type="url" bind:value={picture} placeholder="https://…" />
-          </label>
-        </div>
+        <AvatarUpload
+          bind:picture
+          pubkey={authStore.session?.pubkeyHex ?? ""}
+          label={displayName}
+        />
         <label>
           <span>{t("profile.displayName")}</span>
           <input type="text" bind:value={displayName} data-testid="onboarding-display-name" />
@@ -134,10 +140,6 @@
         <label>
           <span>{t("profile.bio")} <em>{t("common.optional")}</em></span>
           <textarea rows="3" bind:value={about} placeholder={t("profile.bioPlaceholder")}></textarea>
-        </label>
-        <label>
-          <span>{t("profile.website")} <em>{t("common.optional")}</em></span>
-          <input type="url" bind:value={website} placeholder="https://…" />
         </label>
         {#if profileError}
           <p class="error">{profileError}</p>
@@ -148,7 +150,7 @@
         <button class="skip" onclick={() => (step = "channels")}>{t("onboarding.skip")}</button>
       {/if}
     </div>
-  {:else}
+  {:else if step === "channels"}
     <div class="step">
       <h1>{t("onboarding.channelsTitle")}</h1>
       <p class="hint">{t("onboarding.channelsHint")}</p>
@@ -169,14 +171,22 @@
           {/each}
         </div>
       {/if}
-      <button class="primary" onclick={finish} data-testid="onboarding-finish">
+      <button class="primary" onclick={completeChannels} data-testid="onboarding-finish">
         {selected.length === 0
           ? t("onboarding.showAll")
           : selected.length === 1
             ? t("onboarding.showOne")
             : t("onboarding.showCount", { count: selected.length })}
       </button>
+    </div>
+  {:else}
+    <div class="step">
+      <h1>{t("onboarding.pwaTitle")}</h1>
+      <p class="hint">{t("onboarding.pwaHint")}</p>
       <PwaInstallHint />
+      <button class="primary" onclick={finishPwa} data-testid="onboarding-finish-pwa">
+        {t("onboarding.pwaDone")}
+      </button>
     </div>
   {/if}
 </div>
@@ -196,18 +206,6 @@
     flex-direction: column;
     gap: 0.9rem;
   }
-  .center {
-    align-items: center;
-    text-align: center;
-  }
-  .glyph {
-    width: 4rem;
-    height: 4rem;
-    overflow: visible;
-  }
-  .glyph path {
-    stroke: var(--brand);
-  }
   h1 {
     margin: 0;
     font-size: 1.3rem;
@@ -219,14 +217,6 @@
   .hint {
     font-size: 0.9rem;
     color: var(--text-muted);
-  }
-  .avatar-row {
-    display: flex;
-    align-items: flex-end;
-    gap: 0.75rem;
-  }
-  .grow {
-    flex: 1;
   }
   label {
     display: flex;

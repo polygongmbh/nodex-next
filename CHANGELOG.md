@@ -11,6 +11,20 @@
   relay, nostr`; `VITE_SPACE_PROBE_SUBDOMAINS` overrides) that adopts the first
   reachable relay. The "connect your space" step now appears only when all
   three come up empty.
+- Profile pictures upload straight to noas (the account's only media endpoint):
+  tap the avatar to pick a photo, which is resized on-device and stored via
+  `/auth/update`. The image-URL field moved behind a disclosure. Applies to
+  both onboarding and the profile editor. Uploads need a fresh sign-in (the
+  password hash is now kept with the session for this); otherwise the URL field
+  is offered.
+
+### Changed
+
+- Onboarding lost its standalone welcome/"let's go" screen — the greeting is
+  now the profile step's heading — and drops the website field (it stays in the
+  full profile editor). Display name defaults to the username with a capital
+  initial. On a mobile browser that isn't installed, a final step recommends
+  adding Nodex to the home screen.
 
 - The composer sends to the current context. With no space selected it now
   resolves the target space from where the draft's channels live: a channel

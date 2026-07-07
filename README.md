@@ -77,16 +77,22 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   `tasks, feed, relay, nostr`, `VITE_SPACE_PROBE_SUBDOMAINS` to override) that
   adopts the first reachable one. Only when all three come up empty does the
   optional "connect your space" step appear.
-- **Onboarding** runs after the first sign-in on a device: welcome → profile
-  → channel picks. The profile step fetches your existing kind-0
-  from the relays, prefills picture/display name/bio/website, and publishes
-  edits merged into that base (unknown fields like `lud16` survive). Picked
-  channels are pinned: they lead the chips row and form the default feed
-  scope together with posts that mention you. On a mobile browser (and not
-  already installed) the channel step also shows a PWA install hint with
-  the OS's own steps — share sheet on iOS, browser menu on Android, worded
-  browser-neutrally so Firefox/Brave users aren't misdirected; the app
-  ships a web manifest and icons so it installs standalone.
+- **Onboarding** runs after the first sign-in on a device: (space →) profile →
+  channel picks (→ PWA). There is no standalone welcome screen — the greeting
+  is the profile step's heading. The profile step leads with a photo **upload**
+  straight to noas (the account's only media endpoint; an image-URL field sits
+  behind a disclosure), then display name (defaulting to the capitalized
+  username) and bio; website is not asked here (it stays in the full editor).
+  It fetches your existing kind-0 and publishes edits merged into that base
+  (unknown fields like `lud16` survive). Picked channels are pinned: they lead
+  the chips row and form the default feed scope together with posts that
+  mention you. On a mobile browser (and not already installed) a final PWA step
+  shows the OS's own install steps — share sheet on iOS, browser menu on
+  Android, worded browser-neutrally so Firefox/Brave users aren't misdirected;
+  the app ships a web manifest and icons so it installs standalone.
+- **Editing your profile** later uses the same avatar upload; picture uploads
+  need a fresh sign-in (noas authenticates them with the password hash, kept
+  with the session), otherwise the image-URL field is offered instead.
 - **Desktop (≥900px)** gets a persistent sidebar — spaces with connection
   dots, vertical channel list, user card — while phones keep the hamburger
   and chips row.

@@ -28,10 +28,8 @@ export default {
   "signin.register": "Create account",
   "signin.registering": "Creating account…",
 
-  "onboarding.welcome": "Hey {name}, welcome onboard!",
-  "onboarding.personalize": "Let's take a quick moment to personalize your experience.",
-  "onboarding.go": "Let's go",
-  "onboarding.profileTitle": "Set up your profile",
+  "onboarding.profileHeading": "Hey {name}, let's set up your profile",
+  "onboarding.personalize": "A photo and a name help your team recognize you.",
   "onboarding.fetching": "Fetching your existing profile…",
   "onboarding.continue": "Continue",
   "onboarding.skip": "Skip for now",
@@ -46,6 +44,9 @@ export default {
   "onboarding.spaceTitle": "Connect your space",
   "onboarding.spaceHint":
     "Your account has no space yet. Enter your organization's space address (a relay) to get started.",
+  "onboarding.pwaTitle": "Add Nodex to your home screen",
+  "onboarding.pwaHint": "Install it for the full app experience — full-screen, faster launch, no browser bars.",
+  "onboarding.pwaDone": "Get started",
 
   "pwa.recommend": "Tip: add Nodex to your home screen for the full app experience.",
   "pwa.iosShare": "Tap the Share button",

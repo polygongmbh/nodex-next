@@ -114,6 +114,8 @@ It must be event-compatible with nodex/mostr on the same relay.
    only exists after a fresh sign-in/registration — clients that persist it
    with the session can upload after a restore, otherwise they fall back to an
    image-URL field. There is no other media endpoint.
+8. Default display name = the username with an upper-cased initial (see
+   `noas.json` `defaultDisplayName`), overridden by an existing kind-0.
 
 ## Subscriptions
 
@@ -159,10 +161,18 @@ two-stroke N glyph, #4785FF on black.
   to a 2-char prefix, never overwrite typed input.
 - **Onboarding** (first sign-in per device, per pubkey, in localStorage):
   optional "connect your space" step ONLY when the space-detection ladder
-  (§ Noas auth 6) found nothing → welcome ("Hey {name}…") → profile (picture
-  URL with live avatar preview, display name, bio, website — prefilled from
-  the fetched kind-0) → channel picks (live channels with counts) which become
-  **pinned channels**, pinned per space via the content-at-pin-time rule.
+  (§ Noas auth 6) found nothing → profile → channel picks → optional PWA
+  install step. There is no standalone welcome/"let's go" screen; the greeting
+  ("Hey {name}…") is the profile step's heading. The profile step leads with a
+  photo **upload** to noas (avatar-first; an "image URL" field is tucked
+  behind a disclosure since accounts are noas-hosted), then display name
+  (defaulting to the capitalized username), then bio — prefilled from the
+  fetched kind-0. No website field in onboarding (it stays in the full profile
+  editor). Channel picks (live channels with counts) become **pinned
+  channels**, pinned per space via the content-at-pin-time rule. The final PWA
+  step appears only on a mobile browser that is not already installed; it shows
+  the add-to-home-screen hint and a "Get started" button that completes
+  onboarding (on desktop/standalone the channel step completes directly).
 - **Timeline screen**:
   - Mobile top bar: hamburger (menu sheet: user + edit profile + sign-out,
     space selector, per-relay status, add-space, language) + chips row.

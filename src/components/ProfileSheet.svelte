@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { defaultDisplayName } from "@/domain/person";
   import { t } from "@/lib/i18n/index.svelte";
   import { authStore } from "@/stores/auth.svelte";
   import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
-  import Avatar from "./Avatar.svelte";
+  import AvatarUpload from "./AvatarUpload.svelte";
 
   // Profile editor, reachable any time after onboarding. Scope "All spaces"
   // publishes one kind-0 everywhere; picking a space fetches and publishes a
@@ -32,7 +33,9 @@
         const text = (value: unknown): string =>
           typeof value === "string" ? value.trim() : "";
         displayName =
-          text(existing.display_name) || text(existing.name) || (authStore.session?.username ?? "");
+          text(existing.display_name) ||
+          text(existing.name) ||
+          defaultDisplayName(authStore.session?.username ?? "");
         about = text(existing.about);
         website = text(existing.website);
         picture = text(existing.picture) || authStore.profilePictureUrl || "";
@@ -50,7 +53,7 @@
       await timelineController.publishProfile(
         {
           name: authStore.session?.username,
-          displayName: displayName.trim() || (authStore.session?.username ?? ""),
+          displayName: displayName.trim() || defaultDisplayName(authStore.session?.username ?? ""),
           about,
           picture: picture.trim(),
           website,
@@ -85,17 +88,11 @@
   {#if loading}
     <p class="hint">{t("profile.fetching")}</p>
   {:else}
-    <div class="avatar-row">
-      <Avatar
-        label={displayName || "?"}
-        pubkey={authStore.session?.pubkeyHex ?? ""}
-        picture={picture || undefined}
-      />
-      <label class="grow">
-        <span>{t("profile.picture")}</span>
-        <input type="url" bind:value={picture} placeholder="https://…" />
-      </label>
-    </div>
+    <AvatarUpload
+      bind:picture
+      pubkey={authStore.session?.pubkeyHex ?? ""}
+      label={displayName}
+    />
     <label>
       <span>{t("profile.displayName")}</span>
       <input type="text" bind:value={displayName} />
@@ -183,14 +180,6 @@
   select:focus {
     outline: 2px solid var(--accent);
     outline-offset: -1px;
-  }
-  .avatar-row {
-    display: flex;
-    align-items: flex-end;
-    gap: 0.65rem;
-  }
-  .grow {
-    flex: 1;
   }
   .ok {
     margin: 0;
