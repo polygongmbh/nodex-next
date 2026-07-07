@@ -1,12 +1,13 @@
 <script lang="ts">
   import { type CalendarEvent, formatCalendarWhen } from "@/domain/calendar-events";
   import { personLabel } from "@/domain/person";
-  import { relayColorSlot } from "@/domain/relay-identity";
   import { i18n, t } from "@/lib/i18n/index.svelte";
   import { filterStore } from "@/stores/filters.svelte";
+  import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
   import ProfileHover from "./ProfileHover.svelte";
+  import SpaceIcon from "./SpaceIcon.svelte";
 
   let {
     event,
@@ -19,16 +20,19 @@
   const author = $derived(timelineStore.peopleByPubkey[event.pubkey]);
   const label = $derived(personLabel(author, event.pubkey));
   const when = $derived(formatCalendarWhen(event, i18n.locale));
+
+  // Attribution icons only add signal when the feed spans multiple spaces.
+  const showSpaces = $derived(timelineController.scopeRelayIds.length > 1);
+  const spaces = $derived(
+    event.relays.map((relayId) => {
+      const known = timelineStore.relays.find((relay) => relay.id === relayId);
+      return { id: relayId, url: known?.url ?? relayId, connected: known?.connected ?? true };
+    })
+  );
 </script>
 
 <article class="card">
   <div class="main">
-    <div class="gutter">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="4.5" width="18" height="16" rx="2" />
-        <path d="M3 9h18M8 2.5v4M16 2.5v4" />
-      </svg>
-    </div>
     <ProfileHover pubkey={event.pubkey}>
       <Avatar {label} pubkey={event.pubkey} picture={author?.picture} />
     </ProfileHover>
@@ -44,7 +48,11 @@
           </button>
         {/each}
       </header>
-      <h3 class="title">{event.title}</h3>
+      <h3 class="title">
+        <svg class="title-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4.5" width="18" height="16" rx="2" />
+          <path d="M3 9h18M8 2.5v4M16 2.5v4" />
+        </svg>{event.title}</h3>
       <p class="when">🗓 {when}</p>
       {#if event.location}
         <p class="location">📍 {event.location}</p>
@@ -52,14 +60,16 @@
       {#if event.content}
         <p class="content">{event.content}</p>
       {/if}
-      <footer>
-        <span class="spacer"></span>
-        <button class="dots" data-testid="relay-dots" onclick={() => onRelayDots(event.relays)}>
-          {#each event.relays as relayId (relayId)}
-            <span class="dot" style="background: var(--relay-{relayColorSlot(relayId)})"></span>
-          {/each}
-        </button>
-      </footer>
+      {#if showSpaces && spaces.length > 0}
+        <footer>
+          <span class="spacer"></span>
+          <button class="spaces" data-testid="relay-dots" onclick={() => onRelayDots(event.relays)}>
+            {#each spaces as space (space.id)}
+              <SpaceIcon relayId={space.id} url={space.url} connected={space.connected} size={15} />
+            {/each}
+          </button>
+        </footer>
+      {/if}
     </div>
   </div>
 </article>
@@ -72,15 +82,7 @@
   }
   .main {
     display: flex;
-    gap: 0.55rem;
-  }
-  .gutter {
-    width: 1.4rem;
-    display: flex;
-    justify-content: center;
-    padding-top: 0.25rem;
-    flex-shrink: 0;
-    color: var(--accent);
+    gap: 0.6rem;
   }
   .body {
     flex: 1;
@@ -120,6 +122,12 @@
     font-weight: 700;
     overflow-wrap: anywhere;
   }
+  .title-icon {
+    display: inline-block;
+    vertical-align: -0.15em;
+    margin-right: 0.35rem;
+    color: var(--accent);
+  }
   .when,
   .location {
     margin: 0.1rem 0;
@@ -139,16 +147,11 @@
   .spacer {
     flex: 1;
   }
-  .dots {
+  .spaces {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
-    padding: 0.35rem 0.25rem;
-    margin: -0.35rem 0;
-  }
-  .dot {
-    width: 0.55rem;
-    height: 0.55rem;
-    border-radius: 50%;
+    gap: 0.25rem;
+    padding: 0.3rem 0.25rem;
+    margin: -0.3rem 0;
   }
 </style>

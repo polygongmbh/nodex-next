@@ -2,14 +2,15 @@
   import type { Post } from "@/domain/post";
   import { postStatus } from "@/domain/post";
   import { personLabel } from "@/domain/person";
-  import { relayColorSlot } from "@/domain/relay-identity";
   import { tokenizeContent } from "@/domain/content-tokens";
   import { formatTimelineTimestamp } from "@/domain/timeline-timestamp";
   import { i18n, t } from "@/lib/i18n/index.svelte";
   import { filterStore } from "@/stores/filters.svelte";
+  import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
   import ProfileHover from "./ProfileHover.svelte";
+  import SpaceIcon from "./SpaceIcon.svelte";
   import StatusIcon from "./StatusIcon.svelte";
 
   let {
@@ -29,6 +30,16 @@
   const status = $derived(postStatus(post));
   const struck = $derived(status === "done" || status === "closed");
   const tokens = $derived(tokenizeContent(post.content));
+
+  // Per-space attribution only helps when the feed mixes spaces; with one space
+  // in scope every post came from it, so the icons are redundant noise.
+  const showSpaces = $derived(timelineController.scopeRelayIds.length > 1);
+  const spaces = $derived(
+    post.relays.map((relayId) => {
+      const known = timelineStore.relays.find((relay) => relay.id === relayId);
+      return { id: relayId, url: known?.url ?? relayId, connected: known?.connected ?? true };
+    })
+  );
 
   const CLAMP_CHARS = 280;
   const long = $derived(post.content.length > CLAMP_CHARS || post.content.split("\n").length > 5);
@@ -58,11 +69,6 @@
     </nav>
   {/if}
   <div class="main">
-    <div class="gutter">
-      {#if status}
-        <StatusIcon {status} size={20} />
-      {/if}
-    </div>
     <ProfileHover pubkey={post.pubkey}>
       <Avatar {label} pubkey={post.pubkey} picture={author?.picture} />
     </ProfileHover>
@@ -86,6 +92,7 @@
         <time>{formatTimelineTimestamp(new Date(post.timestamp * 1000), i18n.locale)}</time>
       </header>
       <p class="content" class:struck class:clamped={long && !expanded}>
+        {#if status}<span class="status-inline"><StatusIcon {status} size={16} /></span>{/if}
         {#each tokens as token, index (index)}
           {#if token.type === "url"}
             <a href={token.value} target="_blank" rel="noreferrer noopener">{token.value}</a>
@@ -99,19 +106,23 @@
           {expanded ? t("card.showLess") : t("card.showMore")}
         </button>
       {/if}
-      <footer>
-        {#if replyCount > 0}
-          <button class="replies" onclick={() => filterStore.focusThread(post.id)}>
-            ↩ {t(replyCount === 1 ? "card.reply" : "card.replies", { count: replyCount })}
-          </button>
-        {/if}
-        <span class="spacer"></span>
-        <button class="dots" data-testid="relay-dots" onclick={() => onRelayDots(post.relays)}>
-          {#each post.relays as relayId (relayId)}
-            <span class="dot" style="background: var(--relay-{relayColorSlot(relayId)})"></span>
-          {/each}
-        </button>
-      </footer>
+      {#if replyCount > 0 || (showSpaces && spaces.length > 0)}
+        <footer>
+          {#if replyCount > 0}
+            <button class="replies" onclick={() => filterStore.focusThread(post.id)}>
+              ↩ {t(replyCount === 1 ? "card.reply" : "card.replies", { count: replyCount })}
+            </button>
+          {/if}
+          <span class="spacer"></span>
+          {#if showSpaces && spaces.length > 0}
+            <button class="spaces" data-testid="relay-dots" onclick={() => onRelayDots(post.relays)}>
+              {#each spaces as space (space.id)}
+                <SpaceIcon relayId={space.id} url={space.url} connected={space.connected} size={15} />
+              {/each}
+            </button>
+          {/if}
+        </footer>
+      {/if}
     </div>
   </div>
 </article>
@@ -148,18 +159,18 @@
   }
   .main {
     display: flex;
-    gap: 0.55rem;
-  }
-  .gutter {
-    width: 1.4rem;
-    display: flex;
-    justify-content: center;
-    padding-top: 0.25rem;
-    flex-shrink: 0;
+    gap: 0.6rem;
   }
   .body {
     flex: 1;
     min-width: 0;
+  }
+  .status-inline {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    vertical-align: -0.2em;
+    margin-right: 0.3rem;
   }
   header {
     display: flex;
@@ -232,16 +243,11 @@
   .spacer {
     flex: 1;
   }
-  .dots {
+  .spaces {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
-    padding: 0.35rem 0.25rem;
-    margin: -0.35rem 0;
-  }
-  .dot {
-    width: 0.55rem;
-    height: 0.55rem;
-    border-radius: 50%;
+    gap: 0.25rem;
+    padding: 0.3rem 0.25rem;
+    margin: -0.3rem 0;
   }
 </style>
