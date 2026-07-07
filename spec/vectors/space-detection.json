@@ -1,0 +1,88 @@
+{
+  "note": "Pure derivation of ordered wss:// space-probe candidates from a noas host. When neither the account nor noas discovery supplies a relay, a client probes these candidates under the ROOT DOMAIN of the noas server and adopts the first that is reachable. Only the derivation is vectored here — the reachability check (a WebSocket open) is I/O and client-specific. Root domain: strip scheme/port/path, lowercase, drop a trailing dot; when the host has 3+ labels drop the leftmost label. localhost, IPs, and hosts with no dot yield no candidates. Subdomains are lowercased, blanks skipped, duplicates collapsed.",
+  "candidates": [
+    {
+      "name": "flagship two-label host keeps its apex",
+      "host": "nodex.nexus",
+      "subdomains": ["tasks", "feed", "relay", "nostr"],
+      "expected": [
+        "wss://tasks.nodex.nexus",
+        "wss://feed.nodex.nexus",
+        "wss://relay.nodex.nexus",
+        "wss://nostr.nodex.nexus"
+      ]
+    },
+    {
+      "name": "org apex, custom subdomain subset",
+      "host": "acme.com",
+      "subdomains": ["tasks", "feed"],
+      "expected": ["wss://tasks.acme.com", "wss://feed.acme.com"]
+    },
+    {
+      "name": "three-label host drops its leftmost label to the root",
+      "host": "mail.acme.com",
+      "subdomains": ["tasks"],
+      "expected": ["wss://tasks.acme.com"]
+    },
+    {
+      "name": "the relay subdomain itself resolves back to its own root",
+      "host": "tasks.polygon.gmbh",
+      "subdomains": ["tasks", "feed"],
+      "expected": ["wss://tasks.polygon.gmbh", "wss://feed.polygon.gmbh"]
+    },
+    {
+      "name": "url form with scheme, port, and path is reduced to the host",
+      "host": "https://nodex.nexus:8080/api/v1",
+      "subdomains": ["relay"],
+      "expected": ["wss://relay.nodex.nexus"]
+    },
+    {
+      "name": "mixed case host normalizes to lowercase",
+      "host": "Nodex.Nexus",
+      "subdomains": ["Feed"],
+      "expected": ["wss://feed.nodex.nexus"]
+    },
+    {
+      "name": "trailing dot is trimmed",
+      "host": "nodex.nexus.",
+      "subdomains": ["tasks"],
+      "expected": ["wss://tasks.nodex.nexus"]
+    },
+    {
+      "name": "blank subdomains are skipped and duplicates collapse",
+      "host": "acme.com",
+      "subdomains": ["tasks", "", "tasks", "feed"],
+      "expected": ["wss://tasks.acme.com", "wss://feed.acme.com"]
+    },
+    {
+      "name": "localhost yields no candidates",
+      "host": "localhost",
+      "subdomains": ["tasks"],
+      "expected": []
+    },
+    {
+      "name": "ipv4 yields no candidates",
+      "host": "192.168.1.10",
+      "subdomains": ["tasks"],
+      "expected": []
+    },
+    {
+      "name": "single-label host yields no candidates",
+      "host": "intranet",
+      "subdomains": ["tasks"],
+      "expected": []
+    },
+    {
+      "name": "empty subdomain list yields no candidates",
+      "host": "nodex.nexus",
+      "subdomains": [],
+      "expected": []
+    },
+    {
+      "name": "empty host yields no candidates",
+      "host": "",
+      "subdomains": ["tasks"],
+      "expected": []
+    }
+  ]
+}

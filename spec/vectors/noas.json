@@ -94,5 +94,14 @@
       "edits": { "displayName": "Alice", "about": "" },
       "expected": { "name": "alice", "display_name": "Alice", "website": "https://a.example" }
     }
+  ],
+  "defaultDisplayName": [
+    { "name": "lowercase username gets a capital initial", "username": "alice", "expected": "Alice" },
+    { "name": "two-letter handle", "username": "tj", "expected": "Tj" },
+    { "name": "already capitalized is left untouched", "username": "Bob", "expected": "Bob" },
+    { "name": "surrounding whitespace is trimmed first", "username": "  ada ", "expected": "Ada" },
+    { "name": "non-ascii initial is capitalized", "username": "ábel", "expected": "Ábel" },
+    { "name": "digits stay as-is", "username": "3va", "expected": "3va" },
+    { "name": "empty stays empty", "username": "", "expected": "" }
   ]
 }
