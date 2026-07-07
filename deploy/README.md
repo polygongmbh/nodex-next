@@ -127,6 +127,17 @@ periodically (most registries expose a UI or API for it).
 > compose.yml), which is separate from the *image* tag. For app-code
 > regressions, change `IMAGE`.
 
+## Troubleshooting
+
+**Task loops ~90s after start, log shows `SIGQUIT` and no access lines.** The
+health check never connected, so Swarm killed the task as unhealthy (3 ×
+`interval` + `start_period`). The image serves **IPv4-only** — nginx's
+`10-listen-on-ipv6-by-default.sh` skips configs that differ from its packaged
+default (ours does) — so probe/curl `127.0.0.1`, not `localhost` (which can
+resolve to `::1` first). The health check is fixed accordingly. The effective
+health check is the one in `compose.yml` (it overrides the image's), so a plain
+`make deploy` picks up the fix without rebuilding the image.
+
 ## abra vs. plain `docker stack deploy`
 
 Neither is your dev loop — active development is `npm run dev` (Vite HMR);

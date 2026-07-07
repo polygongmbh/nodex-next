@@ -16,5 +16,5 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Stamp the build id so `curl https://<host>/version.txt` shows what is live.
 RUN printf '%s\n' "${APP_VERSION}" > /usr/share/nginx/html/version.txt
 EXPOSE 80
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget -q --spider http://localhost/ || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -q -O /dev/null http://127.0.0.1/ || exit 1
