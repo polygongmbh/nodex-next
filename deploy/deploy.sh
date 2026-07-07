@@ -24,7 +24,9 @@ fi
 [ -n "$IMAGE_OVERRIDE" ] && export IMAGE="$IMAGE_OVERRIDE"
 
 STACK_NAME="${STACK_NAME:-nodex-next}"
-: "${DOMAINS:?set DOMAINS in $ENV_FILE, e.g. DOMAINS=a.example.com,b.example.org}"
+# Accept a single DOMAIN (older env files) as a fallback for the DOMAINS list.
+DOMAINS="${DOMAINS:-${DOMAIN:-}}"
+: "${DOMAINS:?set DOMAINS (or DOMAIN) in $ENV_FILE, e.g. DOMAINS=a.example.com,b.example.org}"
 
 # First entry is the canonical domain (coop-cloud version label + fallback rule).
 DOMAIN="${DOMAINS%%,*}"

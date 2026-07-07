@@ -1,11 +1,12 @@
-# Co-op Cloud style stack file. Deploy with abra (as a recipe) or directly:
-#   docker build -t nodex-next:latest .
-#   set -a; source deploy/.env; set +a
-#   docker stack deploy -c compose.yml nodex-next
+# Co-op Cloud style stack file. Deploy with abra (as a recipe) or, on a plain
+# swarm, with ./deploy/deploy.sh — it derives ROUTER_RULE (the Traefik host
+# rule) from DOMAINS/DOMAIN and then runs `docker stack deploy`. Do NOT use a
+# bare `docker stack deploy`: ROUTER_RULE stays empty and Traefik builds no
+# router. Build the image first (`make build` / `docker build`).
 #
 # Two unrelated env files — do not confuse them:
 #   deploy/.env      - THIS stack's deployment config (DOMAIN, STACK_NAME,
-#                      IMAGE, LETS_ENCRYPT_ENV). Sourced by the shell above,
+#                      IMAGE, LETS_ENCRYPT_ENV). Read by deploy/deploy.sh,
 #                      consumed by docker/Traefik. See deploy/.env.sample.
 #   <repo root>/.env - the app's Vite build-time config (VITE_NOAS_HOST_URL,
 #                      VITE_SPACE_PROBE_SUBDOMAINS), baked into the JS bundle
@@ -37,9 +38,11 @@ services:
         failure_action: rollback
       labels:
         - "traefik.enable=true"
-        # ROUTER_RULE is built from the DOMAINS list by deploy/deploy.sh. When
-        # unset (single-domain abra deploys) it falls back to Host(`$DOMAIN`).
-        - "traefik.http.routers.${STACK_NAME}.rule=${ROUTER_RULE:-Host(`${DOMAIN}`)}"
+        # ROUTER_RULE is precomputed by deploy/deploy.sh from DOMAINS/DOMAIN
+        # (e.g. Host(`a`) || Host(`b`)). No nested-${} default here: compose
+        # interpolation does NOT expand ${DOMAIN} inside a :- default, so it
+        # silently yields a broken rule. deploy.sh (or abra) must set ROUTER_RULE.
+        - "traefik.http.routers.${STACK_NAME}.rule=${ROUTER_RULE}"
         - "traefik.http.routers.${STACK_NAME}.entrypoints=web-secure"
         - "traefik.http.routers.${STACK_NAME}.tls.certresolver=${LETS_ENCRYPT_ENV}"
         - "traefik.http.services.${STACK_NAME}.loadbalancer.server.port=80"
