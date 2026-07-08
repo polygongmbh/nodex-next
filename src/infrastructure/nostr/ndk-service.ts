@@ -44,6 +44,27 @@ export interface NdkService {
   stop(): void;
 }
 
+// NDK's fetchEvents() only ever resolves via the subscription's `onEose` —
+// it has no internal timeout, so a relay that never connects or never sends
+// EOSE hangs the caller forever (surfaced as onboarding's profile step never
+// leaving "Fetching your existing profile…"). Resolve to `fallback` instead.
+const PROFILE_FETCH_TIMEOUT_MS = 8000;
+function withTimeout<T>(promise: Promise<T>, fallback: T, ms: number): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(fallback);
+      }
+    );
+  });
+}
+
 // `event:dup` can emit a raw NostrEvent (no rawEvent()) when the duplicate
 // came in via NDK's subscription manager — normalize both shapes.
 function toRawEvent(event: NDKEvent | NostrEvent): RawNostrEvent | null {
@@ -122,10 +143,10 @@ export function startNdkService(
       const relaySet = relayUrls?.length
         ? NDKRelaySet.fromRelayUrls(relayUrls, ndk)
         : undefined;
-      const events = await ndk.fetchEvents(
-        { kinds: [0 as NDKKind], authors: [pubkeyHex] },
-        undefined,
-        relaySet
+      const events = await withTimeout(
+        ndk.fetchEvents({ kinds: [0 as NDKKind], authors: [pubkeyHex] }, undefined, relaySet),
+        new Set<NDKEvent>(),
+        PROFILE_FETCH_TIMEOUT_MS
       );
       let newest: NDKEvent | null = null;
       for (const event of events) {
@@ -135,7 +156,11 @@ export function startNdkService(
     },
     async fetchProfileEvents(pubkeyHexes) {
       if (pubkeyHexes.length === 0) return [];
-      const events = await ndk.fetchEvents({ kinds: [0 as NDKKind], authors: pubkeyHexes });
+      const events = await withTimeout(
+        ndk.fetchEvents({ kinds: [0 as NDKKind], authors: pubkeyHexes }),
+        new Set<NDKEvent>(),
+        PROFILE_FETCH_TIMEOUT_MS
+      );
       const newestByAuthor = new Map<string, NDKEvent>();
       for (const event of events) {
         const existing = newestByAuthor.get(event.pubkey);
