@@ -75,6 +75,10 @@
 
 ### Fixed
 
+- Focusing a nested reply now scopes the timeline to that reply's own subtree
+  (its ancestors for breadcrumb context plus its own descendants) instead of
+  always expanding to the entire top-level thread; sibling branches under a
+  shared ancestor are excluded.
 - Selecting a topic now scopes cleanly: it drops any included channel the
   topic doesn't tag (which would otherwise AND the feed to nothing), hides
   channels the topic doesn't tag, lights up its own channels, and surfaces

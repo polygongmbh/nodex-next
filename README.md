@@ -103,8 +103,10 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   dots, vertical channel list, user card — while phones keep the hamburger
   and chips row.
 - **Interactivity**: reply cards carry clickable breadcrumb ancestor chains;
-  crumbs, reply indicators, and state rows focus the conversation as a
-  thread (ancestors + all replies). While a thread is open the nav row
+  crumbs, reply indicators, and state rows focus the conversation scoped to
+  the clicked post (its ancestors + its own replies) — focusing a nested reply
+  stays within its subtree and drops sibling branches. While a thread is open
+  the nav row
   (hamburger / space / channels) is replaced by a full-width back bar — tap
   anywhere on it to exit. Names, avatars, and @mentions open profile hover
   cards; card channel chips filter on click.

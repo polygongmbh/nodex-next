@@ -3,6 +3,8 @@
   "events": [
     { "event": { "id": "m1", "pubkey": "alice", "kind": 1, "content": "kickoff #dev", "tags": [], "created_at": 100 }, "relayUrl": "wss://one.example/" },
     { "event": { "id": "m2", "pubkey": "bob", "kind": 1, "content": "reply #other", "tags": [["e", "m1", "", "parent"]], "created_at": 150 }, "relayUrl": "wss://one.example/" },
+    { "event": { "id": "m5", "pubkey": "alice", "kind": 1, "content": "detail #sub", "tags": [["e", "m2", "", "parent"]], "created_at": 160 }, "relayUrl": "wss://one.example/" },
+    { "event": { "id": "m6", "pubkey": "carol", "kind": 1, "content": "aside #sub", "tags": [["e", "m1", "", "parent"]], "created_at": 170 }, "relayUrl": "wss://one.example/" },
     { "event": { "id": "m3", "pubkey": "alice", "kind": 1, "content": "mockups #design", "tags": [["p", "bob"]], "created_at": 200 }, "relayUrl": "wss://one.example/" },
     { "event": { "id": "m4", "pubkey": "carol", "kind": 1, "content": "noise #random", "tags": [], "created_at": 250 }, "relayUrl": "wss://two.example/" },
     { "event": { "id": "t1", "pubkey": "alice", "kind": 1621, "content": "fix login #dev", "tags": [], "created_at": 300 }, "relayUrl": "wss://one.example/" },
@@ -15,6 +17,8 @@
       "expected": [
         { "type": "post", "id": "m1" },
         { "type": "post", "id": "m2" },
+        { "type": "post", "id": "m5" },
+        { "type": "post", "id": "m6" },
         { "type": "post", "id": "m3" },
         { "type": "post", "id": "m4" },
         { "type": "post", "id": "t1" },
@@ -36,6 +40,8 @@
       "expected": [
         { "type": "post", "id": "m1" },
         { "type": "post", "id": "m2" },
+        { "type": "post", "id": "m5" },
+        { "type": "post", "id": "m6" },
         { "type": "post", "id": "m4" },
         { "type": "post", "id": "t1" },
         { "type": "state", "id": "s1" }
@@ -70,11 +76,22 @@
       "expected": [{ "type": "state", "id": "s1" }]
     },
     {
-      "name": "thread focus shows the conversation and bypasses channel scope",
+      "name": "root focus shows the whole conversation and bypasses channel scope",
       "scope": { "focusedPostId": "m1", "channelStates": { "design": "included" } },
       "expected": [
         { "type": "post", "id": "m1" },
-        { "type": "post", "id": "m2" }
+        { "type": "post", "id": "m2" },
+        { "type": "post", "id": "m5" },
+        { "type": "post", "id": "m6" }
+      ]
+    },
+    {
+      "name": "nested focus scopes to the focused subtree plus ancestors, excluding sibling branches",
+      "scope": { "focusedPostId": "m2" },
+      "expected": [
+        { "type": "post", "id": "m1" },
+        { "type": "post", "id": "m2" },
+        { "type": "post", "id": "m5" }
       ]
     },
     {
@@ -83,6 +100,8 @@
       "expected": [
         { "type": "post", "id": "m1" },
         { "type": "post", "id": "m2" },
+        { "type": "post", "id": "m5" },
+        { "type": "post", "id": "m6" },
         { "type": "post", "id": "m3" },
         { "type": "post", "id": "m4" },
         { "type": "post", "id": "t1" },

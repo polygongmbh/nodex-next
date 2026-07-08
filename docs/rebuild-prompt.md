@@ -204,10 +204,12 @@ two-stroke N glyph, #4785FF on black.
     indicator, attribution dots.
   - **Breadcrumbs**: reply cards show the ancestor chain (root › … ›
     parent, ≤3); clicking a crumb / reply indicator / state row focuses the
-    THREAD (root + all descendants, channel scope bypassed; relay scope and
-    search still apply). While focused, the nav row (hamburger / space /
-    channels) is hidden and replaced by a full-width back bar — tapping
-    anywhere on it exits the thread.
+    THREAD scoped to the clicked post: the focused post, its own descendants,
+    and its ancestor chain (breadcrumb context) — sibling branches under a
+    shared ancestor are excluded, so focusing a nested reply stays within its
+    subtree (channel scope bypassed; relay scope and search still apply). While
+    focused, the nav row (hamburger / space / channels) is hidden and replaced
+    by a full-width back bar — tapping anywhere on it exits the thread.
   - **Compact state rows**: status icon, label (state content or translated
     status name), author, task content one-line, time.
 - **Filtering model**: channel chip tap = exclusive include (tap the sole

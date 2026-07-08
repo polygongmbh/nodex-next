@@ -245,8 +245,9 @@ export function buildTimeline(
 
   const hasIncludes = Object.values(scope.channelStates).includes("included");
   const query = scope.searchQuery.trim().toLowerCase();
-  // Thread focus shows the whole conversation regardless of channel scope:
-  // the focused post, its ancestors, and every descendant.
+  // Thread focus bypasses channel scope: the focused post, its ancestor chain
+  // (breadcrumb context), and the focused post's own descendants — nested focus
+  // stays within its subtree and excludes sibling branches under the root.
   const threadIds = scope.focusedPostId
     ? collectThreadIds(postsById, posts, scope.focusedPostId)
     : null;
@@ -319,12 +320,9 @@ function collectThreadIds(
   posts: Post[],
   focusedId: string
 ): Set<string> {
+  // Descendants first, seeded ONLY from the focused post, so focusing a nested
+  // reply scopes to that reply's own subtree — not its parent's whole thread.
   const ids = new Set<string>([focusedId]);
-  let ancestor = postsById[focusedId]?.parentId;
-  while (ancestor && !ids.has(ancestor)) {
-    ids.add(ancestor);
-    ancestor = postsById[ancestor]?.parentId;
-  }
   let grew = true;
   while (grew) {
     grew = false;
@@ -334,6 +332,13 @@ function collectThreadIds(
         grew = true;
       }
     }
+  }
+  // Ancestors added afterward as breadcrumb context; they must not re-seed the
+  // downward walk above (that would pull in sibling branches under the root).
+  let ancestor = postsById[focusedId]?.parentId;
+  while (ancestor && !ids.has(ancestor)) {
+    ids.add(ancestor);
+    ancestor = postsById[ancestor]?.parentId;
   }
   return ids;
 }

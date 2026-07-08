@@ -159,7 +159,7 @@ describe("buildTimeline", () => {
     expect(postIds(included).sort()).toEqual([mention.id, other.id].sort());
   });
 
-  it("thread focus shows the whole conversation and ignores channel scope", () => {
+  it("root focus shows the whole conversation and ignores channel scope", () => {
     const root = rawEvent({ tags: [["t", "dev"]], created_at: 100 });
     const reply = rawEvent({
       tags: [["t", "other"], ["e", root.id, "", "parent"]],
@@ -176,9 +176,36 @@ describe("buildTimeline", () => {
     const items = buildTimeline(
       timelineStore.postsById,
       timelineStore.calendarEventsByAddress,
-      scope({ focusedPostId: reply.id, pinnedChannels: ["dev"] })
+      scope({ focusedPostId: root.id, pinnedChannels: ["dev"] })
     );
     expect(postIds(items).sort()).toEqual([root.id, reply.id, nested.id].sort());
+  });
+
+  it("nested focus scopes to the focused subtree plus ancestors, not siblings", () => {
+    const root = rawEvent({ tags: [["t", "dev"]], created_at: 100 });
+    const branch = rawEvent({
+      tags: [["t", "other"], ["e", root.id, "", "parent"]],
+      created_at: 150,
+    });
+    const branchChild = rawEvent({
+      tags: [["t", "third"], ["e", branch.id, "", "parent"]],
+      created_at: 200,
+    });
+    const sibling = rawEvent({
+      tags: [["t", "other"], ["e", root.id, "", "parent"]],
+      created_at: 250,
+    });
+    for (const event of [root, branch, branchChild, sibling]) {
+      timelineStore.ingestEvent(event, RELAY_A);
+    }
+    const items = buildTimeline(
+      timelineStore.postsById,
+      timelineStore.calendarEventsByAddress,
+      scope({ focusedPostId: branch.id })
+    );
+    // root (ancestor) + branch (focused) + branchChild (descendant); the sibling
+    // branch under root is excluded.
+    expect(postIds(items).sort()).toEqual([root.id, branch.id, branchChild.id].sort());
   });
 
   it("filters by search query, case-insensitively", () => {
