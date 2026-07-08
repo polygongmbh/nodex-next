@@ -32,10 +32,31 @@
     { "name": "channels become lowercased t-tags", "channels": ["General", "design"], "expected": { "tags": [["t", "general"], ["t", "design"]] } },
     { "name": "at least one channel required", "channels": [], "expected": { "error": "error.needChannel" } },
     {
-      "name": "reply adds parent-marked e-tag and p-tag",
+      "name": "reply to the thread root uses a single NIP-10 root-marked e-tag",
       "channels": ["general"],
-      "parent": { "id": "root", "pubkey": "alice", "relays": ["one-example"] },
-      "expected": { "tags": [["t", "general"], ["e", "root", "", "parent"], ["p", "alice"]] }
+      "reply": {
+        "parent": { "id": "root", "pubkey": "alice", "mentions": [] },
+        "root": { "id": "root", "pubkey": "alice" }
+      },
+      "expected": { "tags": [["t", "general"], ["e", "root", "", "root", "alice"], ["p", "alice"]] }
+    },
+    {
+      "name": "reply to a nested post carries root and reply e-tags plus thread p-tags",
+      "channels": ["general"],
+      "reply": {
+        "parent": { "id": "mid", "pubkey": "bob", "mentions": ["alice", "carol"] },
+        "root": { "id": "root", "pubkey": "alice" }
+      },
+      "expected": {
+        "tags": [
+          ["t", "general"],
+          ["e", "root", "", "root", "alice"],
+          ["e", "mid", "", "reply", "bob"],
+          ["p", "bob"],
+          ["p", "alice"],
+          ["p", "carol"]
+        ]
+      }
     }
   ],
   "resolveDraftChannels": [

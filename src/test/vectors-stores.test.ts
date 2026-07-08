@@ -113,13 +113,18 @@ describe("vectors: publish rules", () => {
   });
 
   it.each(publishVectors.buildMessageTags)("$name", (vector) => {
-    const parent = vector.parent ? (vector.parent as unknown as Post) : undefined;
+    const reply = vector.reply
+      ? {
+          parent: vector.reply.parent as unknown as Post,
+          root: vector.reply.root as unknown as Post,
+        }
+      : undefined;
     if ("error" in vector.expected) {
-      expect(() => buildMessageTags(vector.channels, parent)).toThrowError(
+      expect(() => buildMessageTags(vector.channels, reply)).toThrowError(
         new PublishRuleError(vector.expected.error!)
       );
     } else {
-      expect(buildMessageTags(vector.channels, parent)).toEqual(vector.expected.tags);
+      expect(buildMessageTags(vector.channels, reply)).toEqual(vector.expected.tags);
     }
   });
 

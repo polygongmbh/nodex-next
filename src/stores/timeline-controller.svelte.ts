@@ -17,6 +17,7 @@ import {
 import { buildTopicEvent } from "@/domain/topic-events";
 import { mergeProfileContent, type ProfileEdits } from "@/domain/person";
 import { classifyEvent } from "@/domain/event-to-post";
+import type { Post } from "@/domain/post";
 import {
   buildMessageTags,
   PublishRuleError,
@@ -153,6 +154,25 @@ class TimelineController {
       : timelineStore.relays.map((relay) => relay.id);
   }
 
+  /** The post a send would reply to: the focused thread's post, if any. */
+  get replyParent(): Post | undefined {
+    const id = filterStore.focusedPostId;
+    return id ? timelineStore.postsById[id] : undefined;
+  }
+
+  /** Walk parentId up to the thread root (returns self when top-level). */
+  private threadRoot(parent: Post): Post {
+    let current = parent;
+    const seen = new Set<string>([current.id]);
+    while (current.parentId) {
+      const next = timelineStore.postsById[current.parentId];
+      if (!next || seen.has(next.id)) break;
+      seen.add(next.id);
+      current = next;
+    }
+    return current;
+  }
+
   /**
    * Pins are per-space: pinning applies to the scoped spaces that have
    * content in the channel right now; unpinning removes the scoped spaces
@@ -209,12 +229,20 @@ class TimelineController {
     return targets.map((relay) => relay.url);
   }
 
-  /** Channels a send would publish with: every included channel in context. */
+  /**
+   * Channels a send would publish with: typed #hashtags plus the context —
+   * for a reply the parent's own channels (so it stays in the thread's
+   * channels even while the chips row is hidden), otherwise every included
+   * channel and selected-topic tag.
+   */
   get draftChannels(): string[] {
-    const included = Object.entries(this.effectiveChannelStates)
-      .filter(([, state]) => state === "included")
-      .map(([name]) => name);
-    return resolveDraftChannels(this.draft, included);
+    const parent = this.replyParent;
+    const context = parent
+      ? parent.channels
+      : Object.entries(this.effectiveChannelStates)
+          .filter(([, state]) => state === "included")
+          .map(([name]) => name);
+    return resolveDraftChannels(this.draft, context);
   }
 
   /** Connected spaces that already carry the draft's channels (candidate targets). */
@@ -237,6 +265,12 @@ class TimelineController {
     | { type: "resolved"; relayId: string }
     | { type: "ambiguous"; candidates: RelayInfo[] } {
     if (this.draftChannels.length === 0) return { type: "noChannel" };
+    const parent = this.replyParent;
+    if (parent) {
+      // A reply pins to its parent's origin relay, overriding any active space.
+      const origin = timelineStore.relays.find((relay) => relay.id === parent.relays[0]);
+      return origin ? { type: "resolved", relayId: origin.id } : { type: "noneConnected" };
+    }
     if (filterStore.activeRelayId) {
       return { type: "resolved", relayId: filterStore.activeRelayId };
     }
@@ -276,11 +310,13 @@ class TimelineController {
     if (!this.service) throw new PublishRuleError("error.notConnected");
     const channels = this.draftChannels;
     if (channels.length === 0) throw new PublishRuleError("error.needChannel");
-    // Same channel-aware resolution for messages and calendar events.
+    // Same channel-aware resolution for messages and calendar events; a reply
+    // pins to the focused parent's origin relay (keeps the thread on one space).
+    const parent = this.replyParent;
     const relay = resolvePublishRelay(
       timelineStore.relays,
       filterStore.activeRelayId,
-      undefined,
+      parent,
       this.channelSpaceIds
     );
     if (this.calendarDraft) {
@@ -304,10 +340,13 @@ class TimelineController {
     }
     const content = this.draft.trim();
     if (!content) throw new PublishRuleError("error.emptyMessage");
+    const reply = parent
+      ? { parent, root: this.threadRoot(parent), relayHint: relay.url }
+      : undefined;
     await this.service.publish({
       kind: NOSTR_KINDS.message,
       content,
-      tags: buildMessageTags(channels),
+      tags: buildMessageTags(channels, reply),
       relayUrls: [relay.url],
     });
     this.draft = "";

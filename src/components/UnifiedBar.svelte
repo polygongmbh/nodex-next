@@ -1,24 +1,35 @@
 <script lang="ts">
   import { timelineController } from "@/stores/timeline-controller.svelte";
   import { filterStore } from "@/stores/filters.svelte";
+  import { timelineStore } from "@/stores/timeline.svelte";
+  import { personLabel } from "@/domain/person";
   import { PublishRuleError } from "@/domain/publish-rules";
   import { t } from "@/lib/i18n/index.svelte";
   import ComposeEventSheet from "./ComposeEventSheet.svelte";
 
   // One bar for search and posting (the nodex mobile concept): typed text
   // live-filters the feed; typed #hashtags scope it AND become the post's
-  // channels; the send button appears once the draft carries a channel.
+  // channels; the send button appears once the draft carries a channel. In a
+  // focused thread the send is a reply pinned to the parent's origin relay.
   const target = $derived(timelineController.sendTarget);
   const hasCalendar = $derived(timelineController.calendarDraft !== null);
   const canPost = $derived(timelineController.draftChannels.length > 0);
   const hasBody = $derived(hasCalendar || timelineController.draft.trim().length > 0);
   const canSend = $derived(canPost && hasBody && target.type === "resolved");
+  const replyParent = $derived(timelineController.replyParent);
+  const replyLabel = $derived(
+    replyParent
+      ? personLabel(timelineStore.peopleByPubkey[replyParent.pubkey], replyParent.pubkey)
+      : ""
+  );
   const placeholder = $derived(
-    canPost
-      ? t("bar.message", {
-          channels: timelineController.draftChannels.map((channel) => `#${channel}`).join(" "),
-        })
-      : t("bar.search")
+    replyParent
+      ? t("bar.reply")
+      : canPost
+        ? t("bar.message", {
+            channels: timelineController.draftChannels.map((channel) => `#${channel}`).join(" "),
+          })
+        : t("bar.search")
   );
 
   let error = $state("");
@@ -50,6 +61,14 @@
 <div class="bar">
   {#if error}
     <p class="error">{error}</p>
+  {/if}
+
+  {#if replyParent}
+    <div class="reply-chip" data-testid="reply-chip">
+      <span class="reply-label">↩ {t("bar.replyingTo", { name: replyLabel })}</span>
+      <!-- svelte-ignore a11y_consider_explicit_label -->
+      <button class="remove" onclick={() => filterStore.clearThread()} title={t("timeline.exitThread")}>✕</button>
+    </div>
   {/if}
 
   {#if timelineController.calendarDraft}
@@ -123,6 +142,25 @@
     max-width: 100%;
   }
   .event-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .reply-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.45rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 0.7rem;
+    background: var(--accent-muted);
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 500;
+    width: fit-content;
+    max-width: 100%;
+  }
+  .reply-label {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

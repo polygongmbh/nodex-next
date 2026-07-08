@@ -52,15 +52,39 @@ export function resolvePublishRelay(
   throw new PublishRuleError("error.selectSpace");
 }
 
-/** Tags for a kind-1 message: every channel as lowercased `t`-tag. */
-export function buildMessageTags(channels: string[], parent?: Post): string[][] {
+/** Immediate parent + thread root of a reply (root === parent for top-level). */
+export interface ReplyContext {
+  parent: Post;
+  root: Post;
+  /** Relay URL hint for the e-tags (NIP-10 recommends it; "" when unknown). */
+  relayHint?: string;
+}
+
+/**
+ * Tags for a kind-1 message: every channel as a lowercased `t`-tag, plus —
+ * for a reply — NIP-10 threading. A reply to the thread root carries a single
+ * `root`-marked `e`-tag; a reply to a nested post carries `root` + `reply`
+ * e-tags (root-first). `p`-tags notify the thread: the parent's author plus
+ * everyone the parent already `p`-tagged (NIP-10 §"p" tag).
+ */
+export function buildMessageTags(channels: string[], reply?: ReplyContext): string[][] {
   if (channels.length === 0) {
     throw new PublishRuleError("error.needChannel");
   }
   const tags: string[][] = channels.map((channel) => ["t", channel.toLowerCase()]);
-  if (parent) {
-    tags.push(["e", parent.id, "", "parent"]);
-    tags.push(["p", parent.pubkey]);
+  if (reply) {
+    const { parent, root, relayHint = "" } = reply;
+    tags.push(["e", root.id, relayHint, "root", root.pubkey]);
+    if (parent.id !== root.id) {
+      tags.push(["e", parent.id, relayHint, "reply", parent.pubkey]);
+    }
+    const seen = new Set<string>();
+    for (const pubkey of [parent.pubkey, ...parent.mentions]) {
+      if (pubkey && !seen.has(pubkey)) {
+        seen.add(pubkey);
+        tags.push(["p", pubkey]);
+      }
+    }
   }
   return tags;
 }

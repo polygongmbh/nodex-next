@@ -76,6 +76,7 @@ export default {
   "timeline.loading": "Deine Timeline wird geladen…",
   "timeline.empty": "Noch nichts hier. Wähle andere Channels oder starte die Unterhaltung.",
   "timeline.thread": "Thread",
+  "timeline.exitThread": "Thread schließen",
   "timeline.older": "Ältere Nachrichten anzeigen",
   "card.showMore": "Mehr anzeigen",
   "card.showLess": "Weniger anzeigen",
@@ -89,6 +90,8 @@ export default {
 
   "bar.message": "Nachricht an {channels}",
   "bar.search": "Suchen — füge einen #Channel hinzu, um zu posten",
+  "bar.reply": "Antworten…",
+  "bar.replyingTo": "Antwort an {name}",
   "bar.sendFailed": "Senden fehlgeschlagen — versuche es erneut.",
   "bar.attachEvent": "Termin anhängen",
   "bar.selectSpacePrompt": "Wähle einen Space zum Posten:",

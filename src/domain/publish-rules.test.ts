@@ -62,11 +62,22 @@ describe("buildMessageTags", () => {
     expect(() => buildMessageTags([])).toThrow(PublishRuleError);
   });
 
-  it("links replies via a parent-marked e-tag", () => {
+  it("links a top-level reply with a single NIP-10 root-marked e-tag", () => {
     const parent = post();
-    const tags = buildMessageTags(["general"], parent);
-    expect(tags).toContainEqual(["e", parent.id, "", "parent"]);
+    const tags = buildMessageTags(["general"], { parent, root: parent });
+    expect(tags).toContainEqual(["e", parent.id, "", "root", parent.pubkey]);
     expect(tags).toContainEqual(["p", parent.pubkey]);
+    expect(tags.filter((tag) => tag[0] === "e")).toHaveLength(1);
+  });
+
+  it("links a nested reply with root + reply e-tags and thread p-tags", () => {
+    const root = post({ id: "r".repeat(64), pubkey: "a".repeat(64) });
+    const parent = post({ id: "m".repeat(64), pubkey: "b".repeat(64), mentions: [root.pubkey] });
+    const tags = buildMessageTags(["general"], { parent, root });
+    expect(tags).toContainEqual(["e", root.id, "", "root", root.pubkey]);
+    expect(tags).toContainEqual(["e", parent.id, "", "reply", parent.pubkey]);
+    expect(tags).toContainEqual(["p", parent.pubkey]);
+    expect(tags).toContainEqual(["p", root.pubkey]); // parent already p-tagged the root author
   });
 });
 

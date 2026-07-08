@@ -76,6 +76,7 @@ export default {
   "timeline.loading": "Loading your timeline…",
   "timeline.empty": "Nothing here yet. Pick different channels or start the conversation.",
   "timeline.thread": "Thread",
+  "timeline.exitThread": "Close thread",
   "timeline.older": "Show older messages",
   "card.showMore": "Show more",
   "card.showLess": "Show less",
@@ -89,6 +90,8 @@ export default {
 
   "bar.message": "Message {channels}",
   "bar.search": "Search — add a #channel to post",
+  "bar.reply": "Reply…",
+  "bar.replyingTo": "Replying to {name}",
   "bar.sendFailed": "Sending failed — try again.",
   "bar.attachEvent": "Attach event",
   "bar.selectSpacePrompt": "Pick a space to post to:",

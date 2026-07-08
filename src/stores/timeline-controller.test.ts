@@ -53,3 +53,23 @@ describe("sendTarget", () => {
     expect(timelineController.sendTarget).toEqual({ type: "resolved", relayId: "two-example" });
   });
 });
+
+describe("reply composition in a focused thread", () => {
+  it("pins the send to the parent's origin relay, overriding the active space", () => {
+    const parent = rawEvent({ tags: [["t", "dev"]] });
+    timelineStore.ingestEvent(parent, RELAY_B); // parent delivered by two-example
+    filterStore.selectSpace("one-example"); // active space is elsewhere
+    filterStore.focusThread(parent.id);
+    timelineController.draft = "on it";
+    expect(timelineController.replyParent?.id).toBe(parent.id);
+    expect(timelineController.sendTarget).toEqual({ type: "resolved", relayId: "two-example" });
+  });
+
+  it("inherits the parent's channels so a reply needs no typed hashtag", () => {
+    const parent = rawEvent({ content: "parent post", tags: [["t", "dev"], ["t", "ops"]] });
+    timelineStore.ingestEvent(parent, RELAY_A);
+    filterStore.focusThread(parent.id);
+    timelineController.draft = "no hashtags here";
+    expect(timelineController.draftChannels.sort()).toEqual(["dev", "ops"]);
+  });
+});
