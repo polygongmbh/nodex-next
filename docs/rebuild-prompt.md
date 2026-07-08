@@ -205,7 +205,9 @@ two-stroke N glyph, #4785FF on black.
   - **Breadcrumbs**: reply cards show the ancestor chain (root › … ›
     parent, ≤3); clicking a crumb / reply indicator / state row focuses the
     THREAD (root + all descendants, channel scope bypassed; relay scope and
-    search still apply) with a dismissible thread bar.
+    search still apply). While focused, the nav row (hamburger / space /
+    channels) is hidden and replaced by a full-width back bar — tapping
+    anywhere on it exits the thread.
   - **Compact state rows**: status icon, label (state content or translated
     status name), author, task content one-line, time.
 - **Filtering model**: channel chip tap = exclusive include (tap the sole
@@ -217,17 +219,26 @@ two-stroke N glyph, #4785FF on black.
   current space selection (persisted per account as channel → relay ids).
   Excludes supported in the model. With NO explicit includes, the default
   scope = pinned channels ∪ posts mentioning me ∪ my own posts (everything
-  when nothing is pinned). Topics: selecting one includes all its tags; selecting a topic
-  with no channel included auto-selects its primary channel; **tapping a
-  channel clears selected topics (switch over, never stack)** — topic on
-  top of an already-selected channel composes. Topic pinned state is
+  when nothing is pinned). Topics: selecting one scopes the feed to ALL its
+  tags (AND) and drops any included channel OUTSIDE the topic (an outside
+  include would AND the feed to nothing), keeping excludes. While a topic is
+  selected the chips row shows only its channels — each lit as active — and
+  the topic surfaces under every one of its channels (primary or auxiliary).
+  **Tapping a channel switches over — selected topics are dropped, never
+  stacked — and only clears back to neutral when that channel is the sole
+  active thing (lone include, no topic selected).** Topic pinned state is
   per-user.
 - **Unified bottom bar** (search + composer in one): always visible; typed
   text live-filters the feed (case-insensitive substring; state rows also
-  match their label); typed `#hashtags` scope the feed AND become the
-  post's channels; the send button appears once the draft carries ≥1
-  channel (chip, topic, or typed). Enter sends when possible; Escape
-  clears.
+  match their label; a query matching nothing is dropped so the scoped feed
+  shows instead of a blank screen); typed `#hashtags` scope the feed AND
+  become the post's channels; the send button appears once the draft carries
+  ≥1 channel (chip, topic, or typed). Enter sends when possible; Escape
+  clears. Inside a focused thread the bar becomes a reply: it shows a
+  "replying to" chip, inherits the parent's channels (so no `#channel` is
+  required), writes NIP-10 threading tags (a single `root`-marked `e`-tag for
+  a top-level reply, `root`+`reply` for a nested one, plus participant
+  `p`-tags), and pins to the parent's origin relay.
 - **Topic manager sheet**: create (name, primary channel select, secondary
   channel toggles, free-text tag input — prefilled from current context,
   auto-pins on create) and manage (pin/unpin; delete only for own topics).

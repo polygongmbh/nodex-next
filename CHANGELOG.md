@@ -75,11 +75,35 @@
 
 ### Fixed
 
+- Selecting a topic now scopes cleanly: it drops any included channel the
+  topic doesn't tag (which would otherwise AND the feed to nothing), hides
+  channels the topic doesn't tag, lights up its own channels, and surfaces
+  under every one of them (primary or auxiliary). Tapping a highlighted
+  channel while a topic is active now commits to that channel (dropping the
+  topic) instead of clearing everything; a channel only toggles off when it is
+  the sole active thing.
+- Reply threading now uses proper NIP-10 tags. Incoming replies that carry
+  only a `root` marker (the standard top-level-reply form) finally link into
+  their thread instead of showing as orphans; the legacy `parent` marker still
+  reads for nodex/mostr compatibility.
+- Composing inside a focused thread now actually posts a reply: a "replying
+  to" chip appears, the reply inherits the parent's channels (no `#channel`
+  needed), carries NIP-10 `root`/`reply` `e`-tags + participant `p`-tags, and
+  publishes to the parent's origin relay.
+- A search that matches nothing falls back to the unsearched (still scoped)
+  feed instead of a blank screen — so composing a brand-new message no longer
+  blanks the timeline as you type.
 - Smooth scrolling during hydration: the backfill now applies in coarse
   batches (fast first paint, then ~2 flushes/s until EOSE) instead of
   rebuilding the timeline per incoming event, and the history window is
   adjusted before render so arriving batches no longer shift what you are
   reading.
+
+### Changed
+
+- Focusing a thread now hides the nav row (hamburger / space / channels) and
+  replaces it with a full-width back bar — tapping anywhere on it exits the
+  thread.
 
 ### Changed
 

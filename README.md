@@ -104,9 +104,10 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   and chips row.
 - **Interactivity**: reply cards carry clickable breadcrumb ancestor chains;
   crumbs, reply indicators, and state rows focus the conversation as a
-  thread (ancestors + all replies) with a dismissible thread bar. Names,
-  avatars, and @mentions open profile hover cards; card channel chips filter
-  on click.
+  thread (ancestors + all replies). While a thread is open the nav row
+  (hamburger / space / channels) is replaced by a full-width back bar — tap
+  anywhere on it to exit. Names, avatars, and @mentions open profile hover
+  cards; card channel chips filter on click.
 - **Channels are hashtags** (no NIP-28); **spaces are relays**; empty space
   selection means "All spaces", never "no relays". Channel filters are AND.
 - **Topics** are named, composable tag combinations (not sub-channels), each
@@ -114,10 +115,12 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   topic is an addressable kind-30177 event on the relay (spec:
   `docs/nip-topics.md`), visible to every user of the space; the newest
   definition per channel set wins across authors (a topic is identified by the channels it contains, not its name), and NIP-09 deletion removes your
-  own. Topics unfold under any of their channels once selected; the primary
-  channel decides auto-selection (topic tapped with no channel active) and
-  where it lives in the sidebar. Selecting a channel switches over from a
-  selected topic rather than stacking. Pinned state is personal, stored per
+  own. Selecting a topic scopes the feed to ALL its tags, drops any conflicting
+  channel include, and hides channels the topic doesn't tag; the topic unfolds
+  under every one of its channels (primary or auxiliary) that is active. The
+  primary channel decides where it lives in the sidebar. Selecting a channel
+  switches over from a selected topic rather than stacking, and a channel only
+  toggles off on a second tap when it is the sole active thing. Pinned state is personal, stored per
   account in localStorage next to pinned channels. All other protocol
   conventions are surveyed in `docs/nostr-extensions.md`.
 - **Chat orientation**: newest messages at the bottom with auto-scroll;
@@ -158,6 +161,9 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   contracts (provider shapes became rune stores with the same semantics).
 - Attribution uses one subscription + `event:dup` instead of one subscription
   per relay — the dart-ndk dedup limitation does not apply to JS NDK.
-- Replies: the timeline shows reply counts; a thread view and reply composing
-  (pinned to the parent's origin relay — the rule is implemented and tested in
-  `publish-rules.ts`) are not wired into the UI yet.
+- Replies: focusing a thread (reply indicator / breadcrumb / state row) turns
+  the composer into a reply — it carries proper NIP-10 threading tags (a
+  `root`-marked `e`-tag for a top-level reply, `root` + `reply` for a nested
+  one, plus participant `p`-tags), inherits the parent's channels, and pins to
+  the parent's origin relay. Incoming replies link by NIP-10 `reply`/`root`
+  markers (and the legacy `parent` marker for nodex/mostr compatibility).
