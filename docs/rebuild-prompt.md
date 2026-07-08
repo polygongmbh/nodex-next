@@ -151,7 +151,8 @@ two-stroke N glyph, #4785FF on black.
 - **Sign-in card**: glyph (the splash logo glides into it when signed
   out), tabs Sign in / Create account; NO server field — a user@domain
   username picks the host, plain usernames use the deployment default
-  (VITE_NOAS_HOST_URL, fallback nodex.nexus), with a hint naming the
+  (VITE_NOAS_HOST_URL: unset → nodex.nexus, empty → the deployment's own
+  root domain, else the value verbatim), with a hint naming the
   effective host. Password min 8 on register. Email appears only when the
   discovered host's email_verification_mode is "required" (re-discovered
   as the username changes). Optional private key field: 64-hex/nsec with
