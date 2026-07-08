@@ -72,6 +72,15 @@ export function mergeProfileContent(
   return merged;
 }
 
+/**
+ * Whether a fetched kind-0 (`fetchOwnProfile()`'s parsed content) represents
+ * an existing profile — any content at all, since the object only comes back
+ * non-empty when an event was actually found on the relay.
+ */
+export function hasExistingProfileContent(content: Record<string, unknown>): boolean {
+  return Object.keys(content).length > 0;
+}
+
 /** Stable hue for avatar placeholder backgrounds, derived from the pubkey. */
 export function pubkeyHue(pubkey: string): number {
   let hash = 0;

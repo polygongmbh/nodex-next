@@ -113,6 +113,15 @@ class PreferencesStore {
     this.persist();
   }
 
+  /** The relay already has a profile for this account — recognize this
+   * device as onboarded without running the flow (e.g. first sign-in on a
+   * new browser for an account set up elsewhere). Leaves pinnedChannels/
+   * pinnedTopics untouched, unlike completeOnboarding. */
+  confirmOnboarded(): void {
+    this.onboarded = true;
+    this.persist();
+  }
+
   private persist(): void {
     if (!this.pubkey) return;
     try {

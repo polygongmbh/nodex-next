@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeProfileContent, personLabel } from "./person";
+import { hasExistingProfileContent, mergeProfileContent, personLabel } from "./person";
 
 describe("mergeProfileContent", () => {
   const base = {
@@ -22,6 +22,17 @@ describe("mergeProfileContent", () => {
     const merged = mergeProfileContent(base, { displayName: "Alice", about: "" });
     expect(merged.about).toBeUndefined();
     expect(merged.name).toBe("alice"); // name not edited → untouched
+  });
+});
+
+describe("hasExistingProfileContent", () => {
+  it("is false for an empty object (no kind-0 found)", () => {
+    expect(hasExistingProfileContent({})).toBe(false);
+  });
+
+  it("is true when any field is present", () => {
+    expect(hasExistingProfileContent({ name: "alice" })).toBe(true);
+    expect(hasExistingProfileContent({ display_name: "Alice", lud16: "a@b.c" })).toBe(true);
   });
 });
 

@@ -78,7 +78,10 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   adopts the first reachable one. Only when all three come up empty does the
   optional "connect your space" step appear.
 - **Onboarding** runs after the first sign-in on a device: (space →) profile →
-  channel picks (→ PWA). There is no standalone welcome screen — the greeting
+  channel picks (→ PWA). It is also skipped automatically when the relay
+  already has a kind-0 profile for the account, so signing in on a new
+  device/browser for an already-set-up account goes straight to the timeline.
+  There is no standalone welcome screen — the greeting
   is the profile step's heading. The profile step leads with a photo **upload**
   straight to noas (the account's only media endpoint; an image-URL field sits
   behind a disclosure), then display name (defaulting to the capitalized
@@ -90,6 +93,9 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   shows the OS's own install steps — share sheet on iOS, browser menu on
   Android, worded browser-neutrally so Firefox/Brave users aren't misdirected;
   the app ships a web manifest and icons so it installs standalone.
+- **Re-running onboarding** (dev/test): visiting `/onboarding` while signed in
+  forces the flow again in-memory only — stored data is left untouched unless
+  you complete it again, and the URL stays put so a refresh keeps re-forcing it.
 - **Editing your profile** later uses the same avatar upload; picture uploads
   need a fresh sign-in (noas authenticates them with the password hash, kept
   with the session), otherwise the image-URL field is offered instead.

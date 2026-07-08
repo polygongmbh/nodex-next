@@ -159,7 +159,10 @@ two-stroke N glyph, #4785FF on black.
   first ≤3 bech32 letters, run in a worker; auto-mine after 500ms once the
   local part has ≥4 chars and the field is empty, impatient re-click drops
   to a 2-char prefix, never overwrite typed input.
-- **Onboarding** (first sign-in per device, per pubkey, in localStorage):
+- **Onboarding** (first sign-in per device, per pubkey; the localStorage
+  `onboarded` flag is a fast-path cache confirmed/overridden by a relay kind-0
+  check — an unset flag on a fresh device is reconciled against the account's
+  own kind-0, so an account already configured elsewhere skips onboarding):
   optional "connect your space" step ONLY when the space-detection ladder
   (§ Noas auth 6) found nothing → profile → channel picks → optional PWA
   install step. There is no standalone welcome/"let's go" screen; the greeting
