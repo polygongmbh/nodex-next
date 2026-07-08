@@ -111,6 +111,31 @@
       }
     },
     {
+      "name": "root-only marked e-tag is a top-level reply to that root",
+      "event": {
+        "id": "m4b",
+        "pubkey": "alice",
+        "kind": 1,
+        "content": "top-level reply #dev",
+        "tags": [
+          [
+            "e",
+            "root",
+            "wss://relay.example/",
+            "root"
+          ]
+        ],
+        "created_at": 100
+      },
+      "relayIds": [
+        "relay-a"
+      ],
+      "expected": {
+        "type": "post",
+        "parentId": "root"
+      }
+    },
+    {
       "name": "mentions from p-tags deduped",
       "event": {
         "id": "m5",

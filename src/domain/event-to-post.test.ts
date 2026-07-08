@@ -14,14 +14,26 @@ describe("classifyEvent", () => {
     expect(classified.post.parentId).toBeUndefined();
   });
 
-  it("prefers the parent marker over reply", () => {
+  it("resolves the reply parent by NIP-10 marker precedence", () => {
     const parentTagged = [
       ["e", "1".repeat(64), "", "reply"],
       ["e", "2".repeat(64), "", "parent"],
     ];
+    // Legacy parent marker wins over reply (mostr/nodex kind-1621 compat).
     expect(resolveParentId(parentTagged)).toBe("2".repeat(64));
     expect(resolveParentId([["e", "1".repeat(64), "", "reply"]])).toBe("1".repeat(64));
+    // A top-level reply carries only a root marker — that root is its parent.
+    expect(resolveParentId([["e", "3".repeat(64), "", "root"]])).toBe("3".repeat(64));
+    // root + reply: the reply-marked id is the immediate parent.
+    expect(
+      resolveParentId([
+        ["e", "3".repeat(64), "", "root"],
+        ["e", "4".repeat(64), "", "reply"],
+      ])
+    ).toBe("4".repeat(64));
+    // Unmarked (deprecated positional) e-tags are citations, not parents.
     expect(resolveParentId([["e", "1".repeat(64)]])).toBeUndefined();
+    expect(resolveParentId([["e", "5".repeat(64), "", "mention"]])).toBeUndefined();
   });
 
   it("classifies state events with their target", () => {

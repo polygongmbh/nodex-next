@@ -28,15 +28,27 @@ export type ClassifiedEvent =
   | { type: "deletion"; byPubkey: string; targetIds: string[] }
   | { type: "ignored" };
 
-/** `e`-tag with marker `parent` (preferred) or `reply`; no marker fallback. */
+/**
+ * Immediate parent of a reply, from its `e`-tags. Precedence:
+ *  1. legacy `parent` marker (nodex/mostr kind-1621 subtasks — must win so a
+ *     foreign `root`/`reply` tag never shadows the task tree, see mostr's
+ *     find_refs(MARKER_PARENT));
+ *  2. NIP-10 `reply` marker — the direct parent of a nested reply;
+ *  3. NIP-10 `root` marker — a top-level reply carries only `root`, and that
+ *     root IS its parent.
+ * Unmarked (deprecated positional) and `mention` e-tags are NOT parents — a
+ * bare `e`-tag is treated as a citation, not a reply link.
+ */
 export function resolveParentId(tags: string[][]): string | undefined {
   let reply: string | undefined;
+  let root: string | undefined;
   for (const tag of tags) {
     if (tag[0] !== "e" || !tag[1]) continue;
     if (tag[3] === "parent") return tag[1];
     if (tag[3] === "reply" && !reply) reply = tag[1];
+    else if (tag[3] === "root" && !root) root = tag[1];
   }
-  return reply;
+  return reply ?? root;
 }
 
 function resolveMentions(tags: string[][]): string[] {
