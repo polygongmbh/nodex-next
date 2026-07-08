@@ -109,24 +109,32 @@
   </div>
 
   <div class="column">
-    <header class="top">
-      <!-- svelte-ignore a11y_consider_explicit_label -->
-      <button class="menu" onclick={() => (menuOpen = true)} data-testid="menu-button">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <path d="M4 7h16M4 12h16M4 17h16" />
-        </svg>
-      </button>
-      <SpaceSelector />
-      <ChannelChips />
-    </header>
-
-    {#if focusedPost}
-      <div class="thread-bar">
-        <span class="thread-title">{t("timeline.thread")} · {focusedPost.content.split("\n")[0]}</span>
-        <button class="thread-close" onclick={() => filterStore.clearThread()} data-testid="thread-close">
-          ✕
+    <!-- Focus a thread and the nav (hamburger / space / chips) gives way to a
+         full-width back bar — channel scope is bypassed inside a thread, so the
+         chips would only mislead, and the whole bar is one big exit target. -->
+    {#if !focusedPost}
+      <header class="top">
+        <!-- svelte-ignore a11y_consider_explicit_label -->
+        <button class="menu" onclick={() => (menuOpen = true)} data-testid="menu-button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
         </button>
-      </div>
+        <SpaceSelector />
+        <ChannelChips />
+      </header>
+    {:else}
+      <button
+        class="thread-bar"
+        onclick={() => filterStore.clearThread()}
+        title={t("timeline.exitThread")}
+        data-testid="thread-close"
+      >
+        <svg class="back" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 5l-7 7 7 7" />
+        </svg>
+        <span class="thread-title">{t("timeline.thread")} · {focusedPost.content.split("\n")[0]}</span>
+      </button>
     {/if}
 
     <main class="feed" bind:this={feedElement} onscroll={onFeedScroll}>
@@ -212,30 +220,34 @@
     display: flex;
     flex-shrink: 0;
   }
+  /* Full-width back bar: the whole strip is the exit target. Takes over the
+     top safe-area inset the hidden .top header used to own. */
   .thread-bar {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.45rem 1rem;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    padding-top: max(0.6rem, env(safe-area-inset-top));
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     color: var(--accent);
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 600;
+    text-align: left;
+  }
+  .thread-bar:hover {
+    background: var(--accent-muted);
+  }
+  .thread-bar .back {
+    flex-shrink: 0;
   }
   .thread-title {
     flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-  .thread-close {
-    color: var(--text-muted);
-    padding: 0.2rem 0.45rem;
-    flex-shrink: 0;
-  }
-  .thread-close:hover {
-    color: var(--text);
   }
   .feed {
     flex: 1;
