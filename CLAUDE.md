@@ -69,9 +69,12 @@ specific to this codebase:
 Commit/changelog conventions: workspace `../CLAUDE.md`. Always commit cohesive
 changes — one self-contained change per commit, each left green
 (`npm run check` + `npx vitest run`), split larger work into an incremental
-series. Repo-specific:
+series. **Commit each unit AS you finish it, not in one bulk batch at the end.**
+Repo-specific:
 
 - `git add` new files before a pathspec commit (it errors on untracked
   paths); run `git status` afterwards to confirm nothing was left behind.
 - Behavior changes update `README.md`'s behavior notes in the same commit.
-- `npm run check` and `npx vitest run` must both be clean before finishing.
+- `npm run check` (svelte-check — this repo's linter/static analysis) and
+  `npx vitest run` must both be clean before finishing; for any major change,
+  running the linter at the end of the session is required, not optional.
