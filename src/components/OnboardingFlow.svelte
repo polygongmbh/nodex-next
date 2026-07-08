@@ -127,6 +127,7 @@
       <p class="hint">{t("onboarding.personalize")}</p>
       {#if profileLoading}
         <p class="hint">{t("onboarding.fetching")}</p>
+        <button class="skip" onclick={() => (step = "channels")}>{t("onboarding.skip")}</button>
       {:else}
         <AvatarUpload
           bind:picture

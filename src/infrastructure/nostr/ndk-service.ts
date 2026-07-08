@@ -48,7 +48,7 @@ export interface NdkService {
 // it has no internal timeout, so a relay that never connects or never sends
 // EOSE hangs the caller forever (surfaced as onboarding's profile step never
 // leaving "Fetching your existing profile…"). Resolve to `fallback` instead.
-const PROFILE_FETCH_TIMEOUT_MS = 8000;
+const PROFILE_FETCH_TIMEOUT_MS = 3000;
 function withTimeout<T>(promise: Promise<T>, fallback: T, ms: number): Promise<T> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve(fallback), ms);
