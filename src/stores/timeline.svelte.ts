@@ -227,7 +227,8 @@ export const timelineStore = new TimelineStore();
  *   includes, pinned channels form the default scope — a post shows when it
  *   carries a pinned channel, mentions the user, or is the user's own
  * - search: case-insensitive substring over the post content (state rows also
- *   match on their update label)
+ *   match on their update label); a query that matches nothing is dropped so
+ *   the unsearched, still-scoped feed shows instead of an empty screen
  */
 export function buildTimeline(
   postsById: Record<string, Post>,
@@ -271,31 +272,41 @@ export function buildTimeline(
     return true;
   };
 
-  const items: TimelineItem[] = [];
-  for (const post of posts) {
-    if (!inScope(post)) continue;
-    const contentMatches = !query || post.content.toLowerCase().includes(query);
-    if (contentMatches) {
-      items.push({
-        type: "post",
-        post,
-        parent: post.parentId ? postsById[post.parentId] : undefined,
-        replyCount: replyCounts.get(post.id) ?? 0,
-        timestamp: post.timestamp,
-      });
+  const collect = (query: string): TimelineItem[] => {
+    const items: TimelineItem[] = [];
+    for (const post of posts) {
+      if (!inScope(post)) continue;
+      const contentMatches = !query || post.content.toLowerCase().includes(query);
+      if (contentMatches) {
+        items.push({
+          type: "post",
+          post,
+          parent: post.parentId ? postsById[post.parentId] : undefined,
+          replyCount: replyCounts.get(post.id) ?? 0,
+          timestamp: post.timestamp,
+        });
+      }
+      for (const update of post.stateUpdates) {
+        if (!contentMatches && !update.content.toLowerCase().includes(query)) continue;
+        items.push({ type: "state", post, update, timestamp: update.timestamp });
+      }
     }
-    for (const update of post.stateUpdates) {
-      if (!contentMatches && !update.content.toLowerCase().includes(query)) continue;
-      items.push({ type: "state", post, update, timestamp: update.timestamp });
+    for (const event of Object.values(calendarEventsByAddress)) {
+      if (threadIds) continue;
+      if (!inScope({ ...event, mentions: [], id: event.eventId })) continue;
+      const haystack = `${event.title}\n${event.content}\n${event.location ?? ""}`.toLowerCase();
+      if (query && !haystack.includes(query)) continue;
+      items.push({ type: "calendarEvent", event, timestamp: event.createdAt });
     }
-  }
-  for (const event of Object.values(calendarEventsByAddress)) {
-    if (threadIds) continue;
-    if (!inScope({ ...event, mentions: [], id: event.eventId })) continue;
-    const haystack = `${event.title}\n${event.content}\n${event.location ?? ""}`.toLowerCase();
-    if (query && !haystack.includes(query)) continue;
-    items.push({ type: "calendarEvent", event, timestamp: event.createdAt });
-  }
+    return items;
+  };
+
+  // A live search that matches nothing falls back to the unsearched feed —
+  // channel/relay/thread scope still applies — so composing a brand-new
+  // message (which matches no existing post) never blanks the timeline.
+  let items = collect(query);
+  if (query && items.length === 0) items = collect("");
+
   // Chat orientation: oldest at the top, newest at the bottom. On ties the
   // task card comes before its state row (the update follows the task).
   return items.sort(

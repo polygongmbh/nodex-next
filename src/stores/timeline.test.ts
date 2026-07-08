@@ -190,6 +190,30 @@ describe("buildTimeline", () => {
     expect(postIds(items)).toEqual([hit.id]);
   });
 
+  it("falls back to the unsearched feed when the search matches nothing", () => {
+    const a = rawEvent({ content: "deploy plan", tags: [] });
+    const b = rawEvent({ content: "lunch plans", tags: [] });
+    timelineStore.ingestEvent(a, RELAY_A);
+    timelineStore.ingestEvent(b, RELAY_A);
+    const items = buildTimeline(
+      timelineStore.postsById,
+      timelineStore.calendarEventsByAddress,
+      scope({ searchQuery: "no-such-text-anywhere" })
+    );
+    expect(postIds(items).sort()).toEqual([a.id, b.id].sort());
+  });
+
+  it("keeps an empty feed when relay scope (not search) excludes everything", () => {
+    const a = rawEvent({ content: "hello", tags: [] });
+    timelineStore.ingestEvent(a, RELAY_A);
+    const items = buildTimeline(
+      timelineStore.postsById,
+      timelineStore.calendarEventsByAddress,
+      scope({ activeRelayId: "two-example", searchQuery: "zzz" })
+    );
+    expect(items).toEqual([]);
+  });
+
   it("includes calendar events, scoped and searched like posts", () => {
     const event = rawEvent({
       kind: 31922,

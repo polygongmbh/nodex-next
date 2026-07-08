@@ -76,6 +76,23 @@
         { "type": "post", "id": "m1" },
         { "type": "post", "id": "m2" }
       ]
+    },
+    {
+      "name": "a search matching nothing falls back to the unsearched feed",
+      "scope": { "searchQuery": "no-such-token-anywhere" },
+      "expected": [
+        { "type": "post", "id": "m1" },
+        { "type": "post", "id": "m2" },
+        { "type": "post", "id": "m3" },
+        { "type": "post", "id": "m4" },
+        { "type": "post", "id": "t1" },
+        { "type": "state", "id": "s1" }
+      ]
+    },
+    {
+      "name": "the search fallback is search-only: an empty relay scope stays empty",
+      "scope": { "activeRelayId": "nonexistent-space", "searchQuery": "kickoff" },
+      "expected": []
     }
   ]
 }
