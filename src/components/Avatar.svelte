@@ -4,6 +4,13 @@
   let { label, pubkey, picture }: { label: string; pubkey: string; picture?: string } = $props();
 
   let failed = $state(false);
+
+  // why: a new picture URL must get a fresh load attempt — reset the failed
+  // flag when the src changes, else a prior 404 keeps the new image hidden.
+  $effect(() => {
+    picture; // track the prop
+    failed = false;
+  });
 </script>
 
 {#if picture && !failed}
