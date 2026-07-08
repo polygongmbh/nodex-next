@@ -14,18 +14,42 @@
   import TopicManager from "./TopicManager.svelte";
 
   // Channels come from ALL posts (unfiltered) so chips don't vanish while
-  // filtering narrows the feed. Pinned topics are always visible up front;
-  // other topics unfold after ANY of their channels once it is selected
-  // (sketch rows A→B) — each topic appears at most once.
+  // filtering narrows the feed. Pinned topics always lead the row; other
+  // topics unfold under EACH of their channels (primary or auxiliary) that is
+  // active. A channel is "active" when it is an explicit include OR a tag of a
+  // selected topic — so a selected topic's channels light up and surface it.
   type ChipItem =
     | { kind: "channel"; channel: Channel; pinned: boolean }
     | { kind: "topic"; topic: Topic };
 
+  // Channels active via an explicit include or via a selected topic's tags.
+  const effectiveIncluded = $derived.by(() => {
+    const active = new Set(filterStore.includedChannels);
+    for (const topicId of filterStore.selectedTopicIds) {
+      const topic = timelineStore.topicsById[topicId];
+      if (topic) for (const tag of topicTags(topic)) active.add(tag);
+    }
+    return active;
+  });
+
   const chipItems = $derived.by(() => {
-    const channels = partitionPinnedChannels(
+    const partitioned = partitionPinnedChannels(
       deriveChannels(Object.values(timelineStore.postsById)),
       preferencesStore.pinnedChannelNamesFor(timelineController.scopeRelayIds)
     );
+    // While a topic is selected, hide channels it does not tag — the row
+    // narrows to that topic's own context.
+    const topicScope =
+      filterStore.selectedTopicIds.length > 0
+        ? new Set(
+            filterStore.selectedTopicIds.flatMap((topicId) => {
+              const topic = timelineStore.topicsById[topicId];
+              return topic ? topicTags(topic) : [];
+            })
+          )
+        : null;
+    const inScope = (channel: Channel) => !topicScope || topicScope.has(channel.name);
+
     const items: ChipItem[] = [];
     const shownTopics = new Set<string>();
     for (const topic of timelineStore.topics) {
@@ -36,17 +60,27 @@
     }
     const pushChannel = (channel: Channel, pinned: boolean) => {
       items.push({ kind: "channel", channel, pinned });
-      if (filterStore.channelStates[channel.name] !== "included") return;
+      if (!effectiveIncluded.has(channel.name)) return;
       for (const topic of timelineStore.topics) {
-        if (shownTopics.has(topic.id)) continue;
+        if (preferencesStore.isTopicPinned(topic.id)) continue; // already leading
         if (topicTags(topic).includes(channel.name)) {
           items.push({ kind: "topic", topic });
           shownTopics.add(topic.id);
         }
       }
     };
-    for (const channel of channels.pinned) pushChannel(channel, true);
-    for (const channel of channels.rest) pushChannel(channel, false);
+    for (const channel of partitioned.pinned) if (inScope(channel)) pushChannel(channel, true);
+    for (const channel of partitioned.rest) if (inScope(channel)) pushChannel(channel, false);
+    // A selected topic must stay visible (and deselectable) even when none of
+    // its channels currently has posts to unfold under.
+    for (const topicId of filterStore.selectedTopicIds) {
+      if (shownTopics.has(topicId)) continue;
+      const topic = timelineStore.topicsById[topicId];
+      if (topic) {
+        items.push({ kind: "topic", topic });
+        shownTopics.add(topicId);
+      }
+    }
     return items;
   });
 
@@ -54,7 +88,7 @@
 </script>
 
 <div class="chips">
-  {#each chipItems as item (item.kind === "topic" ? `t:${item.topic.id}` : `c:${item.channel.name}`)}
+  {#each chipItems as item, index (item.kind === "topic" ? `t:${item.topic.id}:${index}` : `c:${item.channel.name}`)}
     {#if item.kind === "topic"}
       {@const topic = item.topic}
       <button
@@ -78,7 +112,7 @@
       {@const channel = item.channel}
       <button
         class="chip"
-        class:included={filterStore.channelStates[channel.name] === "included"}
+        class:included={effectiveIncluded.has(channel.name)}
         class:excluded={filterStore.channelStates[channel.name] === "excluded"}
         onclick={() => filterStore.tapChannelChip(channel.name)}
         use:longpress={() => timelineController.togglePinnedChannel(channel.name)}

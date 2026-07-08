@@ -1,4 +1,4 @@
-import type { ChannelFilterState, Topic } from "@/domain/channel";
+import { topicTags, type ChannelFilterState, type Topic } from "@/domain/channel";
 
 // Sidebar-filter equivalent for the mobile timeline: channel chip states and
 // the selected space. Empty space selection = "All spaces" (no relay filter),
@@ -12,17 +12,27 @@ class FilterStore {
   selectedTopicIds = $state<string[]>([]);
 
   /**
-   * Selecting a (pinned) topic while no channel is included auto-selects its
-   * primary channel, so its sibling topics unfold and the context is visible.
+   * A selected topic already scopes the feed to ALL of its tags (see the
+   * controller's effectiveChannelStates), which drives the active-channel
+   * highlight in the chips row. Because channel filters are AND, any channel
+   * included OUTSIDE the topic would narrow the feed to nothing — so selecting
+   * a topic drops such includes, keeping only excludes and the topic's own
+   * tags. Deselecting leaves the channel selection untouched.
    */
   toggleTopic(topic: Topic): void {
     const selecting = !this.selectedTopicIds.includes(topic.id);
-    this.selectedTopicIds = selecting
-      ? [...this.selectedTopicIds, topic.id]
-      : this.selectedTopicIds.filter((topicId) => topicId !== topic.id);
-    if (selecting && !Object.values(this.channelStates).includes("included")) {
-      this.channelStates = { ...this.channelStates, [topic.primary]: "included" };
+    if (!selecting) {
+      this.selectedTopicIds = this.selectedTopicIds.filter((topicId) => topicId !== topic.id);
+      return;
     }
+    const tags = new Set(topicTags(topic));
+    const next: Record<string, ChannelFilterState> = {};
+    for (const [channel, state] of Object.entries(this.channelStates)) {
+      if (state === "excluded") next[channel] = "excluded";
+      else if (state === "included" && tags.has(channel)) next[channel] = "included";
+    }
+    this.channelStates = next;
+    this.selectedTopicIds = [...this.selectedTopicIds, topic.id];
   }
 
   focusThread(postId: string): void {
@@ -34,14 +44,17 @@ class FilterStore {
   }
 
   /**
-   * Exclusive include; tapping the sole included channel clears to neutral.
-   * Selecting a channel SWITCHES the context — any selected topics are
-   * dropped, never stacked. (Selecting a topic on top of a channel still
-   * composes; see toggleTopic.)
+   * Exclusive include: a tap makes this the only included channel and SWITCHES
+   * the context — any selected topics are dropped, never stacked. A tap only
+   * clears back to neutral when the channel is the SOLE active thing: it is the
+   * lone include AND no topic is selected. With a topic active, its tags also
+   * count as active, so tapping one of them first commits to that single
+   * channel (dropping the topic) rather than deselecting.
    */
   tapChannelChip(name: string): void {
     const wasOnlyIncluded =
       this.channelStates[name] === "included" &&
+      this.selectedTopicIds.length === 0 &&
       Object.values(this.channelStates).filter((state) => state === "included").length === 1;
     const next: Record<string, ChannelFilterState> = {};
     for (const [channel, state] of Object.entries(this.channelStates)) {
