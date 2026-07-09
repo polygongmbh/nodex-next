@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { defaultDisplayName } from "@/domain/person";
+  import { defaultDisplayName, parseProfileFields } from "@/domain/person";
   import { t } from "@/lib/i18n/index.svelte";
   import { authStore } from "@/stores/auth.svelte";
   import { timelineController } from "@/stores/timeline-controller.svelte";
@@ -30,15 +30,14 @@
       .fetchOwnProfile(currentScope === "*" ? undefined : currentScope)
       .then((existing) => {
         if (scope !== currentScope) return;
-        const text = (value: unknown): string =>
-          typeof value === "string" ? value.trim() : "";
+        const parsed = parseProfileFields(existing);
         displayName =
-          text(existing.display_name) ||
-          text(existing.name) ||
+          parsed.displayName ||
+          parsed.name ||
           defaultDisplayName(authStore.session?.username ?? "");
-        about = text(existing.about);
-        website = text(existing.website);
-        picture = text(existing.picture) || authStore.profilePictureUrl || "";
+        about = parsed.about;
+        website = parsed.website;
+        picture = parsed.picture || authStore.profilePictureUrl || "";
       })
       .finally(() => {
         if (scope === currentScope) loading = false;

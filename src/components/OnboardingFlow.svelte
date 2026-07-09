@@ -1,6 +1,6 @@
 <script lang="ts">
   import { deriveChannels, spacesToPinChannelFor } from "@/domain/channel";
-  import { defaultDisplayName } from "@/domain/person";
+  import { defaultDisplayName, parseProfileFields } from "@/domain/person";
   import { t } from "@/lib/i18n/index.svelte";
   import { detectMobileOS } from "@/lib/pwa";
   import { authStore } from "@/stores/auth.svelte";
@@ -58,12 +58,10 @@
     void timelineController
       .fetchOwnProfile()
       .then((existing) => {
-        const text = (value: unknown): string =>
-          typeof value === "string" ? value.trim() : "";
-        displayName =
-          text(existing.display_name) || text(existing.name) || displayName;
-        about = text(existing.about) || about;
-        picture = text(existing.picture) || authStore.profilePictureUrl || "";
+        const parsed = parseProfileFields(existing);
+        displayName = parsed.displayName || parsed.name || displayName;
+        about = parsed.about || about;
+        picture = parsed.picture || authStore.profilePictureUrl || "";
       })
       .finally(() => (profileLoading = false));
   });

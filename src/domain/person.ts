@@ -73,6 +73,29 @@ export function mergeProfileContent(
 }
 
 /**
+ * The trimmed string fields of a parsed kind-0 content record, for
+ * prefilling profile editors — the read counterpart of mergeProfileContent.
+ * Non-string and missing values coerce to "".
+ */
+export function parseProfileFields(content: Record<string, unknown>): {
+  name: string;
+  displayName: string;
+  about: string;
+  picture: string;
+  website: string;
+} {
+  const text = (value: unknown): string =>
+    typeof value === "string" ? value.trim() : "";
+  return {
+    name: text(content.name),
+    displayName: text(content.display_name),
+    about: text(content.about),
+    picture: text(content.picture),
+    website: text(content.website),
+  };
+}
+
+/**
  * Whether a fetched kind-0 (`fetchOwnProfile()`'s parsed content) represents
  * an existing profile — any content at all, since the object only comes back
  * non-empty when an event was actually found on the relay.

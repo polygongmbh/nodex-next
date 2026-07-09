@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { hasExistingProfileContent, mergeProfileContent, personLabel } from "./person";
+import {
+  hasExistingProfileContent,
+  mergeProfileContent,
+  parseProfileFields,
+  personLabel,
+} from "./person";
 
 describe("mergeProfileContent", () => {
   const base = {
@@ -22,6 +27,36 @@ describe("mergeProfileContent", () => {
     const merged = mergeProfileContent(base, { displayName: "Alice", about: "" });
     expect(merged.about).toBeUndefined();
     expect(merged.name).toBe("alice"); // name not edited → untouched
+  });
+});
+
+describe("parseProfileFields", () => {
+  it("returns trimmed strings and maps display_name", () => {
+    const parsed = parseProfileFields({
+      name: " alice ",
+      display_name: "Alice",
+      about: "  hi  ",
+      picture: "https://x/p.png",
+      website: "https://a.example",
+    });
+    expect(parsed).toEqual({
+      name: "alice",
+      displayName: "Alice",
+      about: "hi",
+      picture: "https://x/p.png",
+      website: "https://a.example",
+    });
+  });
+
+  it("coerces missing and non-string values to empty strings", () => {
+    const parsed = parseProfileFields({ name: 42, about: null, lud16: "a@b.c" });
+    expect(parsed).toEqual({
+      name: "",
+      displayName: "",
+      about: "",
+      picture: "",
+      website: "",
+    });
   });
 });
 
