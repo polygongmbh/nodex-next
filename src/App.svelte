@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { dismissSplash } from "@/lib/splash";
   import { hasExistingProfileContent } from "@/domain/person";
   import { authStore } from "@/stores/auth.svelte";
@@ -30,30 +30,36 @@
   // tears both down.
   $effect(() => {
     if (authStore.status === "signedIn" && authStore.session) {
-      preferencesStore.load(authStore.session.pubkeyHex);
-      // why: manual dev/test entry point — visiting /onboarding re-runs the
-      // flow in-memory only (never persists) so onboarding changes can be
-      // retried without clearing localStorage; a refresh keeps re-forcing it.
-      const forcedByUrl = window.location.pathname === "/onboarding";
-      if (forcedByUrl) preferencesStore.onboarded = false;
-      // why: the local onboarded flag is a per-device fast path; when it is
-      // unset (fresh browser/device) confirm it against the relay's own kind-0
-      // so an account already set up elsewhere skips onboarding instead of
-      // being re-run. The URL dev-trigger deliberately bypasses this.
-      if (!preferencesStore.onboarded && !forcedByUrl) {
-        checkingProfile = true;
-        timelineController
-          .fetchOwnProfile()
-          .then((content) => {
-            if (hasExistingProfileContent(content)) preferencesStore.confirmOnboarded();
-          })
-          // why: a rejected fetch (relay/connection error) must not silently
-          // skip setup — leave onboarded false so onboarding shows.
-          .catch(() => {})
-          .finally(() => {
-            checkingProfile = false;
-          });
-      }
+      // why: load() writes prefs state and the checks below read it back —
+      // untrack keeps this lifecycle effect keyed to auth alone, else the
+      // read-write cycle on `onboarded` loops the effect until Svelte kills
+      // the flush (effect_update_depth_exceeded) and the UI freezes.
+      untrack(() => {
+        preferencesStore.load(authStore.session!.pubkeyHex);
+        // why: manual dev/test entry point — visiting /onboarding re-runs the
+        // flow in-memory only (never persists) so onboarding changes can be
+        // retried without clearing localStorage; a refresh keeps re-forcing it.
+        const forcedByUrl = window.location.pathname === "/onboarding";
+        if (forcedByUrl) preferencesStore.onboarded = false;
+        // why: the local onboarded flag is a per-device fast path; when it is
+        // unset (fresh browser/device) confirm it against the relay's own kind-0
+        // so an account already set up elsewhere skips onboarding instead of
+        // being re-run. The URL dev-trigger deliberately bypasses this.
+        if (!preferencesStore.onboarded && !forcedByUrl) {
+          checkingProfile = true;
+          timelineController
+            .fetchOwnProfile()
+            .then((content) => {
+              if (hasExistingProfileContent(content)) preferencesStore.confirmOnboarded();
+            })
+            // why: a rejected fetch (relay/connection error) must not silently
+            // skip setup — leave onboarded false so onboarding shows.
+            .catch(() => {})
+            .finally(() => {
+              checkingProfile = false;
+            });
+        }
+      });
       timelineController.start(authStore.session);
     } else if (authStore.status === "signedOut") {
       timelineController.stop();
