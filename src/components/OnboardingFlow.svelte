@@ -11,8 +11,6 @@
   import AvatarUpload from "./AvatarUpload.svelte";
   import PwaInstallHint from "./PwaInstallHint.svelte";
 
-  import { onMount } from "svelte";
-
   // (Space →) profile → channels → (pwa). The space step appears only when the
   // detection ladder found nothing; the greeting lives in the profile heading
   // (no standalone welcome screen); the PWA step appears only on a mobile
@@ -47,8 +45,16 @@
   let saving = $state(false);
 
   // why: an existing kind-0 on the relays must prefill (and survive) the
-  // profile step, so republishing never wipes a profile made elsewhere.
-  onMount(() => {
+  // profile step, so republishing never wipes a profile made elsewhere. Start
+  // the fetch when the profile step begins (run once — step never returns to
+  // "profile"), not at mount: on the space-first path the relays only exist
+  // after AddSpace, so a mount-time fetch would resolve empty before the newly
+  // added relay's profile could be consulted and prefill would silently never
+  // happen.
+  let profileFetchStarted = false;
+  $effect(() => {
+    if (step !== "profile" || profileFetchStarted) return;
+    profileFetchStarted = true;
     void timelineController
       .fetchOwnProfile()
       .then((existing) => {
