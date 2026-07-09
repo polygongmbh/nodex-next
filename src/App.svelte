@@ -44,8 +44,14 @@
         // why: the local onboarded flag is a per-device fast path; when it is
         // unset (fresh browser/device) confirm it against the relay's own kind-0
         // so an account already set up elsewhere skips onboarding instead of
-        // being re-run. The URL dev-trigger deliberately bypasses this.
-        if (!preferencesStore.onboarded && !forcedByUrl) {
+        // being re-run. The URL dev-trigger deliberately bypasses this, and with
+        // zero relays the fetch can confirm nothing (it just burns ~3s of splash),
+        // so skip it — onboarding opens at the space step regardless.
+        if (
+          !preferencesStore.onboarded &&
+          !forcedByUrl &&
+          authStore.session!.relayUrls.length > 0
+        ) {
           checkingProfile = true;
           timelineController
             .fetchOwnProfile()
