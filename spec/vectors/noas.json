@@ -93,6 +93,18 @@
       "base": { "name": "alice", "display_name": "Old", "about": "old bio", "website": "https://a.example" },
       "edits": { "displayName": "Alice", "about": "" },
       "expected": { "name": "alice", "display_name": "Alice", "website": "https://a.example" }
+    },
+    {
+      "name": "empty base: onboarding first publish sets name, display_name, picture",
+      "base": {},
+      "edits": { "displayName": "Alice", "name": "alice", "about": "", "picture": "https://noas.example/picture/abc" },
+      "expected": { "display_name": "Alice", "name": "alice", "picture": "https://noas.example/picture/abc" }
+    },
+    {
+      "name": "omitted picture keeps the existing one, values are trimmed",
+      "base": { "name": "alice", "display_name": "Old", "picture": "https://noas.example/picture/abc" },
+      "edits": { "displayName": "Alice", "about": " hello " },
+      "expected": { "name": "alice", "display_name": "Alice", "about": "hello", "picture": "https://noas.example/picture/abc" }
     }
   ],
   "defaultDisplayName": [
