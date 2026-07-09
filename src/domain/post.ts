@@ -61,10 +61,6 @@ export function foldStateUpdate(post: Post, update: TaskStateUpdate): Post {
   return { ...post, stateUpdates };
 }
 
-export function isTopLevel(post: Post): boolean {
-  return !post.parentId;
-}
-
 /**
  * Custom label of a state update (e.g. "Review"), or null when the generic
  * status name should be shown — the UI translates that one (status.* keys).
