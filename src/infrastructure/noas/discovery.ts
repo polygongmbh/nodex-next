@@ -99,7 +99,3 @@ export async function resolveNoasDiscovery(host: string): Promise<NoasDiscovery>
   }
   return { apiBaseUrl: fallbackApiBaseUrl(normalized), emailVerificationMode: "none", relays: [] };
 }
-
-export async function resolveNoasApiBaseUrl(host: string): Promise<string> {
-  return (await resolveNoasDiscovery(host)).apiBaseUrl;
-}

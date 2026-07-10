@@ -81,7 +81,7 @@
         name: authStore.session?.username,
         displayName: displayName.trim() || defaultDisplayName(username),
         about,
-        picture: picture.trim(),
+        picture,
       });
       step = "channels";
     } catch {

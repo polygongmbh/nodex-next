@@ -54,7 +54,7 @@
           name: authStore.session?.username,
           displayName: displayName.trim() || defaultDisplayName(authStore.session?.username ?? ""),
           about,
-          picture: picture.trim(),
+          picture,
           website,
         },
         scope === "*" ? undefined : scope
