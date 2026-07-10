@@ -9,7 +9,7 @@
     resolveNoasDiscovery,
     type NoasEmailVerificationMode,
   } from "@/infrastructure/noas/discovery";
-  import { vanityTargetFromUsername } from "@/lib/vanity-key";
+  import { createVanityMiner } from "@/lib/vanity-miner.svelte";
   import { t } from "@/lib/i18n/index.svelte";
 
   let mode = $state<"signin" | "register">("signin");
@@ -21,7 +21,6 @@
   let error = $state("");
   let info = $state("");
   let busy = $state(false);
-  let mining = $state(false);
   let emailMode = $state<NoasEmailVerificationMode>("none");
 
   const host = $derived(splitNoasCredentials(username, "").host || DEFAULT_NOAS_HOST);
@@ -63,45 +62,12 @@
     return () => clearTimeout(timer);
   });
 
-  let miner: Worker | null = null;
-  function stopMiner() {
-    miner?.terminate();
-    miner = null;
-    mining = false;
-  }
-  function startMining(target: string, fillIfTyped: boolean) {
-    stopMiner();
-    mining = true;
-    miner = new Worker(new URL("../lib/vanity-key.worker.ts", import.meta.url), {
-      type: "module",
-    });
-    miner.onmessage = (event: MessageEvent<{ secretHex: string } | null>) => {
-      const mined = event.data;
-      // Never clobber a key the user typed/pasted in the meantime.
-      if (mined && (fillIfTyped || !keyInput.trim())) keyInput = mined.secretHex;
-      stopMiner();
-    };
-    miner.postMessage({ target });
-  }
-
-  // why: nodex's auto-mining — once the username has ≥4 chars and no key was
-  // provided, mine a vanity key whose npub starts with the user's initials.
-  $effect(() => {
-    if (mode !== "register") return;
-    const local = username.split("@")[0];
-    if (local.length < 4 || keyInput.trim() || mining) return;
-    const timer = setTimeout(() => startMining(vanityTargetFromUsername(local), false), 500);
-    return () => clearTimeout(timer);
+  const vanity = createVanityMiner({
+    isRegistering: () => mode === "register",
+    getUsername: () => username,
+    getKeyInput: () => keyInput,
+    setKeyInput: (secretHex) => (keyInput = secretHex),
   });
-
-  function generate() {
-    if (mining) {
-      // Impatient re-click: settle for a shorter prefix, faster.
-      startMining(vanityTargetFromUsername(username, 2) || "0", true);
-      return;
-    }
-    startMining(vanityTargetFromUsername(username) || "0", true);
-  }
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
@@ -221,8 +187,8 @@
           <button type="button" class="key-btn" onclick={() => (keyVisible = !keyVisible)}>
             {keyVisible ? "🙈" : "👁"}
           </button>
-          <button type="button" class="key-btn generate" onclick={generate} data-testid="generate-key">
-            {mining ? t("signin.mining") : t("signin.generate")}
+          <button type="button" class="key-btn generate" onclick={vanity.generate} data-testid="generate-key">
+            {vanity.mining ? t("signin.mining") : t("signin.generate")}
           </button>
         </div>
         {#if npubPreview}
