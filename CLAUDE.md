@@ -14,8 +14,7 @@ npx vitest run src/path/to/file.test.ts  # Run a single test file
 
 **Nodex Next** is the ground-up Svelte rewrite of Nodex (`../nodex`), scoped
 to the mobile Timeline (team messaging). Build spec: `../nodex-talk/SPEC.md`;
-product intent: `../nodex/nodex-talk.md`. Events are compatible with
-nodex/mostr on the same relay (kinds 0, 1, 5, 1621, 1630–1633).
+product intent: `../nodex/nodex-talk.md`.
 
 ### Layers (dependency direction: components → stores → infrastructure → domain)
 
@@ -66,12 +65,9 @@ specific to this codebase:
 
 ## Workflow
 
-Commit/changelog conventions: workspace `../CLAUDE.md`. Always commit cohesive
-changes — one self-contained change per commit, each left green
-(`npm run check` + `npx vitest run`), split larger work into an incremental
-series. **Commit each unit AS you finish it, not in one bulk batch at the end.**
-Prefer simple pathspec commits. Repo-specific:
+Commit/changelog conventions: workspace `../CLAUDE.md`; "green" here means
+`npm run check` (svelte-check — this repo's linter/static analysis) and
+`npx vitest run` both clean. Repo-specific:
 
+- Prefer simple pathspec commits.
 - Behavior changes update `README.md`'s behavior notes in the same commit.
-- `npm run check` (svelte-check — this repo's linter/static analysis) and
-  `npx vitest run` must both be clean before finishing.
