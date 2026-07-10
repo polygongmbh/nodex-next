@@ -94,7 +94,7 @@ describe("ingestEvent", () => {
       rawEvent({ kind: 0, content: JSON.stringify({ name: "stale" }), created_at: 150 }),
       RELAY_A
     );
-    expect(timelineStore.peopleByPubkey[ALICE].name).toBe("new");
+    expect(timelineStore.peopleByPubkey[ALICE].profile.name).toBe("new");
   });
 });
 

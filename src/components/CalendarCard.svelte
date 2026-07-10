@@ -1,6 +1,6 @@
 <script lang="ts">
   import { type CalendarEvent, formatCalendarWhen } from "@/domain/calendar-events";
-  import { personLabel } from "@/domain/person";
+  import { personLabel, personPicture } from "@/domain/person";
   import { i18n, t } from "@/lib/i18n/index.svelte";
   import { filterStore } from "@/stores/filters.svelte";
   import { timelineController } from "@/stores/timeline-controller.svelte";
@@ -34,7 +34,7 @@
 <article class="card">
   <div class="main">
     <ProfileHover pubkey={event.pubkey}>
-      <Avatar {label} pubkey={event.pubkey} picture={author?.picture} />
+      <Avatar {label} pubkey={event.pubkey} picture={personPicture(author)} />
     </ProfileHover>
     <div class="body">
       <header>

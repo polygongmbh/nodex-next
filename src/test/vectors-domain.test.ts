@@ -18,6 +18,7 @@ import { post as postFixture } from "@/test/fixtures";
 import { timelineTimestampBucket } from "@/domain/timeline-timestamp";
 import { buildTopicEvent, parseTopicEvent, topicIdForChannels } from "@/domain/topic-events";
 import { classifyEvent, type RawNostrEvent } from "@/domain/event-to-post";
+import { personAbout, personDisplayName, personName, personNip05 } from "@/domain/person";
 import { buildCalendarEvent } from "@/domain/calendar-events";
 
 describe("vectors: channels", () => {
@@ -125,10 +126,10 @@ describe("vectors: event classification", () => {
       expect(classified.targetIds).toEqual(expected.targetIds);
     } else if (classified.type === "person") {
       const person = classified.person;
-      if (expected.displayName) expect(person.displayName).toBe(expected.displayName);
-      if (expected.personName) expect(person.name).toBe(expected.personName);
-      if (expected.about) expect(person.about).toBe(expected.about);
-      if (expected.nip05) expect(person.nip05).toBe(expected.nip05);
+      if (expected.displayName) expect(personDisplayName(person)).toBe(expected.displayName);
+      if (expected.personName) expect(personName(person)).toBe(expected.personName);
+      if (expected.about) expect(personAbout(person)).toBe(expected.about);
+      if (expected.nip05) expect(personNip05(person)).toBe(expected.nip05);
     } else if (classified.type === "topic") {
       const topic = classified.topic;
       if (expected.topicId) expect(topic.id).toBe(expected.topicId);

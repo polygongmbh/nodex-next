@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Post } from "@/domain/post";
   import { postStatus } from "@/domain/post";
-  import { personLabel } from "@/domain/person";
+  import { personLabel, personPicture } from "@/domain/person";
   import { tokenizeContent } from "@/domain/content-tokens";
   import { formatTimelineTimestamp } from "@/domain/timeline-timestamp";
   import { i18n, t } from "@/lib/i18n/index.svelte";
@@ -70,7 +70,7 @@
   {/if}
   <div class="main">
     <ProfileHover pubkey={post.pubkey}>
-      <Avatar {label} pubkey={post.pubkey} picture={author?.picture} />
+      <Avatar {label} pubkey={post.pubkey} picture={personPicture(author)} />
     </ProfileHover>
     <div class="body">
       <header>

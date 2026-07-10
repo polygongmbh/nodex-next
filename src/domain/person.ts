@@ -1,22 +1,71 @@
-export interface Person {
-  pubkey: string;
+/**
+ * The parsed kind-0 content, kept verbatim (NDK's NDKUserProfile shape mirrored
+ * structurally so the domain layer stays NDK-import-free): typed known keys plus
+ * an index signature so unknown keys (lud16, banner, custom fields) survive a
+ * round-trip. Keys are NIP-01 wire format (`display_name`, never camelCase);
+ * values are trimmed/coerced only at read time, never at parse time.
+ */
+export interface ProfileContent {
+  [key: string]: unknown;
   name?: string;
-  displayName?: string;
+  display_name?: string;
   nip05?: string;
   picture?: string;
   about?: string;
   website?: string;
+  banner?: string;
+  lud16?: string;
+  lud06?: string;
+}
+
+export interface Person {
+  pubkey: string;
   /** created_at of the kind-0 event this profile came from; newer wins. */
   metadataTimestamp: number;
+  /** The full parsed kind-0 content JSON, verbatim. */
+  profile: ProfileContent;
+}
+
+const trimmed = (value: unknown): string =>
+  typeof value === "string" ? value.trim() : "";
+
+// Wire-alias tolerance lives here (read time), not in the stored content: the
+// old parseMetadata accepted camelCase `displayName` and `username` fallbacks.
+function contentDisplayName(content: Record<string, unknown>): string {
+  return trimmed(content.display_name) || trimmed(content.displayName);
+}
+function contentName(content: Record<string, unknown>): string {
+  return trimmed(content.name) || trimmed(content.username);
+}
+
+/** Trimmed display_name (with camelCase fallback), or "" when absent. */
+export function personDisplayName(person: Person | undefined): string {
+  return person ? contentDisplayName(person.profile) : "";
+}
+/** Trimmed name/username (with fallback), or "" when absent. */
+export function personName(person: Person | undefined): string {
+  return person ? contentName(person.profile) : "";
+}
+export function personNip05(person: Person | undefined): string {
+  return trimmed(person?.profile.nip05);
+}
+export function personPicture(person: Person | undefined): string {
+  return trimmed(person?.profile.picture);
+}
+export function personAbout(person: Person | undefined): string {
+  return trimmed(person?.profile.about);
+}
+export function personWebsite(person: Person | undefined): string {
+  return trimmed(person?.profile.website);
 }
 
 /** Fallback chain for the visible author label. */
 export function personLabel(person: Person | undefined, pubkey: string): string {
   if (person) {
     const candidate =
-      person.displayName?.trim() ||
-      person.name?.trim() ||
-      person.nip05?.split("@")[0]?.trim();
+      contentDisplayName(person.profile) ||
+      contentName(person.profile) ||
+      personNip05(person).split("@")[0];
     if (candidate) return candidate;
   }
   return `${pubkey.slice(0, 8)}…`;
@@ -84,14 +133,12 @@ export function parseProfileFields(content: Record<string, unknown>): {
   picture: string;
   website: string;
 } {
-  const text = (value: unknown): string =>
-    typeof value === "string" ? value.trim() : "";
   return {
-    name: text(content.name),
-    displayName: text(content.display_name),
-    about: text(content.about),
-    picture: text(content.picture),
-    website: text(content.website),
+    name: contentName(content),
+    displayName: contentDisplayName(content),
+    about: trimmed(content.about),
+    picture: trimmed(content.picture),
+    website: trimmed(content.website),
   };
 }
 

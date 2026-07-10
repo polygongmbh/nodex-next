@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { classifyEvent, resolveParentId } from "./event-to-post";
+import { personDisplayName } from "./person";
 import { ALICE, rawEvent } from "@/test/fixtures";
 
 describe("classifyEvent", () => {
@@ -62,9 +63,33 @@ describe("classifyEvent", () => {
       ["relay-a"]
     );
     if (classified.type !== "person") throw new Error("expected a person");
-    expect(classified.person.displayName).toBe("Alice");
+    expect(personDisplayName(classified.person)).toBe("Alice");
     expect(classifyEvent(rawEvent({ kind: 0, content: "not json" }), ["relay-a"]).type).toBe(
       "ignored"
     );
+    // A non-object JSON body (number, array) is not a profile either.
+    expect(classifyEvent(rawEvent({ kind: 0, content: "42" }), ["relay-a"]).type).toBe("ignored");
+  });
+
+  it("keeps the full kind-0 content verbatim so unknown fields survive", () => {
+    const classified = classifyEvent(
+      rawEvent({
+        kind: 0,
+        content: JSON.stringify({
+          display_name: "Alice",
+          lud16: "alice@wallet.example",
+          banner: "https://x/banner.png",
+          custom_field: 7,
+        }),
+      }),
+      ["relay-a"]
+    );
+    if (classified.type !== "person") throw new Error("expected a person");
+    expect(classified.person.profile).toMatchObject({
+      display_name: "Alice",
+      lud16: "alice@wallet.example",
+      banner: "https://x/banner.png",
+      custom_field: 7,
+    });
   });
 });

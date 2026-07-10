@@ -42,7 +42,9 @@ describe("vectors: ingest scenarios", () => {
       expect(timelineStore.postsById[id]).toBeUndefined();
     }
     for (const [pubkey, want] of Object.entries(expected.people ?? {})) {
-      expect(timelineStore.peopleByPubkey[pubkey]).toMatchObject(want);
+      // Person carries the full kind-0 content on `.profile`; the vector's
+      // person fields (name, …) are asserted against that record.
+      expect(timelineStore.peopleByPubkey[pubkey].profile).toMatchObject(want);
     }
     for (const [id, want] of Object.entries(expected.topics ?? {})) {
       expect(timelineStore.topicsById[id]).toMatchObject(want);

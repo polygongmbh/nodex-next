@@ -1,7 +1,14 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { nip19 } from "nostr-tools";
-  import { personLabel } from "@/domain/person";
+  import {
+    personAbout,
+    personLabel,
+    personName,
+    personNip05,
+    personPicture,
+    personWebsite,
+  } from "@/domain/person";
   import { timelineStore } from "@/stores/timeline.svelte";
   import Avatar from "./Avatar.svelte";
 
@@ -14,6 +21,10 @@
 
   const person = $derived(timelineStore.peopleByPubkey[pubkey]);
   const label = $derived(personLabel(person, pubkey));
+  const name = $derived(personName(person));
+  const nip05 = $derived(personNip05(person));
+  const about = $derived(personAbout(person));
+  const website = $derived(personWebsite(person));
   const npub = $derived.by(() => {
     try {
       return nip19.npubEncode(pubkey);
@@ -40,23 +51,23 @@
   {#if open}
     <div class="popover" data-testid="profile-hover">
       <div class="head">
-        <Avatar {label} {pubkey} picture={person?.picture} />
+        <Avatar {label} {pubkey} picture={personPicture(person)} />
         <div class="names">
           <span class="display">{label}</span>
-          {#if person?.name && person.name !== label}
-            <span class="muted">@{person.name}</span>
+          {#if name && name !== label}
+            <span class="muted">@{name}</span>
           {/if}
-          {#if person?.nip05}
-            <span class="muted">{person.nip05}</span>
+          {#if nip05}
+            <span class="muted">{nip05}</span>
           {/if}
         </div>
       </div>
-      {#if person?.about}
-        <p class="about">{person.about}</p>
+      {#if about}
+        <p class="about">{about}</p>
       {/if}
-      {#if person?.website}
-        <a class="website" href={person.website} target="_blank" rel="noreferrer noopener">
-          {person.website}
+      {#if website}
+        <a class="website" href={website} target="_blank" rel="noreferrer noopener">
+          {website}
         </a>
       {/if}
       <code class="npub">{npub.slice(0, 14)}…{npub.slice(-6)}</code>

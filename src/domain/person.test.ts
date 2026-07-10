@@ -3,7 +3,11 @@ import {
   hasExistingProfileContent,
   mergeProfileContent,
   parseProfileFields,
+  personAbout,
   personLabel,
+  personName,
+  personPicture,
+  personWebsite,
 } from "./person";
 
 describe("mergeProfileContent", () => {
@@ -72,14 +76,62 @@ describe("hasExistingProfileContent", () => {
 });
 
 describe("personLabel", () => {
-  it("falls back through displayName, name, nip05, pubkey", () => {
+  it("falls back through display_name, name, nip05, pubkey", () => {
     const pubkey = "a".repeat(64);
-    expect(personLabel({ pubkey, displayName: "Alice", metadataTimestamp: 0 }, pubkey)).toBe(
-      "Alice"
-    );
     expect(
-      personLabel({ pubkey, nip05: "alice@polygon.example", metadataTimestamp: 0 }, pubkey)
+      personLabel({ pubkey, metadataTimestamp: 0, profile: { display_name: "Alice" } }, pubkey)
+    ).toBe("Alice");
+    expect(
+      personLabel(
+        { pubkey, metadataTimestamp: 0, profile: { nip05: "alice@polygon.example" } },
+        pubkey
+      )
     ).toBe("alice");
     expect(personLabel(undefined, pubkey)).toBe("aaaaaaaa…");
+  });
+
+  it("tolerates the camelCase displayName / username wire aliases", () => {
+    const pubkey = "b".repeat(64);
+    expect(
+      personLabel({ pubkey, metadataTimestamp: 0, profile: { displayName: "Bo" } }, pubkey)
+    ).toBe("Bo");
+    expect(
+      personLabel({ pubkey, metadataTimestamp: 0, profile: { username: "bob" } }, pubkey)
+    ).toBe("bob");
+  });
+});
+
+describe("person accessors preserve the full profile", () => {
+  const pubkey = "c".repeat(64);
+  const person = {
+    pubkey,
+    metadataTimestamp: 0,
+    profile: {
+      name: " carol ",
+      picture: "https://x/c.png",
+      about: "  hi  ",
+      website: "https://c.example",
+      lud16: "carol@wallet.example",
+      banner: "https://x/banner.png",
+      customKey: { nested: true },
+    },
+  };
+
+  it("reads and trims known fields", () => {
+    expect(personName(person)).toBe("carol");
+    expect(personPicture(person)).toBe("https://x/c.png");
+    expect(personAbout(person)).toBe("hi");
+    expect(personWebsite(person)).toBe("https://c.example");
+  });
+
+  it("keeps unknown/extra fields verbatim on person.profile", () => {
+    expect(person.profile.lud16).toBe("carol@wallet.example");
+    expect(person.profile.banner).toBe("https://x/banner.png");
+    expect(person.profile.customKey).toEqual({ nested: true });
+  });
+
+  it("returns empty strings for a missing person", () => {
+    expect(personName(undefined)).toBe("");
+    expect(personPicture(undefined)).toBe("");
   });
 });

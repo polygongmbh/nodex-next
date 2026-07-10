@@ -2,7 +2,7 @@
 // stores never see raw events; every input is one of these classified shapes.
 
 import { NOSTR_KINDS, isPostKind, isTaskStateKind } from "./nostr-kinds";
-import type { Person } from "./person";
+import type { Person, ProfileContent } from "./person";
 import type { Post, TaskStateUpdate } from "./post";
 import type { Topic } from "./channel";
 import { deriveChannelTags } from "./hashtags";
@@ -124,21 +124,18 @@ export function classifyEvent(event: RawNostrEvent, relayIds: string[]): Classif
 }
 
 function parseMetadata(event: RawNostrEvent): Person | null {
+  // Keep the whole decoded object verbatim — trimmed/coerced fields are read
+  // on demand (person.ts accessors), so unknown keys (lud16, banner, …) survive.
+  let profile: unknown;
   try {
-    const profile = JSON.parse(event.content) as Record<string, unknown>;
-    const text = (value: unknown): string | undefined =>
-      typeof value === "string" && value.trim() ? value.trim() : undefined;
-    return {
-      pubkey: event.pubkey,
-      name: text(profile.name) ?? text(profile.username),
-      displayName: text(profile.display_name) ?? text(profile.displayName),
-      nip05: text(profile.nip05),
-      picture: text(profile.picture),
-      about: text(profile.about),
-      website: text(profile.website),
-      metadataTimestamp: event.created_at,
-    };
+    profile = JSON.parse(event.content);
   } catch {
     return null;
   }
+  if (profile === null || typeof profile !== "object" || Array.isArray(profile)) return null;
+  return {
+    pubkey: event.pubkey,
+    metadataTimestamp: event.created_at,
+    profile: profile as ProfileContent,
+  };
 }
