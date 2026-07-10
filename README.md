@@ -135,7 +135,11 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   UI in English and German (`src/lib/i18n`).
 - **Profiles** stream on a dedicated subscription before the content
   backfill, with a targeted post-EOSE fetch for stragglers; "Edit profile"
-  works per space (a separate kind-0 per relay) or across all spaces.
+  works per space (a separate kind-0 per relay) or across all spaces. Opening
+  the editor is cache-first: the live subscription primes the kind-0 merge
+  base, so it usually needs no network fetch (the fetch stays as the
+  cold-start/miss fallback), and an empty or timed-out fetch is never cached —
+  a real profile is never overwritten with a blank.
 - **The timeline** shows post cards (replies carry a parent-context header
   and count toward the parent's reply indicator) and compact rows for task
   state updates; tasks get a status icon and strikethrough when finished.

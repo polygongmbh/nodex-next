@@ -26,6 +26,21 @@ export interface Person {
   profile: ProfileContent;
 }
 
+/**
+ * Parse a kind-0 `content` string into ProfileContent, verbatim. Malformed
+ * JSON and non-object bodies (number, array, null) are not profiles → null.
+ */
+export function parseProfileContent(json: string): ProfileContent | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return null;
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  return parsed as ProfileContent;
+}
+
 const trimmed = (value: unknown): string =>
   typeof value === "string" ? value.trim() : "";
 
@@ -102,11 +117,8 @@ export interface ProfileEdits {
  * (lud16, banner, …) survive untouched, edited fields override, and fields
  * the user cleared are removed.
  */
-export function mergeProfileContent(
-  base: Record<string, unknown>,
-  edits: ProfileEdits
-): Record<string, unknown> {
-  const merged: Record<string, unknown> = { ...base };
+export function mergeProfileContent(base: ProfileContent, edits: ProfileEdits): ProfileContent {
+  const merged: ProfileContent = { ...base };
   merged.display_name = edits.displayName;
   if (edits.name?.trim()) merged.name = edits.name.trim();
   for (const [key, value] of [

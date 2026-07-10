@@ -20,6 +20,11 @@
 
 ### Changed
 
+- The profile editor opens instantly: it reuses the kind-0 already streamed by
+  the live subscription as the merge base instead of always waiting on a
+  network fetch (the fetch stays as a cold-start fallback), so fresh signups no
+  longer fetch twice. A timed-out or empty fetch is never cached, so editing
+  can never overwrite a real profile with a blank.
 - The space selector is now an icon-first dropdown: the collapsed pill shows
   only the active space's host-derived icon (a neutral layers glyph for "All
   spaces"), space names appear once it's open, "Add a space" is inline at the

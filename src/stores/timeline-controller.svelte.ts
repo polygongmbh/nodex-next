@@ -15,8 +15,15 @@ import {
   type CalendarDraft,
 } from "@/domain/calendar-events";
 import { buildTopicEvent } from "@/domain/topic-events";
-import { mergeProfileContent, type ProfileEdits } from "@/domain/person";
-import { classifyEvent } from "@/domain/event-to-post";
+import {
+  hasExistingProfileContent,
+  mergeProfileContent,
+  parseProfileContent,
+  type ProfileContent,
+  type ProfileEdits,
+} from "@/domain/person";
+import { relayUrlToId } from "@/domain/relay-identity";
+import { classifyEvent, type RawNostrEvent } from "@/domain/event-to-post";
 import type { Post } from "@/domain/post";
 import {
   buildMessageTags,
@@ -38,9 +45,13 @@ class TimelineController {
   private service: NdkService | null = null;
   private batcher: IngestBatcher | null = null;
   private sessionPubkey: string | null = null;
-  // Merge bases per scope: "*" = all spaces, else a relay id. Per-space
-  // profiles are separate kind-0 events living only on that relay.
-  private ownProfileBases = new Map<string, Record<string, unknown>>();
+  // Own kind-0 merge bases, keyed by scope: a relay id for a per-space profile,
+  // or "*" for an all-spaces fetch/publish whose source relay is unknown. Fed
+  // newest-wins by the live subscription (ingest), by fetchOwnProfile, and by
+  // publishProfile — so publishProfile never republishes over a stale base and
+  // the editor can open without a network round-trip. Only NON-empty content is
+  // ever stored (empties would let a merge silently wipe unknown fields).
+  private ownProfileBases = new Map<string, { content: ProfileContent; createdAt: number }>();
 
   start(session: StoredSession): void {
     if (this.service) return;
@@ -49,9 +60,10 @@ class TimelineController {
     // The hydration backfill streams thousands of events; batching keeps the
     // reactive timeline from rebuilding per event (scroll jitter). After EOSE
     // the batcher settles into immediate pass-through for live traffic.
-    const batcher = createIngestBatcher((raw, relayUrl) =>
-      timelineStore.ingestEvent(raw, relayUrl)
-    );
+    const batcher = createIngestBatcher((raw, relayUrl) => {
+      this.captureOwnProfile(raw, relayUrl);
+      timelineStore.ingestEvent(raw, relayUrl);
+    });
     this.batcher = batcher;
     this.service = startNdkService(session.relayUrls, session.privateKeyHex, {
       onEvent: (event, relayUrl) => batcher.push(event, relayUrl),
@@ -86,6 +98,44 @@ class TimelineController {
     }
   }
 
+  /**
+   * Capture the session user's own kind-0s as they flow through ingest, so the
+   * live subscription primes the profile-editor merge base and most opens need
+   * no fetch. Only non-empty content is recorded (never cache emptiness).
+   */
+  private captureOwnProfile(raw: RawNostrEvent, relayUrl: string | undefined): void {
+    if (raw.kind !== NOSTR_KINDS.metadata || raw.pubkey !== this.sessionPubkey || !relayUrl) return;
+    const content = parseProfileContent(raw.content);
+    if (content && hasExistingProfileContent(content)) {
+      this.recordOwnProfile(relayUrlToId(relayUrl), content, raw.created_at);
+    }
+  }
+
+  /** Newest-wins record of an own kind-0 under a scope key (relay id or "*"). */
+  private recordOwnProfile(scopeKey: string, content: ProfileContent, createdAt: number): void {
+    const existing = this.ownProfileBases.get(scopeKey);
+    if (existing && existing.createdAt >= createdAt) return;
+    this.ownProfileBases.set(scopeKey, { content, createdAt });
+  }
+
+  /** The newest own kind-0 seen across every scope, or undefined if none. */
+  private newestOwnProfile(): { content: ProfileContent; createdAt: number } | undefined {
+    let newest: { content: ProfileContent; createdAt: number } | undefined;
+    for (const entry of this.ownProfileBases.values()) {
+      if (!newest || entry.createdAt > newest.createdAt) newest = entry;
+    }
+    return newest;
+  }
+
+  /**
+   * The merge base for a scope: that relay's own kind-0 when present, else the
+   * newest one seen across all scopes ("*" fallback), else {}.
+   */
+  private ownProfileBase(relayId?: string): ProfileContent {
+    const scoped = relayId ? this.ownProfileBases.get(relayId) : undefined;
+    return (scoped ?? this.newestOwnProfile())?.content ?? {};
+  }
+
   stop(): void {
     this.batcher?.dispose();
     this.batcher = null;
@@ -115,30 +165,34 @@ class TimelineController {
   }
 
   /**
-   * Fetch the user's existing kind-0 — from one space when relayId is given,
-   * across all spaces otherwise. The parsed content becomes the merge base
-   * for publishProfile, so republishing never drops fields this UI doesn't
-   * know about.
+   * The user's existing kind-0 for a scope — from one space when relayId is
+   * given, across all spaces otherwise — as the merge base for publishProfile,
+   * so republishing never drops fields this UI doesn't know about.
+   *
+   * Cache-first: a confirmed NON-empty base (from the live subscription, an
+   * earlier fetch, or a publish) is returned without a network round-trip, so
+   * opening the editor is instant. Emptiness is never cached — a timed-out
+   * fetch is indistinguishable from a confirmed-absent profile, and merging
+   * edits into a wrongly-empty base would silently wipe lud16/banner — so an
+   * empty result just makes the next call fetch again.
    */
-  async fetchOwnProfile(relayId?: string): Promise<Record<string, unknown>> {
+  async fetchOwnProfile(relayId?: string): Promise<ProfileContent> {
     if (!this.service || !this.sessionPubkey) return {};
-    const scopeKey = relayId ?? "*";
+    const cached = this.ownProfileBase(relayId);
+    if (hasExistingProfileContent(cached)) return cached;
     const raw = await this.service.fetchProfileEvent(
       this.sessionPubkey,
       relayId ? this.relayUrlsForScope(relayId) : undefined
     );
     if (raw) {
-      let base: Record<string, unknown> = {};
-      try {
-        base = JSON.parse(raw.content) as Record<string, unknown>;
-      } catch {
-        base = {};
+      const content = parseProfileContent(raw.content);
+      if (content && hasExistingProfileContent(content)) {
+        this.recordOwnProfile(relayId ?? "*", content, raw.created_at);
+        const classified = classifyEvent(raw, []);
+        if (classified.type === "person") timelineStore.upsertPerson(classified.person);
       }
-      this.ownProfileBases.set(scopeKey, base);
-      const classified = classifyEvent(raw, []);
-      if (classified.type === "person") timelineStore.upsertPerson(classified.person);
     }
-    return this.ownProfileBases.get(scopeKey) ?? this.ownProfileBases.get("*") ?? {};
+    return this.ownProfileBase(relayId);
   }
 
   /** Tear down and reconnect — used when the session's spaces change. */
@@ -362,17 +416,15 @@ class TimelineController {
     if (!this.service) throw new PublishRuleError("error.notConnected");
     const relayUrls = this.relayUrlsForScope(relayId);
     if (relayUrls.length === 0) throw new PublishRuleError("error.noSpaceAvailable");
-    const scopeKey = relayId ?? "*";
-    const base =
-      this.ownProfileBases.get(scopeKey) ?? this.ownProfileBases.get("*") ?? {};
-    const content = mergeProfileContent(base, edits);
+    const content = mergeProfileContent(this.ownProfileBase(relayId), edits);
+    const createdAt = Math.floor(Date.now() / 1000);
     await this.service.publish({
       kind: NOSTR_KINDS.metadata,
       content: JSON.stringify(content),
       tags: [],
       relayUrls,
     });
-    this.ownProfileBases.set(scopeKey, content);
+    this.recordOwnProfile(relayId ?? "*", content, createdAt);
   }
 }
 
