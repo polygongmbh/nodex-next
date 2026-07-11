@@ -31,7 +31,7 @@ export const PROFILE_SUBSCRIPTION_FILTERS = [
 
 export const CONTENT_SUBSCRIPTION_FILTERS = [
   { kinds: [NOSTR_KINDS.message, NOSTR_KINDS.task] as number[], limit: 1000 },
-  { kinds: [NOSTR_KINDS.deletion, ...TASK_STATE_KINDS] as number[], limit: 1000 },
+  { kinds: [NOSTR_KINDS.deletion, NOSTR_KINDS.reaction, ...TASK_STATE_KINDS] as number[], limit: 1000 },
   { kinds: [NOSTR_KINDS.calendarDate, NOSTR_KINDS.calendarTime] as number[], limit: 500 },
 ];
 

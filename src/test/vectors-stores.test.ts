@@ -65,6 +65,22 @@ describe("vectors: ingest scenarios", () => {
     for (const address of expected.absentCalendar ?? []) {
       expect(timelineStore.calendarEventsByAddress[address]).toBeUndefined();
     }
+    for (const [targetId, want] of Object.entries(expected.reactions ?? {})) {
+      const bucket = timelineStore.reactionsByTargetId[targetId] ?? {};
+      const byEmoji: Record<string, string[]> = {};
+      for (const reaction of Object.values(bucket)) {
+        (byEmoji[reaction.emoji] ??= []).push(reaction.pubkey);
+      }
+      for (const reactors of Object.values(byEmoji)) reactors.sort();
+      expect(byEmoji, `reactions on ${targetId}`).toEqual(want);
+    }
+    for (const [targetId, want] of Object.entries(expected.reactionRelays ?? {})) {
+      for (const [reactor, relays] of Object.entries(want as Record<string, string[]>)) {
+        expect(
+          timelineStore.reactionsByTargetId[targetId]?.[reactor]?.relays.slice().sort()
+        ).toEqual([...relays].sort());
+      }
+    }
   });
 });
 

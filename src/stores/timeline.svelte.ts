@@ -4,6 +4,7 @@ import { calendarAddress, type CalendarEvent } from "@/domain/calendar-events";
 import type { Post } from "@/domain/post";
 import { foldStateUpdate, type TaskStateUpdate } from "@/domain/post";
 import { classifyEvent, type RawNostrEvent } from "@/domain/event-to-post";
+import type { Reaction } from "@/domain/reaction-events";
 import { postMatchesChannelFilters, type ChannelFilterState } from "@/domain/channel";
 import { normalizeRelayUrl, relayDisplayName, relayUrlToId } from "@/domain/relay-identity";
 
@@ -40,6 +41,8 @@ class TimelineStore {
   topicsById = $state<Record<string, Topic>>({});
   /** NIP-52 calendar events keyed by (pubkey, d) — newest per address wins. */
   calendarEventsByAddress = $state<Record<string, CalendarEvent>>({});
+  /** NIP-25 reactions per target event id: reactor pubkey → their reaction. */
+  reactionsByTargetId = $state<Record<string, Record<string, Reaction>>>({});
   relays = $state<RelayInfo[]>([]);
   hydrating = $state(true);
 
@@ -94,7 +97,29 @@ class TimelineStore {
       case "deletion":
         this.applyDeletion(classified.byPubkey, classified.targetIds);
         break;
+      case "reaction":
+        this.ingestReaction(classified.reaction);
+        break;
     }
+  }
+
+  /**
+   * One reaction per reactor per target (an emoji change replaces the old
+   * one, newest created_at wins regardless of arrival order); a re-delivery
+   * of the same event only adds relay attribution.
+   */
+  private ingestReaction(reaction: Reaction): void {
+    if (this.deletionsByAuthor.get(reaction.pubkey)?.has(reaction.id)) return;
+    const bucket = this.reactionsByTargetId[reaction.targetId] ?? {};
+    const existing = bucket[reaction.pubkey];
+    if (existing && existing.id === reaction.id) {
+      const unseen = reaction.relays.filter((relay) => !existing.relays.includes(relay));
+      if (unseen.length > 0) existing.relays.push(...unseen);
+      return;
+    }
+    if (existing && existing.timestamp >= reaction.timestamp) return;
+    bucket[reaction.pubkey] = reaction;
+    this.reactionsByTargetId[reaction.targetId] = bucket;
   }
 
   /** Same id ⇒ same signed event: a re-ingest only carries new relay attribution. */
@@ -192,6 +217,14 @@ class TimelineStore {
         this.pendingFoldsCount -= pending.length;
         this.pendingFoldsByTargetId.delete(targetId);
       }
+      for (const [reactedId, bucket] of Object.entries(this.reactionsByTargetId)) {
+        for (const [reactor, reaction] of Object.entries(bucket)) {
+          if (reaction.id === targetId && reactor === byPubkey) {
+            delete bucket[reactor];
+            if (Object.keys(bucket).length === 0) delete this.reactionsByTargetId[reactedId];
+          }
+        }
+      }
     }
   }
 
@@ -209,6 +242,7 @@ class TimelineStore {
     this.peopleByPubkey = {};
     this.topicsById = {};
     this.calendarEventsByAddress = {};
+    this.reactionsByTargetId = {};
     this.relays = [];
     this.hydrating = true;
     this.deletionsByAuthor.clear();
