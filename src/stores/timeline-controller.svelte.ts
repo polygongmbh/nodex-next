@@ -23,13 +23,16 @@ import {
   type ProfileEdits,
 } from "@/domain/person";
 import { relayUrlToId } from "@/domain/relay-identity";
+import { buildReactionTags, reactionContentFor } from "@/domain/reaction-events";
 import { classifyEvent, type RawNostrEvent } from "@/domain/event-to-post";
 import type { Post } from "@/domain/post";
 import {
+  buildDeletionTags,
   buildMessageTags,
   PublishRuleError,
   resolveDraftChannels,
   resolvePublishRelay,
+  resolveTargetRelays,
 } from "@/domain/publish-rules";
 import { createIngestBatcher, type IngestBatcher } from "@/infrastructure/nostr/ingest-batcher";
 import { startNdkService, type NdkService } from "@/infrastructure/nostr/ndk-service";
@@ -405,6 +408,35 @@ class TimelineController {
     });
     this.draft = "";
     return relay.id;
+  }
+
+  /**
+   * Toggle a NIP-25 reaction on a post. Reactions publish to every connected
+   * relay that delivered the post (per-relay attribution), never a global
+   * default. Re-reacting with the SAME emoji deletes the prior reaction (kind
+   * 5); a different emoji publishes a new kind-7 (the store's newest-wins
+   * replaces the old one). Optimistic echo drives the local state.
+   */
+  async react(post: Post, emoji: string): Promise<void> {
+    if (!this.service || !this.sessionPubkey) throw new PublishRuleError("error.notConnected");
+    const relays = resolveTargetRelays(timelineStore.relays, post.relays);
+    const relayUrls = relays.map((relay) => relay.url);
+    const mine = timelineStore.reactionsByTargetId[post.id]?.[this.sessionPubkey];
+    if (mine && mine.emoji === emoji) {
+      await this.service.publish({
+        kind: NOSTR_KINDS.deletion,
+        content: "",
+        tags: buildDeletionTags([{ id: mine.id, kind: NOSTR_KINDS.reaction }]),
+        relayUrls,
+      });
+      return;
+    }
+    await this.service.publish({
+      kind: NOSTR_KINDS.reaction,
+      content: reactionContentFor(emoji),
+      tags: buildReactionTags(post, relays[0].url),
+      relayUrls,
+    });
   }
 
   /**

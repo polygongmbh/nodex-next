@@ -5,6 +5,7 @@
   import { tokenizeContent } from "@/domain/content-tokens";
   import { formatTimelineTimestamp } from "@/domain/timeline-timestamp";
   import { i18n, t } from "@/lib/i18n/index.svelte";
+  import { authStore } from "@/stores/auth.svelte";
   import { filterStore } from "@/stores/filters.svelte";
   import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
@@ -56,6 +57,30 @@
   const CLAMP_CHARS = 280;
   const long = $derived(post.content.length > CLAMP_CHARS || post.content.split("\n").length > 5);
   let expanded = $state(false);
+
+  // Reaction chips: one per distinct emoji with its count, own reaction
+  // highlighted. Sorted by count so the loudest reactions lead.
+  const myPubkey = $derived(authStore.session?.pubkeyHex ?? null);
+  const reactionChips = $derived.by(() => {
+    const byEmoji = new Map<string, { count: number; mine: boolean }>();
+    for (const [pubkey, reaction] of Object.entries(
+      timelineStore.reactionsByTargetId[post.id] ?? {}
+    )) {
+      const entry = byEmoji.get(reaction.emoji) ?? { count: 0, mine: false };
+      entry.count += 1;
+      if (pubkey === myPubkey) entry.mine = true;
+      byEmoji.set(reaction.emoji, entry);
+    }
+    return Array.from(byEmoji, ([emoji, value]) => ({ emoji, ...value })).sort(
+      (a, b) => b.count - a.count
+    );
+  });
+
+  function toggleReaction(emoji: string) {
+    // The card chip has no error surface; the menu's React row does. A failed
+    // publish here is swallowed rather than left as an unhandled rejection.
+    void timelineController.react(post, emoji).catch(() => {});
+  }
 
   // Ancestor chain for the breadcrumb header, oldest first (root › … › parent).
   const crumbs = $derived.by(() => {
@@ -118,6 +143,19 @@
         <button class="more" onclick={() => (expanded = !expanded)}>
           {expanded ? t("card.showLess") : t("card.showMore")}
         </button>
+      {/if}
+      {#if reactionChips.length > 0}
+        <div class="reactions" data-testid="reactions">
+          {#each reactionChips as chip (chip.emoji)}
+            <button
+              class="reaction"
+              class:mine={chip.mine}
+              onclick={() => toggleReaction(chip.emoji)}
+            >
+              <span class="emoji">{chip.emoji}</span>{chip.count}
+            </button>
+          {/each}
+        </div>
       {/if}
       {#if replyCount > 0 || (showSpaces && spaces.length > 0)}
         <footer>
@@ -240,6 +278,35 @@
     color: var(--text-muted);
     font-size: 0.85rem;
     margin-bottom: 0.3rem;
+  }
+  .reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin: 0.1rem 0 0.4rem;
+  }
+  .reaction {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 0.7rem;
+    border: 1px solid var(--border);
+    background: var(--surface-sunken);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .reaction:hover {
+    border-color: var(--accent);
+  }
+  .reaction.mine {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+    color: var(--text);
+  }
+  .reaction .emoji {
+    font-size: 0.95rem;
   }
   footer {
     display: flex;

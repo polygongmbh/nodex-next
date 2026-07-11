@@ -14,6 +14,27 @@ export interface Reaction {
   timestamp: number; // unix seconds
 }
 
+/** Quick-pick reactions offered in the UI — same registry as the original nodex. */
+export const QUICK_REACTION_EMOJIS = [
+  "👍",
+  "❤️",
+  "🎉",
+  "😄",
+  "🚀",
+  "👀",
+  "🙏",
+  "🙌",
+  "🛠️",
+  "👎",
+] as const;
+
+/** NIP-25 wire content for a display emoji: "+"/"-" for the thumbs, else verbatim. */
+export function reactionContentFor(emoji: string): string {
+  if (emoji === "👍") return "+";
+  if (emoji === "👎") return "-";
+  return emoji;
+}
+
 const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 /** NIP-25 content → displayed emoji; undefined = unsupported, drop the event. */

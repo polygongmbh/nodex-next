@@ -1,7 +1,10 @@
 <script lang="ts">
   import type { Post } from "@/domain/post";
   import { buildPostPermalink } from "@/domain/permalink";
+  import { QUICK_REACTION_EMOJIS } from "@/domain/reaction-events";
+  import { PublishRuleError } from "@/domain/publish-rules";
   import { filterStore } from "@/stores/filters.svelte";
+  import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
   import { t } from "@/lib/i18n/index.svelte";
 
@@ -13,9 +16,21 @@
   let copied = $state(false);
   let error = $state("");
 
+  const quickEmojis = QUICK_REACTION_EMOJIS;
+
   function reply() {
     filterStore.focusThread(post.id);
     onClose();
+  }
+
+  async function react(emoji: string) {
+    error = "";
+    try {
+      await timelineController.react(post, emoji);
+      onClose();
+    } catch (caught) {
+      error = caught instanceof PublishRuleError ? t(caught.message) : t("postmenu.reactFailed");
+    }
   }
 
   async function copyLink() {
@@ -44,6 +59,11 @@
   <button class="item" onclick={reply}>
     <span class="glyph">↩</span>{t("postmenu.reply")}
   </button>
+  <div class="emojis" data-testid="post-menu-react">
+    {#each quickEmojis as emoji (emoji)}
+      <button class="emoji" onclick={() => react(emoji)}>{emoji}</button>
+    {/each}
+  </div>
   <button class="item" onclick={copyLink} data-testid="post-menu-copy">
     <span class="glyph">🔗</span>{copied ? t("postmenu.copied") : t("postmenu.copyLink")}
   </button>
@@ -125,6 +145,21 @@
     width: 1.25rem;
     text-align: center;
     flex-shrink: 0;
+  }
+  .emojis {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem;
+    padding: 0.15rem 0.35rem 0.35rem;
+  }
+  .emoji {
+    font-size: 1.35rem;
+    line-height: 1;
+    padding: 0.35rem;
+    border-radius: 0.5rem;
+  }
+  .emoji:hover {
+    background: var(--accent-muted);
   }
   .error {
     margin: 0.1rem 0.6rem 0;

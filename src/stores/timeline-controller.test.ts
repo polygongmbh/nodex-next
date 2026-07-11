@@ -5,7 +5,7 @@ import type { StoredSession } from "@/infrastructure/noas/session";
 import { timelineController } from "./timeline-controller.svelte";
 import { timelineStore } from "./timeline.svelte";
 import { filterStore } from "./filters.svelte";
-import { ALICE, rawEvent } from "@/test/fixtures";
+import { ALICE, BOB, rawEvent } from "@/test/fixtures";
 
 // The real NDK service opens relay sockets; stub it so tests drive the ingest
 // handlers directly and spy on the one-shot profile fetch.
@@ -91,6 +91,98 @@ describe("reply composition in a focused thread", () => {
     filterStore.focusThread(parent.id);
     timelineController.draft = "no hashtags here";
     expect(timelineController.draftChannels.sort()).toEqual(["dev", "ops"]);
+  });
+});
+
+// Reactions publish to the relays that delivered the post (per-relay
+// attribution), normalize the thumbs to +/-, and toggle off by deleting the
+// prior kind-7 when the same emoji is tapped again.
+describe("react", () => {
+  let publish: ReturnType<typeof vi.fn>;
+  let post: import("@/domain/post").Post;
+
+  const session: StoredSession = {
+    pubkeyHex: ALICE,
+    privateKeyHex: "b".repeat(64),
+    username: "alice",
+    apiBaseUrl: "https://noas.example",
+    relayUrls: [RELAY_A, RELAY_B],
+  };
+
+  beforeEach(() => {
+    timelineController.stop();
+    publish = vi.fn().mockResolvedValue(undefined);
+    const service: NdkService = {
+      publish: publish as NdkService["publish"],
+      fetchProfileEvent: vi.fn().mockResolvedValue(null),
+      fetchProfileEvents: vi.fn().mockResolvedValue([]),
+      stop: vi.fn(),
+    };
+    vi.mocked(startNdkService).mockReturnValue(service);
+    timelineController.start(session);
+    timelineStore.setRelayConnected(RELAY_A, true);
+    timelineStore.setRelayConnected(RELAY_B, true);
+    // A post by someone else, delivered only by one-example.
+    const raw = rawEvent({ pubkey: BOB, tags: [["t", "dev"]] });
+    timelineStore.ingestEvent(raw, RELAY_A);
+    post = timelineStore.postsById[raw.id];
+  });
+
+  it("publishes a kind-7 reaction to the post's delivery relays", async () => {
+    await timelineController.react(post, "❤️");
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 7,
+        content: "❤️",
+        relayUrls: [RELAY_A],
+        tags: expect.arrayContaining([["e", post.id, RELAY_A, BOB], ["k", "1"]]),
+      })
+    );
+  });
+
+  it("normalizes the thumbs to + / - on the wire", async () => {
+    await timelineController.react(post, "👍");
+    expect(publish).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 7, content: "+" }));
+    await timelineController.react(post, "👎");
+    expect(publish).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 7, content: "-" }));
+  });
+
+  it("re-reacting with the same emoji deletes the prior reaction (kind 5)", async () => {
+    const mine = rawEvent({
+      kind: 7,
+      pubkey: ALICE,
+      content: "❤️",
+      tags: [["e", post.id, "", BOB], ["p", BOB], ["k", "1"]],
+    });
+    timelineStore.ingestEvent(mine, RELAY_A);
+    await timelineController.react(post, "❤️");
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 5,
+        content: "",
+        relayUrls: [RELAY_A],
+        tags: [["e", mine.id], ["k", "7"]],
+      })
+    );
+  });
+
+  it("reacting with a different emoji publishes a new kind-7", async () => {
+    const mine = rawEvent({
+      kind: 7,
+      pubkey: ALICE,
+      content: "❤️",
+      tags: [["e", post.id, "", BOB], ["p", BOB], ["k", "1"]],
+    });
+    timelineStore.ingestEvent(mine, RELAY_A);
+    await timelineController.react(post, "🎉");
+    expect(publish).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: 7, content: "🎉" })
+    );
+  });
+
+  it("throws when no connected relay delivered the post", async () => {
+    timelineStore.setRelayConnected(RELAY_A, false);
+    await expect(timelineController.react(post, "❤️")).rejects.toThrow("error.postSpaceUnavailable");
   });
 });
 

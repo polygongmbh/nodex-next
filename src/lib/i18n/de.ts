@@ -100,6 +100,7 @@ export default {
   "postmenu.copyLink": "Link kopieren",
   "postmenu.copied": "Link kopiert",
   "postmenu.copyFailed": "Link konnte nicht kopiert werden.",
+  "postmenu.reactFailed": "Reaktion konnte nicht gesendet werden.",
 
   "calendar.new": "Neuer Termin",
   "calendar.titleLabel": "Titel",

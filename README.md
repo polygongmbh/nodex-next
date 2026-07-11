@@ -117,6 +117,14 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   become repliable). **Copy link** copies the post's permalink
   (`origin/relayHost/eventId`, the relay host omitted when unknown) and shows a
   brief "Link copied" confirmation.
+- **Reactions** (NIP-25, kind 7): the menu offers a quick-emoji row
+  (👍 ❤️ 🎉 😄 🚀 👀 🙏 🙌 🛠️ 👎 — the original nodex registry); the thumbs
+  normalize to `+`/`-` on the wire, other emojis pass through verbatim. A
+  post's reactions render as compact count chips under its content (own
+  reaction highlighted); tapping a chip toggles/switches yours. Reactions
+  publish to every connected relay that delivered the post (per-relay
+  attribution); re-reacting with the same emoji deletes your prior reaction
+  (kind 5), a different emoji replaces it (newest-wins).
 - **Channels are hashtags** (no NIP-28); **spaces are relays**; empty space
   selection means "All spaces", never "no relays". Channel filters are AND.
 - **Topics** are named, composable tag combinations (not sub-channels), each
