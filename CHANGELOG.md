@@ -4,6 +4,23 @@
 
 ### Added
 
+- Post context menu: tap a card body to open a compact menu (bottom sheet on
+  phones, small centered card on desktop) with Reply (focuses the thread —
+  the entry point for reply-less posts), a quick-emoji React row, Copy link
+  (permalink `origin/relayHost/eventId`), and for own posts Recompose…
+  (kind-1 only: prefills the composer, replacement inherits kind/channels/
+  thread/origin relay, the original is deleted only after the replacement
+  publishes) and Delete (NIP-09 kind 5 with `e` + `k` tags), both behind
+  inline two-step confirms.
+- Reactions (NIP-25): posts show per-emoji count chips (own reaction
+  highlighted); tapping toggles/switches. 👍/👎 normalize to `+`/`-` on the
+  wire; reactions and deletions publish to every connected relay that
+  delivered the target (per-relay attribution). Same-emoji re-react deletes
+  the prior reaction; a different emoji replaces it newest-wins.
+- Cross-client note: the `classify-events.json` "unknown kind ignored"
+  sample kind changed 7 → 12345 (kind 7 is now a classified reaction; the
+  vector's expectation is unchanged).
+
 - Spaces are auto-detected during sign-in, so onboarding rarely asks for one:
   the account's own relays, else the tenant defaults noas now advertises at
   discovery (`noas.relays`), else a WebSocket probe of

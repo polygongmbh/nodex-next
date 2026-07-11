@@ -212,6 +212,37 @@ two-stroke N glyph, #4785FF on black.
     by a full-width back bar — tapping anywhere on it exits the thread.
   - **Compact state rows**: status icon, label (state content or translated
     status name), author, task content one-line, time.
+  - **Post context menu**: tapping a card body (never an inner control —
+    ignore clicks on `button`/`a` descendants — nor during text selection;
+    state rows untouched) opens a compact menu: bottom sheet on mobile, small
+    centered card ≥900px. Items:
+    - **Reply** = focus the post's thread (the bar becomes the reply
+      composer) — the entry point for reply-less posts.
+    - **React**: quick-emoji row 👍 ❤️ 🎉 😄 🚀 👀 🙏 🙌 🛠️ 👎 (nodex
+      registry). Publishes NIP-25 kind 7 to EVERY connected relay that
+      delivered the post (never a composer target), content `+`/`-` for
+      👍/👎, else the emoji verbatim; `e` (id, relay hint, author) + `p` +
+      `k` tags. Same emoji again = toggle OFF via own kind-5 of the prior
+      reaction (`e` + `k 7`); different emoji just publishes anew
+      (newest-wins per reactor). Cards show per-emoji count chips (own
+      highlighted, tap = same toggle); no row when no reactions.
+    - **Copy link**: permalink `origin/relayHost/eventId` — relay host from
+      the active space if it delivered the post, else the post's origin
+      relay, omitted when unknown — to the clipboard with a brief inline
+      confirmation.
+    - Own posts only — **Recompose…** (kind-1 messages only; tasks are
+      immutable) behind an inline confirm: prefills the composer with the
+      original's content and shows a cancelable bar chip (✕/Escape aborts,
+      clearing the draft). The replacement keeps the original's kind,
+      channels, NIP-10 thread (parent + root when the parent is still known,
+      none otherwise) and pins to the ORIGINAL's origin relay (recompose
+      precedence over reply); only AFTER it publishes is the original
+      deleted (kind 5 to the relays that delivered it) — a failed deletion
+      surfaces as an error, the replacement stays.
+    - Own posts only — **Delete** (destructive styling, any own post) behind
+      an inline confirm ("publishes a deletion event — spaces may keep a
+      copy"; no browser confirm()): kind 5 with `e` + `k` tags to every
+      connected relay that delivered the post; the echo tombstones locally.
 - **Filtering model**: channel chip tap = exclusive include (tap the sole
   included channel to clear); long-press (or right-click) any channel chip
   or sidebar entry pins/unpins. Pins are PER-SPACE (spec vector

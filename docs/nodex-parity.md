@@ -27,12 +27,17 @@ grouped by status. "Faithful" means behavior-compatible, not line-ported.
 - **Onboarding flow** per nodex-talk.md (welcome, profile, channel picks).
 - **Topics** per the brainstorm sketch, upgraded to shared relay events
   (kind 30177) with a NIP draft — beyond nodex, which has no topics yet.
+- **Thread participation**: focusing a thread (breadcrumbs, reply counts,
+  post-menu Reply) turns the bar into a reply composer with NIP-10 tags,
+  inherited parent channels, and origin-relay pinning.
+- **Post context menu** (tap a card): reply, NIP-25 reactions (quick-emoji
+  registry, +/- normalization, kind-5 toggle, count chips on cards),
+  permalink copy, and for own posts recompose (replace-then-delete,
+  kind-1 only) and NIP-09 delete — all publishing to the relays that
+  delivered the target.
 
 ## Present but needs work
 
-- **Thread view**: focusing works (breadcrumbs, reply counts), but there is
-  no reply COMPOSER — the parent-relay pinning rule is implemented and
-  tested, just not wired to UI. Highest-value next step.
 - **History depth**: backfill is limit-based only; no `until` paging when
   the user scrolls past the oldest loaded message.
 - **Search**: content substring only; nodex also matches authors and richer
@@ -53,10 +58,6 @@ grouped by status. "Faithful" means behavior-compatible, not line-ported.
 
 ## Missing (belongs in this app eventually)
 
-- Reply composing / thread participation (see above).
-- Deleting and recomposing OWN posts (kind-5 publishing exists internally
-  for topics only).
-- Reactions (nodex: reactions registry + toggles).
 - Presence (NIP-38 kind 30315, relay-scoped) and the people/sidebar
   presence UI; mention autocomplete in the composer.
 - Attachments and media: imeta on publish (a deliberate nodex contract),
