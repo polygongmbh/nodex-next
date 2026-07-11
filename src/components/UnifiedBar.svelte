@@ -54,7 +54,12 @@
       event.preventDefault();
       void send();
     }
-    if (event.key === "Escape") timelineController.draft = "";
+    if (event.key === "Escape") {
+      // Escape abandons a recompose (clears marker + prefilled draft), else
+      // just clears the draft.
+      if (timelineController.recomposeOf) timelineController.cancelRecompose();
+      else timelineController.draft = "";
+    }
   }
 </script>
 
@@ -63,7 +68,13 @@
     <p class="error">{error}</p>
   {/if}
 
-  {#if replyParent}
+  {#if timelineController.recomposeOf}
+    <div class="reply-chip" data-testid="recompose-chip">
+      <span class="reply-label">✎ {t("bar.recomposing")}</span>
+      <!-- svelte-ignore a11y_consider_explicit_label -->
+      <button class="remove" onclick={() => timelineController.cancelRecompose()} title={t("common.cancel")}>✕</button>
+    </div>
+  {:else if replyParent}
     <div class="reply-chip" data-testid="reply-chip">
       <span class="reply-label">↩ {t("bar.replyingTo", { name: replyLabel })}</span>
       <!-- svelte-ignore a11y_consider_explicit_label -->

@@ -45,6 +45,11 @@ class TimelineController {
   draft = $state("");
   /** A calendar event attached to the draft; when set, sending posts NIP-52. */
   calendarDraft = $state<CalendarDraft | null>(null);
+  /**
+   * The own post being recomposed: sending publishes a replacement (same kind,
+   * the original's channels and thread) and then deletes this original.
+   */
+  recomposeOf = $state<Post | null>(null);
   private service: NdkService | null = null;
   private batcher: IngestBatcher | null = null;
   private sessionPubkey: string | null = null;
@@ -150,6 +155,23 @@ class TimelineController {
     filterStore.reset();
     this.draft = "";
     this.calendarDraft = null;
+    this.recomposeOf = null;
+  }
+
+  /**
+   * Start recomposing an own post: prefill the composer with its content. On
+   * send the replacement is published (inheriting the original's channels,
+   * thread and origin relay), then the original is deleted.
+   */
+  recompose(post: Post): void {
+    this.recomposeOf = post;
+    this.draft = post.content;
+  }
+
+  /** Abandon a recompose: clear the marker and the prefilled draft. */
+  cancelRecompose(): void {
+    this.recomposeOf = null;
+    this.draft = "";
   }
 
   setCalendarDraft(draft: CalendarDraft): void {
@@ -265,11 +287,31 @@ class TimelineController {
     await this.service.publish({
       kind: NOSTR_KINDS.deletion,
       content: "",
+      // NIP-09 `e` + `k` from the shared builder, plus the `a` address so the
+      // addressable topic is tombstoned by coordinate too.
       tags: [
-        ["e", topic.eventId],
+        ...buildDeletionTags([{ id: topic.eventId, kind: NOSTR_KINDS.topic }]),
         ["a", `${NOSTR_KINDS.topic}:${topic.pubkey}:${topic.id}`],
       ],
       relayUrls: this.topicRelayUrls(),
+    });
+  }
+
+  /**
+   * NIP-09 delete of one of the user's own posts (kind 1 or 1621). Guards
+   * own-authorship, then publishes a kind-5 tombstone to every connected relay
+   * that delivered the post — the echo removes it locally.
+   */
+  async deletePost(post: Post): Promise<void> {
+    if (!this.service || post.pubkey !== this.sessionPubkey) {
+      throw new PublishRuleError("error.notConnected");
+    }
+    const relays = resolveTargetRelays(timelineStore.relays, post.relays);
+    await this.service.publish({
+      kind: NOSTR_KINDS.deletion,
+      content: "",
+      tags: buildDeletionTags([{ id: post.id, kind: post.kind }]),
+      relayUrls: relays.map((relay) => relay.url),
     });
   }
 
@@ -293,9 +335,12 @@ class TimelineController {
    * channel and selected-topic tag.
    */
   get draftChannels(): string[] {
-    const parent = this.replyParent;
-    const context = parent
-      ? parent.channels
+    // A recompose inherits the original's channels; a reply the parent's — both
+    // over the chip context (recompose wins over reply). This keeps the post in
+    // the same channels even while the chips row is hidden.
+    const contextPost = this.recomposeOf ?? this.replyParent;
+    const context = contextPost
+      ? contextPost.channels
       : Object.entries(this.effectiveChannelStates)
           .filter(([, state]) => state === "included")
           .map(([name]) => name);
@@ -322,10 +367,11 @@ class TimelineController {
     | { type: "resolved"; relayId: string }
     | { type: "ambiguous"; candidates: RelayInfo[] } {
     if (this.draftChannels.length === 0) return { type: "noChannel" };
-    const parent = this.replyParent;
-    if (parent) {
-      // A reply pins to its parent's origin relay, overriding any active space.
-      const origin = timelineStore.relays.find((relay) => relay.id === parent.relays[0]);
+    // A recompose pins to the ORIGINAL's origin relay, a reply to the parent's —
+    // both override any active space (recompose wins over reply).
+    const pinPost = this.recomposeOf ?? this.replyParent;
+    if (pinPost) {
+      const origin = timelineStore.relays.find((relay) => relay.id === pinPost.relays[0]);
       return origin ? { type: "resolved", relayId: origin.id } : { type: "noneConnected" };
     }
     if (filterStore.activeRelayId) {
@@ -368,12 +414,14 @@ class TimelineController {
     const channels = this.draftChannels;
     if (channels.length === 0) throw new PublishRuleError("error.needChannel");
     // Same channel-aware resolution for messages and calendar events; a reply
-    // pins to the focused parent's origin relay (keeps the thread on one space).
+    // pins to the focused parent's origin relay, a recompose to the ORIGINAL's
+    // (recompose wins over reply) — keeping the thread on one space.
+    const recompose = this.recomposeOf;
     const parent = this.replyParent;
     const relay = resolvePublishRelay(
       timelineStore.relays,
       filterStore.activeRelayId,
-      parent,
+      recompose ?? parent,
       this.channelSpaceIds
     );
     if (this.calendarDraft) {
@@ -397,16 +445,36 @@ class TimelineController {
     }
     const content = this.draft.trim();
     if (!content) throw new PublishRuleError("error.emptyMessage");
-    const reply = parent
-      ? { parent, root: this.threadRoot(parent), relayHint: relay.url }
+    // Threading: a reply threads under its parent; a recompose reuses the
+    // ORIGINAL's thread (parent + root), or none when the parent is gone.
+    const threadParent = recompose
+      ? recompose.parentId
+        ? timelineStore.postsById[recompose.parentId]
+        : undefined
+      : parent;
+    const reply = threadParent
+      ? { parent: threadParent, root: this.threadRoot(threadParent), relayHint: relay.url }
       : undefined;
     await this.service.publish({
-      kind: NOSTR_KINDS.message,
+      kind: recompose ? recompose.kind : NOSTR_KINDS.message,
       content,
       tags: buildMessageTags(channels, reply),
       relayUrls: [relay.url],
     });
     this.draft = "";
+    // A recompose deletes the original only AFTER the replacement lands. The
+    // marker is cleared first so the composer resets even if the deletion
+    // fails — the new post is kept and the deletion error surfaces to the bar.
+    if (recompose) {
+      this.recomposeOf = null;
+      const targets = resolveTargetRelays(timelineStore.relays, recompose.relays);
+      await this.service.publish({
+        kind: NOSTR_KINDS.deletion,
+        content: "",
+        tags: buildDeletionTags([{ id: recompose.id, kind: recompose.kind }]),
+        relayUrls: targets.map((target) => target.url),
+      });
+    }
     return relay.id;
   }
 

@@ -125,6 +125,16 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   publish to every connected relay that delivered the post (per-relay
   attribution); re-reacting with the same emoji deletes your prior reaction
   (kind 5), a different emoji replaces it (newest-wins).
+- **Own posts** additionally get **Recompose…** (kind-1 messages only — tasks
+  are immutable) and **Delete** (any own post), both behind an inline two-step
+  confirm (no browser dialogs). Delete publishes a NIP-09 kind-5 (`e` + `k`
+  tags) to every connected relay that delivered the post; the echo tombstones
+  it locally. Recompose prefills the composer with the original's content and
+  shows a cancelable chip in the bar (✕ or Escape aborts and clears the
+  draft); the replacement keeps the original's kind, channels, thread position
+  (same NIP-10 parent/root when the parent is still known) and origin relay,
+  and only after it publishes successfully is the original deleted — a failed
+  deletion surfaces as an error while the new post stays.
 - **Channels are hashtags** (no NIP-28); **spaces are relays**; empty space
   selection means "All spaces", never "no relays". Channel filters are AND.
 - **Topics** are named, composable tag combinations (not sub-channels), each

@@ -5,7 +5,7 @@ import type { StoredSession } from "@/infrastructure/noas/session";
 import { timelineController } from "./timeline-controller.svelte";
 import { timelineStore } from "./timeline.svelte";
 import { filterStore } from "./filters.svelte";
-import { ALICE, BOB, rawEvent } from "@/test/fixtures";
+import { ALICE, BOB, post as makePost, rawEvent } from "@/test/fixtures";
 
 // The real NDK service opens relay sockets; stub it so tests drive the ingest
 // handlers directly and spy on the one-shot profile fetch.
@@ -183,6 +183,150 @@ describe("react", () => {
   it("throws when no connected relay delivered the post", async () => {
     timelineStore.setRelayConnected(RELAY_A, false);
     await expect(timelineController.react(post, "❤️")).rejects.toThrow("error.postSpaceUnavailable");
+  });
+});
+
+const SESSION: StoredSession = {
+  pubkeyHex: ALICE,
+  privateKeyHex: "b".repeat(64),
+  username: "alice",
+  apiBaseUrl: "https://noas.example",
+  relayUrls: [RELAY_A, RELAY_B],
+};
+
+// Boot the controller against a publish-spy service and reconnect both relays
+// (start() re-inits them disconnected).
+function startWithPublishSpy(): ReturnType<typeof vi.fn> {
+  timelineController.stop();
+  const publish = vi.fn().mockResolvedValue(undefined);
+  const service: NdkService = {
+    publish: publish as NdkService["publish"],
+    fetchProfileEvent: vi.fn().mockResolvedValue(null),
+    fetchProfileEvents: vi.fn().mockResolvedValue([]),
+    stop: vi.fn(),
+  };
+  vi.mocked(startNdkService).mockReturnValue(service);
+  timelineController.start(SESSION);
+  timelineStore.setRelayConnected(RELAY_A, true);
+  timelineStore.setRelayConnected(RELAY_B, true);
+  return publish;
+}
+
+describe("deletePost", () => {
+  let publish: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    publish = startWithPublishSpy();
+  });
+
+  it("tombstones an own post with e+k tags on its delivery relays", async () => {
+    const mine = makePost({ pubkey: ALICE, kind: 1, relays: ["one-example"] });
+    timelineStore.postsById[mine.id] = mine;
+    await timelineController.deletePost(mine);
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 5,
+        content: "",
+        relayUrls: [RELAY_A],
+        tags: [["e", mine.id], ["k", "1"]],
+      })
+    );
+  });
+
+  it("refuses to delete another author's post", async () => {
+    const theirs = makePost({ pubkey: BOB, relays: ["one-example"] });
+    await expect(timelineController.deletePost(theirs)).rejects.toThrow("error.notConnected");
+    expect(publish).not.toHaveBeenCalled();
+  });
+});
+
+describe("recompose", () => {
+  let publish: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    publish = startWithPublishSpy();
+  });
+
+  it("publishes the replacement, then deletes the original, then clears state", async () => {
+    const original = makePost({
+      pubkey: ALICE,
+      kind: 1,
+      content: "old text #dev",
+      channels: ["dev"],
+      relays: ["one-example"],
+    });
+    timelineStore.postsById[original.id] = original;
+    timelineController.recompose(original);
+    expect(timelineController.draft).toBe("old text #dev");
+    timelineController.draft = "new text";
+    await timelineController.sendMessage();
+
+    expect(publish).toHaveBeenCalledTimes(2);
+    const [replacement, deletion] = publish.mock.calls.map((call) => call[0]);
+    expect(replacement).toMatchObject({ kind: 1, content: "new text", relayUrls: [RELAY_A] });
+    expect(replacement.tags).toContainEqual(["t", "dev"]);
+    expect(deletion).toMatchObject({
+      kind: 5,
+      content: "",
+      relayUrls: [RELAY_A],
+      tags: [["e", original.id], ["k", "1"]],
+    });
+    expect(timelineController.recomposeOf).toBeNull();
+    expect(timelineController.draft).toBe("");
+  });
+
+  it("inherits the original's channels and pins to its origin relay", async () => {
+    const original = makePost({
+      pubkey: ALICE,
+      content: "original body", // no typed hashtags
+      channels: ["dev", "ops"],
+      relays: ["two-example"], // delivered by two-example
+    });
+    timelineStore.postsById[original.id] = original;
+    filterStore.selectSpace("one-example"); // active space is elsewhere
+    timelineController.recompose(original);
+    expect(timelineController.draftChannels.sort()).toEqual(["dev", "ops"]);
+    expect(timelineController.sendTarget).toEqual({ type: "resolved", relayId: "two-example" });
+    timelineController.draft = "replacement";
+    await timelineController.sendMessage();
+    expect(publish.mock.calls[0][0]).toMatchObject({ relayUrls: [RELAY_B] });
+  });
+
+  it("threads the replacement under the original's parent when present", async () => {
+    const parent = makePost({ pubkey: BOB, relays: ["one-example"] });
+    timelineStore.postsById[parent.id] = parent;
+    const original = makePost({
+      pubkey: ALICE,
+      channels: ["dev"],
+      relays: ["one-example"],
+      parentId: parent.id,
+    });
+    timelineStore.postsById[original.id] = original;
+    timelineController.recompose(original);
+    timelineController.draft = "reworded reply";
+    await timelineController.sendMessage();
+    expect(publish.mock.calls[0][0].tags).toContainEqual(["e", parent.id, RELAY_A, "root", BOB]);
+  });
+
+  it("drops threading tags when the original's parent is gone", async () => {
+    const original = makePost({
+      pubkey: ALICE,
+      channels: ["dev"],
+      relays: ["one-example"],
+      parentId: "f".repeat(64), // parent not in the store
+    });
+    timelineStore.postsById[original.id] = original;
+    timelineController.recompose(original);
+    timelineController.draft = "reworded";
+    await timelineController.sendMessage();
+    const tags: string[][] = publish.mock.calls[0][0].tags;
+    expect(tags.some((tag) => tag[0] === "e")).toBe(false);
+  });
+
+  it("cancelRecompose clears the marker and the prefilled draft", () => {
+    const original = makePost({ pubkey: ALICE, relays: ["one-example"] });
+    timelineController.recompose(original);
+    timelineController.cancelRecompose();
+    expect(timelineController.recomposeOf).toBeNull();
+    expect(timelineController.draft).toBe("");
   });
 });
 

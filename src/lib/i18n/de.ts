@@ -4,6 +4,7 @@ export default {
   "app.welcome": "Willkommen bei Nodex",
   "common.optional": "(optional)",
   "common.saving": "Speichern…",
+  "common.cancel": "Abbrechen",
 
   "signin.hint": "Melde dich mit dem Konto deiner Organisation an.",
   "signin.registerHint": "Erstelle dein Konto — dein Schlüssel wird auf diesem Gerät erzeugt.",
@@ -95,12 +96,20 @@ export default {
   "bar.sendFailed": "Senden fehlgeschlagen — versuche es erneut.",
   "bar.attachEvent": "Termin anhängen",
   "bar.selectSpacePrompt": "Wähle einen Space zum Posten:",
+  "bar.recomposing": "Neu verfassen — Original wird beim Senden ersetzt",
 
   "postmenu.reply": "Antworten",
   "postmenu.copyLink": "Link kopieren",
   "postmenu.copied": "Link kopiert",
   "postmenu.copyFailed": "Link konnte nicht kopiert werden.",
   "postmenu.reactFailed": "Reaktion konnte nicht gesendet werden.",
+  "postmenu.recompose": "Neu verfassen…",
+  "postmenu.recomposeConfirm":
+    "Dein Entwurf erscheint im Editor. Das Original wird erst gelöscht, nachdem der Ersatz veröffentlicht wurde.",
+  "postmenu.delete": "Löschen",
+  "postmenu.deleteConfirm":
+    "Diesen Beitrag löschen? Dies veröffentlicht ein Lösch-Event — Spaces behalten möglicherweise eine Kopie.",
+  "postmenu.deleteFailed": "Beitrag konnte nicht gelöscht werden.",
 
   "calendar.new": "Neuer Termin",
   "calendar.titleLabel": "Titel",

@@ -1,8 +1,10 @@
 <script lang="ts">
   import type { Post } from "@/domain/post";
+  import { NOSTR_KINDS } from "@/domain/nostr-kinds";
   import { buildPostPermalink } from "@/domain/permalink";
   import { QUICK_REACTION_EMOJIS } from "@/domain/reaction-events";
   import { PublishRuleError } from "@/domain/publish-rules";
+  import { authStore } from "@/stores/auth.svelte";
   import { filterStore } from "@/stores/filters.svelte";
   import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
@@ -15,12 +17,34 @@
 
   let copied = $state(false);
   let error = $state("");
+  // Two-step destructive actions: null, or the action awaiting inline confirm.
+  let confirming = $state<"delete" | "recompose" | null>(null);
 
   const quickEmojis = QUICK_REACTION_EMOJIS;
+  // Own posts get recompose (kind-1 messages only — tasks are immutable) and
+  // delete (any own post).
+  const isOwn = $derived(post.pubkey === authStore.session?.pubkeyHex);
+  const canRecompose = $derived(isOwn && post.kind === NOSTR_KINDS.message);
 
   function reply() {
     filterStore.focusThread(post.id);
     onClose();
+  }
+
+  function recompose() {
+    timelineController.recompose(post);
+    onClose();
+  }
+
+  async function deletePost() {
+    error = "";
+    try {
+      await timelineController.deletePost(post);
+      onClose();
+    } catch (caught) {
+      confirming = null;
+      error = caught instanceof PublishRuleError ? t(caught.message) : t("postmenu.deleteFailed");
+    }
   }
 
   async function react(emoji: string) {
@@ -67,6 +91,39 @@
   <button class="item" onclick={copyLink} data-testid="post-menu-copy">
     <span class="glyph">🔗</span>{copied ? t("postmenu.copied") : t("postmenu.copyLink")}
   </button>
+
+  {#if canRecompose}
+    {#if confirming === "recompose"}
+      <div class="confirm" data-testid="post-menu-recompose-confirm">
+        <p class="prompt">{t("postmenu.recomposeConfirm")}</p>
+        <div class="actions">
+          <button class="cancel" onclick={() => (confirming = null)}>{t("common.cancel")}</button>
+          <button class="proceed" onclick={recompose}>{t("postmenu.recompose")}</button>
+        </div>
+      </div>
+    {:else}
+      <button class="item" onclick={() => (confirming = "recompose")} data-testid="post-menu-recompose">
+        <span class="glyph">✎</span>{t("postmenu.recompose")}
+      </button>
+    {/if}
+  {/if}
+
+  {#if isOwn}
+    {#if confirming === "delete"}
+      <div class="confirm" data-testid="post-menu-delete-confirm">
+        <p class="prompt">{t("postmenu.deleteConfirm")}</p>
+        <div class="actions">
+          <button class="cancel" onclick={() => (confirming = null)}>{t("common.cancel")}</button>
+          <button class="danger" onclick={deletePost}>{t("postmenu.delete")}</button>
+        </div>
+      </div>
+    {:else}
+      <button class="item destructive" onclick={() => (confirming = "delete")} data-testid="post-menu-delete">
+        <span class="glyph">🗑</span>{t("postmenu.delete")}
+      </button>
+    {/if}
+  {/if}
+
   {#if error}
     <p class="error">{error}</p>
   {/if}
@@ -140,6 +197,41 @@
   }
   .item:hover {
     background: var(--accent-muted);
+  }
+  .item.destructive {
+    color: var(--danger);
+  }
+  .item.destructive:hover {
+    background: hsl(0 72% 48% / 0.12);
+  }
+  .confirm {
+    padding: 0.5rem 0.6rem 0.35rem;
+  }
+  .confirm .prompt {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .confirm .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .confirm button {
+    padding: 0.4rem 0.9rem;
+    border-radius: 0.6rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  .confirm .cancel {
+    color: var(--text-muted);
+  }
+  .confirm .proceed {
+    color: var(--accent);
+  }
+  .confirm .danger {
+    background: var(--danger);
+    color: #fff;
   }
   .glyph {
     width: 1.25rem;

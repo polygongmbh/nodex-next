@@ -5,6 +5,7 @@ export default {
   "app.welcome": "Welcome to Nodex",
   "common.optional": "(optional)",
   "common.saving": "Saving…",
+  "common.cancel": "Cancel",
 
   "signin.hint": "Sign in with your organization's account.",
   "signin.registerHint": "Create your account — your key is generated on this device.",
@@ -95,12 +96,20 @@ export default {
   "bar.sendFailed": "Sending failed — try again.",
   "bar.attachEvent": "Attach event",
   "bar.selectSpacePrompt": "Pick a space to post to:",
+  "bar.recomposing": "Recomposing — original is replaced on send",
 
   "postmenu.reply": "Reply",
   "postmenu.copyLink": "Copy link",
   "postmenu.copied": "Link copied",
   "postmenu.copyFailed": "Couldn't copy the link.",
   "postmenu.reactFailed": "Couldn't send the reaction.",
+  "postmenu.recompose": "Recompose…",
+  "postmenu.recomposeConfirm":
+    "Your draft will appear in the composer. The original is deleted only after the replacement is published.",
+  "postmenu.delete": "Delete",
+  "postmenu.deleteConfirm":
+    "Delete this post? This publishes a deletion event — spaces may keep a copy.",
+  "postmenu.deleteFailed": "Couldn't delete the post.",
 
   "calendar.new": "New event",
   "calendar.titleLabel": "Title",
