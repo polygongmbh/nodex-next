@@ -153,6 +153,7 @@ export default {
   "error.emptyMessage": "Write a message first.",
   "error.needChannel": "A post needs at least one #channel.",
   "error.parentSpaceUnavailable": "The parent post's origin space is not available.",
+  "error.postSpaceUnavailable": "The post's space is not available.",
   "error.spaceUnavailable": "The selected space is not available.",
   "error.noSpaceConnected": "No space is connected.",
   "error.selectSpace": "Select a space to post to.",

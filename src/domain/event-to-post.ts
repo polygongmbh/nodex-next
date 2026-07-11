@@ -9,6 +9,7 @@ import { deriveChannelTags } from "./hashtags";
 import { parseAttachments } from "./attachments";
 import { isCalendarKind, parseCalendarEvent, type CalendarEvent } from "./calendar-events";
 import { parseTopicEvent } from "./topic-events";
+import { normalizeReactionEmoji, type Reaction } from "./reaction-events";
 
 export interface RawNostrEvent {
   id: string;
@@ -26,6 +27,7 @@ export type ClassifiedEvent =
   | { type: "calendarEvent"; event: CalendarEvent }
   | { type: "state"; targetId: string; update: TaskStateUpdate }
   | { type: "deletion"; byPubkey: string; targetIds: string[] }
+  | { type: "reaction"; reaction: Reaction }
   | { type: "ignored" };
 
 /**
@@ -59,6 +61,14 @@ function resolveMentions(tags: string[][]): string[] {
 
 function firstEventReference(tags: string[][]): string | undefined {
   return tags.find((tag) => tag[0] === "e" && tag[1])?.[1];
+}
+
+/** NIP-25: the reacted-to event is the LAST `e`-tag. */
+function lastEventReference(tags: string[][]): string | undefined {
+  for (let index = tags.length - 1; index >= 0; index -= 1) {
+    if (tags[index][0] === "e" && tags[index][1]) return tags[index][1];
+  }
+  return undefined;
 }
 
 export function classifyEvent(event: RawNostrEvent, relayIds: string[]): ClassifiedEvent {
@@ -103,6 +113,23 @@ export function classifyEvent(event: RawNostrEvent, relayIds: string[]): Classif
       .map((tag) => tag[1]);
     if (targetIds.length === 0) return { type: "ignored" };
     return { type: "deletion", byPubkey: event.pubkey, targetIds };
+  }
+
+  if (event.kind === NOSTR_KINDS.reaction) {
+    const emoji = normalizeReactionEmoji(event.content);
+    const targetId = lastEventReference(event.tags);
+    if (!emoji || !targetId) return { type: "ignored" };
+    return {
+      type: "reaction",
+      reaction: {
+        id: event.id,
+        targetId,
+        pubkey: event.pubkey,
+        emoji,
+        relays: [...relayIds],
+        timestamp: event.created_at,
+      },
+    };
   }
 
   if (event.kind === NOSTR_KINDS.metadata) {

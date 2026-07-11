@@ -9,11 +9,14 @@ import { buildTimeline, timelineStore, type TimelineScope } from "@/stores/timel
 import { postStatus, type Post } from "@/domain/post";
 import type { RawNostrEvent } from "@/domain/event-to-post";
 import {
+  buildDeletionTags,
   buildMessageTags,
   PublishRuleError,
   resolveDraftChannels,
   resolvePublishRelay,
+  resolveTargetRelays,
 } from "@/domain/publish-rules";
+import { buildReactionTags } from "@/domain/reaction-events";
 
 interface Step {
   event: RawNostrEvent;
@@ -132,5 +135,25 @@ describe("vectors: publish rules", () => {
 
   it.each(publishVectors.resolveDraftChannels)("$name", ({ content, included, expected }) => {
     expect(resolveDraftChannels(content, included).sort()).toEqual([...expected].sort());
+  });
+
+  it.each(publishVectors.resolveTargetRelays)("$name", (vector) => {
+    if ("error" in vector.expected) {
+      expect(() => resolveTargetRelays(allRelays, vector.targetRelayIds)).toThrowError(
+        new PublishRuleError(vector.expected.error!)
+      );
+    } else {
+      expect(resolveTargetRelays(allRelays, vector.targetRelayIds).map((relay) => relay.id)).toEqual(
+        vector.expected.relayIds
+      );
+    }
+  });
+
+  it.each(publishVectors.buildReactionTags)("$name", (vector) => {
+    expect(buildReactionTags(vector.target, vector.relayHint)).toEqual(vector.expected.tags);
+  });
+
+  it.each(publishVectors.buildDeletionTags)("$name", (vector) => {
+    expect(buildDeletionTags(vector.targets)).toEqual(vector.expected.tags);
   });
 });

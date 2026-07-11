@@ -154,6 +154,7 @@ export default {
   "error.emptyMessage": "Schreibe zuerst eine Nachricht.",
   "error.needChannel": "Ein Beitrag braucht mindestens einen #Channel.",
   "error.parentSpaceUnavailable": "Der Ursprungs-Space des übergeordneten Beitrags ist nicht verfügbar.",
+  "error.postSpaceUnavailable": "Der Space dieses Beitrags ist nicht verfügbar.",
   "error.spaceUnavailable": "Der gewählte Space ist nicht verfügbar.",
   "error.noSpaceConnected": "Kein Space ist verbunden.",
   "error.selectSpace": "Wähle einen Space zum Posten.",

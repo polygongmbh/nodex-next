@@ -3,6 +3,8 @@ export const NOSTR_KINDS = {
   metadata: 0,
   message: 1,
   deletion: 5,
+  /** NIP-25 reaction. */
+  reaction: 7,
   task: 1621,
   stateOpen: 1630,
   stateDone: 1631,

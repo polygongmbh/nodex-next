@@ -62,5 +62,47 @@
   "resolveDraftChannels": [
     { "name": "included chips union typed hashtags", "content": "ship #Launch today", "included": ["general"], "expected": ["general", "launch"] },
     { "name": "uppercase hex color in draft is not a channel", "content": "color #FFF", "included": [], "expected": [] }
+  ],
+  "resolveTargetRelays": [
+    {
+      "name": "targets every connected space that delivered the post",
+      "targetRelayIds": ["one-example", "two-example"],
+      "expected": { "relayIds": ["one-example", "two-example"] }
+    },
+    {
+      "name": "disconnected and unknown delivery spaces are skipped",
+      "targetRelayIds": ["two-example", "three-example", "gone-example"],
+      "expected": { "relayIds": ["two-example"] }
+    },
+    {
+      "name": "no reachable delivery space errors",
+      "targetRelayIds": ["three-example", "gone-example"],
+      "expected": { "error": "error.postSpaceUnavailable" }
+    }
+  ],
+  "buildReactionTags": [
+    {
+      "name": "reaction tags carry target with hint, author p-tag and kind k-tag",
+      "target": { "id": "root", "pubkey": "alice", "kind": 1 },
+      "relayHint": "wss://one.example/",
+      "expected": { "tags": [["e", "root", "wss://one.example/", "alice"], ["p", "alice"], ["k", "1"]] }
+    },
+    {
+      "name": "task reaction carries the task kind and an empty hint slot",
+      "target": { "id": "t1", "pubkey": "bob", "kind": 1621 },
+      "expected": { "tags": [["e", "t1", "", "bob"], ["p", "bob"], ["k", "1621"]] }
+    }
+  ],
+  "buildDeletionTags": [
+    {
+      "name": "deletion carries an e-tag plus the target kind as k-tag",
+      "targets": [{ "id": "m1", "kind": 1 }],
+      "expected": { "tags": [["e", "m1"], ["k", "1"]] }
+    },
+    {
+      "name": "multiple targets list every e-tag and dedupe k-tags",
+      "targets": [{ "id": "r1", "kind": 7 }, { "id": "r2", "kind": 7 }],
+      "expected": { "tags": [["e", "r1"], ["e", "r2"], ["k", "7"]] }
+    }
   ]
 }

@@ -52,6 +52,31 @@ export function resolvePublishRelay(
   throw new PublishRuleError("error.selectSpace");
 }
 
+/**
+ * Every connected space that delivered the target event. Reactions and
+ * deletions follow the post — they go to wherever it was seen, not to the
+ * composer's single publish target.
+ */
+export function resolveTargetRelays(
+  relays: PublishRelayCandidate[],
+  targetRelayIds: string[]
+): PublishRelayCandidate[] {
+  const targets = relays.filter(
+    (relay) => targetRelayIds.includes(relay.id) && relay.connected
+  );
+  if (targets.length === 0) throw new PublishRuleError("error.postSpaceUnavailable");
+  return targets;
+}
+
+/** NIP-09 tags for deleting own events: an `e` per event plus deduped `k` kinds. */
+export function buildDeletionTags(targets: { id: string; kind: number }[]): string[][] {
+  const tags: string[][] = targets.map((target) => ["e", target.id]);
+  for (const kind of new Set(targets.map((target) => target.kind))) {
+    tags.push(["k", String(kind)]);
+  }
+  return tags;
+}
+
 /** Immediate parent + thread root of a reply (root === parent for top-level). */
 export interface ReplyContext {
   parent: Post;

@@ -431,7 +431,7 @@
       "event": {
         "id": "x1",
         "pubkey": "alice",
-        "kind": 7,
+        "kind": 12345,
         "content": "+",
         "tags": [
           [
@@ -645,6 +645,136 @@
       "expected": {
         "type": "ignored"
       }
+    },
+    {
+      "name": "kind 7 plus-content reaction normalizes to thumbs up",
+      "event": {
+        "id": "r1",
+        "pubkey": "bob",
+        "kind": 7,
+        "content": "+",
+        "tags": [["e", "m1", "", "alice"], ["p", "alice"], ["k", "1"]],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "reaction", "targetId": "m1", "emoji": "👍", "reactionPubkey": "bob", "relays": ["relay-a"] }
+    },
+    {
+      "name": "kind 7 empty content also counts as thumbs up",
+      "event": {
+        "id": "r2",
+        "pubkey": "bob",
+        "kind": 7,
+        "content": "",
+        "tags": [["e", "m1"]],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "reaction", "targetId": "m1", "emoji": "👍" }
+    },
+    {
+      "name": "kind 7 minus content normalizes to thumbs down",
+      "event": {
+        "id": "r3",
+        "pubkey": "bob",
+        "kind": 7,
+        "content": "-",
+        "tags": [["e", "m1"]],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "reaction", "targetId": "m1", "emoji": "👎" }
+    },
+    {
+      "name": "kind 7 single emoji passes through",
+      "event": {
+        "id": "r4",
+        "pubkey": "bob",
+        "kind": 7,
+        "content": "🎉",
+        "tags": [["e", "m1"]],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "reaction", "targetId": "m1", "emoji": "🎉" }
+    },
+    {
+      "name": "kind 7 skin-tone emoji is one grapheme and passes through",
+      "event": {
+        "id": "r5",
+        "pubkey": "bob",
+        "kind": 7,
+        "content": "👍🏽",
+        "tags": [["e", "m1"]],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "reaction", "targetId": "m1", "emoji": "👍🏽" }
+    },
+    {
+      "name": "kind 7 reacts to the LAST e-tag per NIP-25",
+      "event": {
+        "id": "r6",
+        "pubkey": "bob",
+        "kind": 7,
+        "content": "+",
+        "tags": [["e", "root"], ["e", "m2"], ["p", "alice"]],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "reaction", "targetId": "m2", "emoji": "👍" }
+    },
+    {
+      "name": "kind 7 word content is not a reaction",
+      "event": {
+        "id": "r7",
+        "pubkey": "bob",
+        "kind": 7,
+        "content": "nice",
+        "tags": [["e", "m1"]],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "ignored" }
+    },
+    {
+      "name": "kind 7 shortcode content is not a reaction (no NIP-30)",
+      "event": {
+        "id": "r8",
+        "pubkey": "bob",
+        "kind": 7,
+        "content": ":fire:",
+        "tags": [["e", "m1"]],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "ignored" }
+    },
+    {
+      "name": "kind 7 lone ascii character is not a reaction",
+      "event": {
+        "id": "r9",
+        "pubkey": "bob",
+        "kind": 7,
+        "content": "x",
+        "tags": [["e", "m1"]],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "ignored" }
+    },
+    {
+      "name": "kind 7 without any e-tag is ignored",
+      "event": {
+        "id": "r10",
+        "pubkey": "bob",
+        "kind": 7,
+        "content": "+",
+        "tags": [["p", "alice"]],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "ignored" }
     }
   ]
 }

@@ -1,0 +1,40 @@
+{
+  "relays": [
+    { "id": "one-example", "url": "wss://one.example/" },
+    { "id": "relay-two-example", "url": "wss://relay.two.example/" }
+  ],
+  "buildPostPermalink": [
+    {
+      "name": "active space wins when it delivered the post",
+      "origin": "https://app.example",
+      "postId": "m1",
+      "postRelayIds": ["one-example", "relay-two-example"],
+      "activeRelayId": "relay-two-example",
+      "expected": "https://app.example/relay.two.example/m1"
+    },
+    {
+      "name": "origin relay (first attribution) when no space is active",
+      "origin": "https://app.example",
+      "postId": "m1",
+      "postRelayIds": ["one-example", "relay-two-example"],
+      "activeRelayId": null,
+      "expected": "https://app.example/one.example/m1"
+    },
+    {
+      "name": "active space that did not deliver the post falls back to origin relay",
+      "origin": "https://app.example",
+      "postId": "m1",
+      "postRelayIds": ["one-example"],
+      "activeRelayId": "relay-two-example",
+      "expected": "https://app.example/one.example/m1"
+    },
+    {
+      "name": "unknown delivery relays omit the relay segment",
+      "origin": "https://app.example/",
+      "postId": "m1",
+      "postRelayIds": ["gone-example"],
+      "activeRelayId": null,
+      "expected": "https://app.example/m1"
+    }
+  ]
+}

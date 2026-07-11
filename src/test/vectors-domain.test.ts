@@ -8,6 +8,7 @@ import relayIdentity from "../../spec/vectors/relay-identity.json";
 import timestamps from "../../spec/vectors/timestamps.json";
 import topicIdentity from "../../spec/vectors/topic-identity.json";
 import classifyVectors from "../../spec/vectors/classify-events.json";
+import permalinkVectors from "../../spec/vectors/permalinks.json";
 import pinningVectors from "../../spec/vectors/pinning.json";
 import calendarVectors from "../../spec/vectors/calendar-events.json";
 import { deriveChannelTags, extractHashtagsFromContent, isHexColorToken } from "@/domain/hashtags";
@@ -20,6 +21,7 @@ import { buildTopicEvent, parseTopicEvent, topicIdForChannels } from "@/domain/t
 import { classifyEvent, type RawNostrEvent } from "@/domain/event-to-post";
 import { personAbout, personDisplayName, personName, personNip05 } from "@/domain/person";
 import { buildCalendarEvent } from "@/domain/calendar-events";
+import { buildPostPermalink } from "@/domain/permalink";
 
 describe("vectors: channels", () => {
   it.each(channels.extractHashtags)("$name", ({ content, expected }) => {
@@ -137,6 +139,23 @@ describe("vectors: event classification", () => {
       if (expected.primary) expect(topic.primary).toBe(expected.primary);
     } else if (classified.type === "calendarEvent") {
       expect(classified.event).toMatchObject(expected.calendar as Record<string, unknown>);
+    } else if (classified.type === "reaction") {
+      const reaction = classified.reaction;
+      expect(reaction.targetId).toBe(expected.targetId);
+      if (expected.emoji) expect(reaction.emoji).toBe(expected.emoji);
+      if (expected.reactionPubkey) expect(reaction.pubkey).toBe(expected.reactionPubkey);
+      if (expected.relays) expect(reaction.relays).toEqual(expected.relays);
     }
   });
+});
+
+describe("vectors: permalinks", () => {
+  it.each(permalinkVectors.buildPostPermalink)(
+    "$name",
+    ({ origin, postId, postRelayIds, activeRelayId, expected }) => {
+      expect(
+        buildPostPermalink(origin, postId, postRelayIds, permalinkVectors.relays, activeRelayId)
+      ).toBe(expected);
+    }
+  );
 });
