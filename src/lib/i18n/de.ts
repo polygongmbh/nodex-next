@@ -96,6 +96,11 @@ export default {
   "bar.attachEvent": "Termin anhängen",
   "bar.selectSpacePrompt": "Wähle einen Space zum Posten:",
 
+  "postmenu.reply": "Antworten",
+  "postmenu.copyLink": "Link kopieren",
+  "postmenu.copied": "Link kopiert",
+  "postmenu.copyFailed": "Link konnte nicht kopiert werden.",
+
   "calendar.new": "Neuer Termin",
   "calendar.titleLabel": "Titel",
   "calendar.titlePlaceholder": "Termintitel, z. B. Sprint-Review",

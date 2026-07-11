@@ -7,6 +7,7 @@
   import { buildTimeline, timelineStore } from "@/stores/timeline.svelte";
   import ChannelChips from "./ChannelChips.svelte";
   import MenuSheet from "./MenuSheet.svelte";
+  import PostMenu from "./PostMenu.svelte";
   import RelaySheet from "./RelaySheet.svelte";
   import Sidebar from "./Sidebar.svelte";
   import SpaceSelector from "./SpaceSelector.svelte";
@@ -14,6 +15,7 @@
   import TimelineCard from "./TimelineCard.svelte";
   import CalendarCard from "./CalendarCard.svelte";
   import UnifiedBar from "./UnifiedBar.svelte";
+  import type { Post } from "@/domain/post";
 
   const items = $derived(
     buildTimeline(timelineStore.postsById, timelineStore.calendarEventsByAddress, {
@@ -39,6 +41,7 @@
 
   let relaySheetRelays = $state<string[] | null>(null);
   let menuOpen = $state(false);
+  let menuPost = $state<Post | null>(null);
 
   let feedElement = $state<HTMLElement | null>(null);
   // User intent: pinned means "keep me at the newest message". Starts true so
@@ -154,6 +157,7 @@
                 parent={item.parent}
                 replyCount={item.replyCount}
                 onRelayDots={(relays) => (relaySheetRelays = relays)}
+                onOpenMenu={(post) => (menuPost = post)}
               />
             {:else if item.type === "state"}
               <StateRow post={item.post} update={item.update} />
@@ -173,6 +177,9 @@
   {/if}
   {#if menuOpen}
     <MenuSheet onClose={() => (menuOpen = false)} />
+  {/if}
+  {#if menuPost}
+    <PostMenu post={menuPost} onClose={() => (menuPost = null)} />
   {/if}
 </div>
 

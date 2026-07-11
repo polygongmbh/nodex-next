@@ -110,6 +110,13 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   (hamburger / space / channels) is replaced by a full-width back bar — tap
   anywhere on it to exit. Names, avatars, and @mentions open profile hover
   cards; card channel chips filter on click.
+- **Post context menu**: tapping a card body (not an inner control, and not
+  while selecting text) opens a compact menu for that post — a bottom sheet on
+  phones, a small centered card on desktop. **Reply** focuses the post's thread
+  (turning the bottom bar into a reply composer — this is how reply-less posts
+  become repliable). **Copy link** copies the post's permalink
+  (`origin/relayHost/eventId`, the relay host omitted when unknown) and shows a
+  brief "Link copied" confirmation.
 - **Channels are hashtags** (no NIP-28); **spaces are relays**; empty space
   selection means "All spaces", never "no relays". Channel filters are AND.
 - **Topics** are named, composable tag combinations (not sub-channels), each

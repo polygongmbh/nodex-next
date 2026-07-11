@@ -74,6 +74,17 @@ describe("reply composition in a focused thread", () => {
     expect(timelineController.sendTarget).toEqual({ type: "resolved", relayId: "two-example" });
   });
 
+  it("makes a reply-less post repliable: the post-menu Reply focuses its thread", () => {
+    // A top-level post with no existing replies — the context menu's Reply is
+    // its only entry point into the composer-as-reply flow.
+    const parent = rawEvent({ tags: [["t", "dev"]] });
+    timelineStore.ingestEvent(parent, RELAY_A);
+    filterStore.focusThread(parent.id); // what PostMenu's Reply does
+    timelineController.draft = "first reply";
+    expect(timelineController.replyParent?.id).toBe(parent.id);
+    expect(timelineController.sendTarget).toEqual({ type: "resolved", relayId: "one-example" });
+  });
+
   it("inherits the parent's channels so a reply needs no typed hashtag", () => {
     const parent = rawEvent({ content: "parent post", tags: [["t", "dev"], ["t", "ops"]] });
     timelineStore.ingestEvent(parent, RELAY_A);

@@ -96,6 +96,11 @@ export default {
   "bar.attachEvent": "Attach event",
   "bar.selectSpacePrompt": "Pick a space to post to:",
 
+  "postmenu.reply": "Reply",
+  "postmenu.copyLink": "Copy link",
+  "postmenu.copied": "Link copied",
+  "postmenu.copyFailed": "Couldn't copy the link.",
+
   "calendar.new": "New event",
   "calendar.titleLabel": "Title",
   "calendar.titlePlaceholder": "Event title, e.g. Sprint review",

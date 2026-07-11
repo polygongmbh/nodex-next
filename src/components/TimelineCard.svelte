@@ -18,12 +18,24 @@
     parent,
     replyCount,
     onRelayDots,
+    onOpenMenu,
   }: {
     post: Post;
     parent?: Post;
     replyCount: number;
     onRelayDots: (relays: string[]) => void;
+    onOpenMenu: (post: Post) => void;
   } = $props();
+
+  // A tap on the card body opens the context menu — but not when the click
+  // landed on an inner control (chip, crumb, link, relay dots, show-more) or
+  // when the user is selecting text.
+  function onCardClick(event: MouseEvent) {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("button, a")) return;
+    if (window.getSelection()?.toString()) return;
+    onOpenMenu(post);
+  }
 
   const author = $derived(timelineStore.peopleByPubkey[post.pubkey]);
   const label = $derived(personLabel(author, post.pubkey));
@@ -57,7 +69,8 @@
   });
 </script>
 
-<article class="card">
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+<article class="card" onclick={onCardClick}>
   {#if crumbs.length > 0}
     <nav class="crumbs">
       {#each crumbs as crumb, index (crumb.id)}
