@@ -2,6 +2,7 @@
   import { type CalendarEvent, formatCalendarWhen } from "@/domain/calendar-events";
   import { personLabel, personPicture } from "@/domain/person";
   import { i18n, t } from "@/lib/i18n/index.svelte";
+  import { authStore } from "@/stores/auth.svelte";
   import { filterStore } from "@/stores/filters.svelte";
   import { timelineController } from "@/stores/timeline-controller.svelte";
   import { timelineStore } from "@/stores/timeline.svelte";
@@ -12,14 +13,49 @@
   let {
     event,
     onRelayDots,
+    onOpenMenu,
   }: {
     event: CalendarEvent;
     onRelayDots: (relays: string[]) => void;
+    onOpenMenu: (event: CalendarEvent, x: number, y: number) => void;
   } = $props();
+
+  // A tap on the card body opens the context menu at the tap point — same rule
+  // as post cards (skip inner controls and active text selections).
+  function onCardClick(mouse: MouseEvent) {
+    const target = mouse.target as HTMLElement | null;
+    if (target?.closest("button, a")) return;
+    if (window.getSelection()?.toString()) return;
+    onOpenMenu(event, mouse.clientX, mouse.clientY);
+  }
 
   const author = $derived(timelineStore.peopleByPubkey[event.pubkey]);
   const label = $derived(personLabel(author, event.pubkey));
   const when = $derived(formatCalendarWhen(event, i18n.locale));
+
+  // Reaction chips keyed by the calendar eventId, mirroring post cards: one per
+  // distinct emoji with its count, own reaction highlighted, loudest first.
+  const myPubkey = $derived(authStore.session?.pubkeyHex ?? null);
+  const reactionChips = $derived.by(() => {
+    const byEmoji = new Map<string, { count: number; mine: boolean }>();
+    for (const [pubkey, reaction] of Object.entries(
+      timelineStore.reactionsByTargetId[event.eventId] ?? {}
+    )) {
+      const entry = byEmoji.get(reaction.emoji) ?? { count: 0, mine: false };
+      entry.count += 1;
+      if (pubkey === myPubkey) entry.mine = true;
+      byEmoji.set(reaction.emoji, entry);
+    }
+    return Array.from(byEmoji, ([emoji, value]) => ({ emoji, ...value })).sort(
+      (a, b) => b.count - a.count
+    );
+  });
+
+  function toggleReaction(emoji: string) {
+    // The chip has no error surface; the menu's React row does. A failed publish
+    // here is swallowed rather than left as an unhandled rejection.
+    void timelineController.react(event, emoji).catch(() => {});
+  }
 
   // Attribution icons only add signal when the feed spans multiple spaces.
   const showSpaces = $derived(timelineController.scopeRelayIds.length > 1);
@@ -31,7 +67,8 @@
   );
 </script>
 
-<article class="card">
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+<article class="card" onclick={onCardClick}>
   <div class="main">
     <ProfileHover pubkey={event.pubkey}>
       <Avatar {label} pubkey={event.pubkey} picture={personPicture(author)} />
@@ -59,6 +96,15 @@
       {/if}
       {#if event.content}
         <p class="content">{event.content}</p>
+      {/if}
+      {#if reactionChips.length > 0}
+        <div class="reactions" data-testid="reactions">
+          {#each reactionChips as chip (chip.emoji)}
+            <button class="reaction" class:mine={chip.mine} onclick={() => toggleReaction(chip.emoji)}>
+              <span class="emoji">{chip.emoji}</span>{chip.count}
+            </button>
+          {/each}
+        </div>
       {/if}
       {#if showSpaces && spaces.length > 0}
         <footer>
@@ -138,6 +184,35 @@
     margin: 0.35rem 0;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+  }
+  .reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin: 0.1rem 0 0.4rem;
+  }
+  .reaction {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 0.7rem;
+    border: 1px solid var(--border);
+    background: var(--surface-sunken);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .reaction:hover {
+    border-color: var(--accent);
+  }
+  .reaction.mine {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+    color: var(--text);
+  }
+  .reaction .emoji {
+    font-size: 0.95rem;
   }
   footer {
     display: flex;

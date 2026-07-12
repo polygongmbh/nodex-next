@@ -2,7 +2,6 @@
 // posts target exactly one relay — the single active relay, else the sole
 // connected relay, else it's an error. Replies pin to the parent's origin relay.
 
-import type { Post } from "./post";
 import { extractHashtagsFromContent } from "./hashtags";
 import { NOSTR_KINDS } from "./nostr-kinds";
 
@@ -26,7 +25,8 @@ export function resolveDraftChannels(content: string, includedChannels: string[]
 export function resolvePublishRelay(
   relays: PublishRelayCandidate[],
   activeRelayId: string | null,
-  parent?: Post,
+  // Any relay-attributed item (a post or a calendar event) pins the target.
+  parent?: { relays: string[] },
   candidateSpaceIds?: string[]
 ): PublishRelayCandidate {
   if (parent) {

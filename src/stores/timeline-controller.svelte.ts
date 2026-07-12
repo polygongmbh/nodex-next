@@ -11,8 +11,10 @@ import {
 } from "@/domain/channel";
 import {
   buildCalendarEvent,
+  calendarAddress,
   encodeCalendarWhen,
   type CalendarDraft,
+  type CalendarEvent,
 } from "@/domain/calendar-events";
 import { buildTopicEvent } from "@/domain/topic-events";
 import {
@@ -29,10 +31,12 @@ import type { Post } from "@/domain/post";
 import {
   buildDeletionTags,
   buildMessageTags,
+  buildReplyEvent,
   PublishRuleError,
   resolveDraftChannels,
   resolvePublishRelay,
   resolveTargetRelays,
+  type ReplyTarget,
 } from "@/domain/publish-rules";
 import { createIngestBatcher, type IngestBatcher } from "@/infrastructure/nostr/ingest-batcher";
 import { startNdkService, type NdkService } from "@/infrastructure/nostr/ndk-service";
@@ -40,6 +44,31 @@ import type { StoredSession } from "@/infrastructure/noas/session";
 import { filterStore } from "./filters.svelte";
 import { preferencesStore } from "./preferences.svelte";
 import { timelineStore, type RelayInfo } from "./timeline.svelte";
+
+/** A menu/reply target is either a post or an addressable calendar event. */
+export type TimelineTarget = Post | CalendarEvent;
+
+function isCalendarEvent(item: TimelineTarget): item is CalendarEvent {
+  return "eventId" in item;
+}
+
+/** The event id used for reactions/deletions/threading (posts vs calendar). */
+function targetEventId(item: TimelineTarget): string {
+  return isCalendarEvent(item) ? item.eventId : item.id;
+}
+
+/** A NIP-10/NIP-22 reply target: calendar events carry their `kind:pubkey:d`. */
+function replyTargetOf(item: TimelineTarget): ReplyTarget {
+  if (isCalendarEvent(item)) {
+    return {
+      id: item.eventId,
+      pubkey: item.pubkey,
+      kind: item.kind,
+      address: `${item.kind}:${calendarAddress(item)}`,
+    };
+  }
+  return { id: item.id, pubkey: item.pubkey, kind: item.kind, mentions: item.mentions };
+}
 
 class TimelineController {
   draft = $state("");
@@ -233,23 +262,47 @@ class TimelineController {
       : timelineStore.relays.map((relay) => relay.id);
   }
 
-  /** The post a send would reply to: the focused thread's post, if any. */
-  get replyParent(): Post | undefined {
+  /**
+   * What a send would reply to: the focused thread's post, or — when the
+   * focused id is a calendar event rather than a post — that calendar event.
+   */
+  get replyParent(): TimelineTarget | undefined {
     const id = filterStore.focusedPostId;
-    return id ? timelineStore.postsById[id] : undefined;
+    return id ? this.findItem(id) : undefined;
   }
 
-  /** Walk parentId up to the thread root (returns self when top-level). */
-  private threadRoot(parent: Post): Post {
-    let current = parent;
-    const seen = new Set<string>([current.id]);
-    while (current.parentId) {
-      const next = timelineStore.postsById[current.parentId];
+  /** Resolve an event id to the post or calendar event it belongs to. */
+  private findItem(id: string): TimelineTarget | undefined {
+    return (
+      timelineStore.postsById[id] ??
+      Object.values(timelineStore.calendarEventsByAddress).find((event) => event.eventId === id)
+    );
+  }
+
+  /**
+   * The immediate parent and thread root of a reply, as NIP-10/NIP-22 targets.
+   * A reply straight to a calendar event roots at that event; otherwise walk
+   * parentId up the known posts, and if the top-most one still points at a
+   * calendar event (by its eventId), that event is the root.
+   */
+  private resolveThread(parent: TimelineTarget): { parent: ReplyTarget; root: ReplyTarget } {
+    const parentTarget = replyTargetOf(parent);
+    if (isCalendarEvent(parent)) return { parent: parentTarget, root: parentTarget };
+    let top = parent;
+    const seen = new Set<string>([top.id]);
+    while (top.parentId) {
+      const next = timelineStore.postsById[top.parentId];
       if (!next || seen.has(next.id)) break;
       seen.add(next.id);
-      current = next;
+      top = next;
     }
-    return current;
+    if (top.parentId) {
+      const calendarRoot = Object.values(timelineStore.calendarEventsByAddress).find(
+        (event) => event.eventId === top.parentId
+      );
+      if (calendarRoot) return { parent: parentTarget, root: replyTargetOf(calendarRoot) };
+    }
+    return { parent: parentTarget, root: replyTargetOf(top) };
   }
 
   /**
@@ -302,15 +355,19 @@ class TimelineController {
    * own-authorship, then publishes a kind-5 tombstone to every connected relay
    * that delivered the post — the echo removes it locally.
    */
-  async deletePost(post: Post): Promise<void> {
-    if (!this.service || post.pubkey !== this.sessionPubkey) {
+  async deletePost(target: TimelineTarget): Promise<void> {
+    if (!this.service || target.pubkey !== this.sessionPubkey) {
       throw new PublishRuleError("error.notConnected");
     }
-    const relays = resolveTargetRelays(timelineStore.relays, post.relays);
+    const relays = resolveTargetRelays(timelineStore.relays, target.relays);
+    const tags = buildDeletionTags([{ id: targetEventId(target), kind: target.kind }]);
+    // Addressable calendar events are tombstoned by coordinate too (`a` next to
+    // the shared e+k — mirrors deleteTopic).
+    if (isCalendarEvent(target)) tags.push(["a", `${target.kind}:${calendarAddress(target)}`]);
     await this.service.publish({
       kind: NOSTR_KINDS.deletion,
       content: "",
-      tags: buildDeletionTags([{ id: post.id, kind: post.kind }]),
+      tags,
       relayUrls: relays.map((relay) => relay.url),
     });
   }
@@ -445,20 +502,22 @@ class TimelineController {
     }
     const content = this.draft.trim();
     if (!content) throw new PublishRuleError("error.emptyMessage");
-    // Threading: a reply threads under its parent; a recompose reuses the
-    // ORIGINAL's thread (parent + root), or none when the parent is gone.
+    // Threading: a reply threads under its focused parent (a post or a calendar
+    // event); a recompose reuses the ORIGINAL's parent, or none when it's gone.
+    // buildReplyEvent picks the wire form — NIP-10 kind-1 under a kind-1 root,
+    // NIP-22 kind-1111 comments under everything else (tasks, calendar events).
     const threadParent = recompose
       ? recompose.parentId
-        ? timelineStore.postsById[recompose.parentId]
+        ? this.findItem(recompose.parentId)
         : undefined
       : parent;
-    const reply = threadParent
-      ? { parent: threadParent, root: this.threadRoot(threadParent), relayHint: relay.url }
-      : undefined;
+    const built = threadParent
+      ? buildReplyEvent(channels, { ...this.resolveThread(threadParent), relayHint: relay.url })
+      : { kind: recompose ? recompose.kind : NOSTR_KINDS.message, tags: buildMessageTags(channels) };
     await this.service.publish({
-      kind: recompose ? recompose.kind : NOSTR_KINDS.message,
+      kind: built.kind,
       content,
-      tags: buildMessageTags(channels, reply),
+      tags: built.tags,
       relayUrls: [relay.url],
     });
     this.draft = "";
@@ -485,11 +544,12 @@ class TimelineController {
    * 5); a different emoji publishes a new kind-7 (the store's newest-wins
    * replaces the old one). Optimistic echo drives the local state.
    */
-  async react(post: Post, emoji: string): Promise<void> {
+  async react(target: TimelineTarget, emoji: string): Promise<void> {
     if (!this.service || !this.sessionPubkey) throw new PublishRuleError("error.notConnected");
-    const relays = resolveTargetRelays(timelineStore.relays, post.relays);
+    const id = targetEventId(target);
+    const relays = resolveTargetRelays(timelineStore.relays, target.relays);
     const relayUrls = relays.map((relay) => relay.url);
-    const mine = timelineStore.reactionsByTargetId[post.id]?.[this.sessionPubkey];
+    const mine = timelineStore.reactionsByTargetId[id]?.[this.sessionPubkey];
     if (mine && mine.emoji === emoji) {
       await this.service.publish({
         kind: NOSTR_KINDS.deletion,
@@ -502,7 +562,10 @@ class TimelineController {
     await this.service.publish({
       kind: NOSTR_KINDS.reaction,
       content: reactionContentFor(emoji),
-      tags: buildReactionTags(post, relays[0].url),
+      tags: buildReactionTags(
+        { id, pubkey: target.pubkey, kind: target.kind },
+        relays[0].url
+      ),
       relayUrls,
     });
   }

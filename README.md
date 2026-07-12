@@ -128,14 +128,24 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   publish to every connected relay that delivered the post (per-relay
   attribution); re-reacting with the same emoji deletes your prior reaction
   (kind 5), a different emoji replaces it (newest-wins).
-- **Own posts** additionally get **Recompose…** (kind-1 messages only — tasks
-  are immutable) and **Delete** (any own post), both behind an inline two-step
+- **Every post kind carries the menu** — messages, tasks, and **calendar
+  events**. Replying to anything that is not a kind-1 message publishes a
+  **NIP-22 kind-1111 comment** (rather than a kind-1 with parent markers): it
+  carries the root scope as `A`/`E` + `K` + `P` and the immediate parent as
+  `a`/`e` + `k` + `p`, inherits the parent's channels, and pins to the parent's
+  origin relay. Replying to a calendar event roots the comment at the event's
+  addressable `kind:pubkey:d` coordinate; reactions on a calendar event carry
+  its kind in the `k`-tag and render as count chips like posts; deleting an own
+  calendar event tombstones it by `e` + `k` + `a`.
+- **Own posts** additionally get **Recompose…** (kind-1 messages and kind-1111
+  comments — tasks and calendar events are not recomposable) and **Delete**
+  (any own post/event), both behind an inline two-step
   confirm (no browser dialogs). Delete publishes a NIP-09 kind-5 (`e` + `k`
   tags) to every connected relay that delivered the post; the echo tombstones
   it locally. Recompose prefills the composer with the original's content and
   shows a cancelable chip in the bar (✕ or Escape aborts and clears the
   draft); the replacement keeps the original's kind, channels, thread position
-  (same NIP-10 parent/root when the parent is still known) and origin relay,
+  (same NIP-10/NIP-22 threading when the parent is still known) and origin relay,
   and only after it publishes successfully is the original deleted — a failed
   deletion surfaces as an error while the new post stays.
 - **Channels are hashtags** (no NIP-28); **spaces are relays**; empty space

@@ -16,6 +16,25 @@ vi.mock("@/infrastructure/nostr/ndk-service", () => ({
 const RELAY_A = "wss://one.example/";
 const RELAY_B = "wss://two.example/";
 
+// replyParent is a Post | CalendarEvent union; both carry an event id under a
+// different key.
+function replyParentId(): string | undefined {
+  const rp = timelineController.replyParent;
+  if (!rp) return undefined;
+  return "eventId" in rp ? rp.eventId : rp.id;
+}
+
+// A NIP-52 date-based calendar event (kind 31922) with a #team channel.
+function calendarRaw(overrides: Record<string, unknown> = {}) {
+  return rawEvent({
+    kind: 31922,
+    pubkey: ALICE,
+    content: "offsite details",
+    tags: [["d", "offsite"], ["title", "Offsite"], ["start", "2026-08-01"], ["t", "team"]],
+    ...overrides,
+  });
+}
+
 beforeEach(() => {
   timelineStore.reset();
   filterStore.reset();
@@ -70,7 +89,7 @@ describe("reply composition in a focused thread", () => {
     filterStore.selectSpace("one-example"); // active space is elsewhere
     filterStore.focusThread(parent.id);
     timelineController.draft = "on it";
-    expect(timelineController.replyParent?.id).toBe(parent.id);
+    expect(replyParentId()).toBe(parent.id);
     expect(timelineController.sendTarget).toEqual({ type: "resolved", relayId: "two-example" });
   });
 
@@ -81,7 +100,7 @@ describe("reply composition in a focused thread", () => {
     timelineStore.ingestEvent(parent, RELAY_A);
     filterStore.focusThread(parent.id); // what PostMenu's Reply does
     timelineController.draft = "first reply";
-    expect(timelineController.replyParent?.id).toBe(parent.id);
+    expect(replyParentId()).toBe(parent.id);
     expect(timelineController.sendTarget).toEqual({ type: "resolved", relayId: "one-example" });
   });
 
@@ -327,6 +346,72 @@ describe("recompose", () => {
     timelineController.cancelRecompose();
     expect(timelineController.recomposeOf).toBeNull();
     expect(timelineController.draft).toBe("");
+  });
+});
+
+// Calendar events (NIP-52) are first-class menu/reply targets: replies are
+// NIP-22 kind-1111 comments rooted at the event's addressable coordinate,
+// reactions carry the event kind, and an own event deletes by e+k+a.
+describe("calendar events as reply/menu targets", () => {
+  const address = `${ALICE}:offsite`;
+  let publish: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    publish = startWithPublishSpy();
+    timelineStore.ingestEvent(calendarRaw(), RELAY_A); // delivered by one-example
+  });
+
+  it("focusing a calendar event makes it the reply parent", () => {
+    const cal = timelineStore.calendarEventsByAddress[address];
+    filterStore.focusThread(cal.eventId);
+    expect(replyParentId()).toBe(cal.eventId);
+    // Channels are inherited from the event, so no typed hashtag is needed.
+    timelineController.draft = "count me in";
+    expect(timelineController.draftChannels).toEqual(["team"]);
+    expect(timelineController.sendTarget).toEqual({ type: "resolved", relayId: "one-example" });
+  });
+
+  it("replies to a calendar event as a NIP-22 kind-1111 comment (A/a+e, pinned)", async () => {
+    const cal = timelineStore.calendarEventsByAddress[address];
+    filterStore.focusThread(cal.eventId);
+    timelineController.draft = "count me in";
+    await timelineController.sendMessage();
+
+    const published = publish.mock.calls[0][0];
+    expect(published.kind).toBe(1111);
+    expect(published.relayUrls).toEqual([RELAY_A]);
+    expect(published.tags).toContainEqual(["t", "team"]);
+    expect(published.tags).toContainEqual(["A", `31922:${address}`, RELAY_A]);
+    expect(published.tags).toContainEqual(["K", "31922"]);
+    expect(published.tags).toContainEqual(["a", `31922:${address}`, RELAY_A]);
+    expect(published.tags).toContainEqual(["e", cal.eventId, RELAY_A, ALICE]);
+    expect(published.tags).toContainEqual(["k", "31922"]);
+  });
+
+  it("reacts to a calendar event with the event kind in the k-tag", async () => {
+    const cal = timelineStore.calendarEventsByAddress[address];
+    await timelineController.react(cal, "🎉");
+    expect(publish).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 7,
+        content: "🎉",
+        relayUrls: [RELAY_A],
+        tags: expect.arrayContaining([["e", cal.eventId, RELAY_A, ALICE], ["k", "31922"]]),
+      })
+    );
+  });
+
+  it("deletes an own calendar event with e+k+a tags", async () => {
+    const cal = timelineStore.calendarEventsByAddress[address];
+    await timelineController.deletePost(cal);
+    expect(publish).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 5,
+        content: "",
+        relayUrls: [RELAY_A],
+        tags: [["e", cal.eventId], ["k", "31922"], ["a", `31922:${address}`]],
+      })
+    );
   });
 });
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Post } from "@/domain/post";
+  import type { CalendarEvent } from "@/domain/calendar-events";
   import { NOSTR_KINDS } from "@/domain/nostr-kinds";
   import { buildPostPermalink } from "@/domain/permalink";
   import { QUICK_REACTION_EMOJIS } from "@/domain/reaction-events";
@@ -13,9 +14,13 @@
   // A small inline popup anchored at the tap point (WhatsApp-reactions style):
   // a quick-emoji row over a compact action row, grown out of the anchor with a
   // scale-in. No dimmed backdrop — a transparent full-viewport click-catcher
-  // and Escape dismiss it.
-  let { post, x, y, onClose }: { post: Post; x: number; y: number; onClose: () => void } =
-    $props();
+  // and Escape dismiss it. Serves both posts and calendar events.
+  let {
+    item,
+    x,
+    y,
+    onClose,
+  }: { item: Post | CalendarEvent; x: number; y: number; onClose: () => void } = $props();
 
   let copied = $state(false);
   let error = $state("");
@@ -23,10 +28,14 @@
   let confirming = $state<"delete" | "recompose" | null>(null);
 
   const quickEmojis = QUICK_REACTION_EMOJIS;
-  // Own posts get recompose (kind-1 messages only — tasks are immutable) and
-  // delete (any own post).
-  const isOwn = $derived(post.pubkey === authStore.session?.pubkeyHex);
-  const canRecompose = $derived(isOwn && post.kind === NOSTR_KINDS.message);
+  // Reactions/deletions/threading key on the post id, or the calendar eventId.
+  const targetId = $derived("eventId" in item ? item.eventId : item.id);
+  const isOwn = $derived(item.pubkey === authStore.session?.pubkeyHex);
+  // Recompose is for own messages (kind 1) and comments (kind 1111) — tasks are
+  // immutable and calendar events aren't recomposable.
+  const canRecompose = $derived(
+    isOwn && (item.kind === NOSTR_KINDS.message || item.kind === NOSTR_KINDS.comment)
+  );
 
   // Measured popup box, clamped to the viewport: grow down-right from the tap,
   // flip above/left when the box would overflow, and pin the transform-origin
@@ -45,19 +54,20 @@
   });
 
   function reply() {
-    filterStore.focusThread(post.id);
+    filterStore.focusThread(targetId);
     onClose();
   }
 
   function recompose() {
-    timelineController.recompose(post);
+    if ("eventId" in item) return;
+    timelineController.recompose(item);
     onClose();
   }
 
   async function deletePost() {
     error = "";
     try {
-      await timelineController.deletePost(post);
+      await timelineController.deletePost(item);
       onClose();
     } catch (caught) {
       confirming = null;
@@ -68,7 +78,7 @@
   async function react(emoji: string) {
     error = "";
     try {
-      await timelineController.react(post, emoji);
+      await timelineController.react(item, emoji);
       onClose();
     } catch (caught) {
       error = caught instanceof PublishRuleError ? t(caught.message) : t("postmenu.reactFailed");
@@ -79,8 +89,8 @@
     error = "";
     const url = buildPostPermalink(
       location.origin,
-      post.id,
-      post.relays,
+      targetId,
+      item.relays,
       timelineStore.relays,
       filterStore.activeRelayId
     );

@@ -16,6 +16,7 @@
   import CalendarCard from "./CalendarCard.svelte";
   import UnifiedBar from "./UnifiedBar.svelte";
   import type { Post } from "@/domain/post";
+  import type { CalendarEvent } from "@/domain/calendar-events";
 
   const items = $derived(
     buildTimeline(timelineStore.postsById, timelineStore.calendarEventsByAddress, {
@@ -41,8 +42,9 @@
 
   let relaySheetRelays = $state<string[] | null>(null);
   let menuOpen = $state(false);
-  // The context-menu anchor: the post plus the viewport point it was tapped at.
-  let menuAnchor = $state<{ post: Post; x: number; y: number } | null>(null);
+  // The context-menu anchor: the tapped item (post or calendar event) plus the
+  // viewport point it was tapped at.
+  let menuAnchor = $state<{ item: Post | CalendarEvent; x: number; y: number } | null>(null);
 
   let feedElement = $state<HTMLElement | null>(null);
   // User intent: pinned means "keep me at the newest message". Starts true so
@@ -158,12 +160,16 @@
                 parent={item.parent}
                 replyCount={item.replyCount}
                 onRelayDots={(relays) => (relaySheetRelays = relays)}
-                onOpenMenu={(post, x, y) => (menuAnchor = { post, x, y })}
+                onOpenMenu={(post, x, y) => (menuAnchor = { item: post, x, y })}
               />
             {:else if item.type === "state"}
               <StateRow post={item.post} update={item.update} />
             {:else}
-              <CalendarCard event={item.event} onRelayDots={(relays) => (relaySheetRelays = relays)} />
+              <CalendarCard
+                event={item.event}
+                onRelayDots={(relays) => (relaySheetRelays = relays)}
+                onOpenMenu={(event, x, y) => (menuAnchor = { item: event, x, y })}
+              />
             {/if}
           {/each}
         {/if}
@@ -181,7 +187,7 @@
   {/if}
   {#if menuAnchor}
     <PostMenu
-      post={menuAnchor.post}
+      item={menuAnchor.item}
       x={menuAnchor.x}
       y={menuAnchor.y}
       onClose={() => (menuAnchor = null)}
