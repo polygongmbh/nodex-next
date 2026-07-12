@@ -25,17 +25,17 @@
     parent?: Post;
     replyCount: number;
     onRelayDots: (relays: string[]) => void;
-    onOpenMenu: (post: Post) => void;
+    onOpenMenu: (post: Post, x: number, y: number) => void;
   } = $props();
 
-  // A tap on the card body opens the context menu — but not when the click
-  // landed on an inner control (chip, crumb, link, relay dots, show-more) or
-  // when the user is selecting text.
+  // A tap on the card body opens the context menu at the tap point — but not
+  // when the click landed on an inner control (chip, crumb, link, relay dots,
+  // show-more) or when the user is selecting text.
   function onCardClick(event: MouseEvent) {
     const target = event.target as HTMLElement | null;
     if (target?.closest("button, a")) return;
     if (window.getSelection()?.toString()) return;
-    onOpenMenu(post);
+    onOpenMenu(post, event.clientX, event.clientY);
   }
 
   const author = $derived(timelineStore.peopleByPubkey[post.pubkey]);

@@ -41,7 +41,8 @@
 
   let relaySheetRelays = $state<string[] | null>(null);
   let menuOpen = $state(false);
-  let menuPost = $state<Post | null>(null);
+  // The context-menu anchor: the post plus the viewport point it was tapped at.
+  let menuAnchor = $state<{ post: Post; x: number; y: number } | null>(null);
 
   let feedElement = $state<HTMLElement | null>(null);
   // User intent: pinned means "keep me at the newest message". Starts true so
@@ -157,7 +158,7 @@
                 parent={item.parent}
                 replyCount={item.replyCount}
                 onRelayDots={(relays) => (relaySheetRelays = relays)}
-                onOpenMenu={(post) => (menuPost = post)}
+                onOpenMenu={(post, x, y) => (menuAnchor = { post, x, y })}
               />
             {:else if item.type === "state"}
               <StateRow post={item.post} update={item.update} />
@@ -178,8 +179,13 @@
   {#if menuOpen}
     <MenuSheet onClose={() => (menuOpen = false)} />
   {/if}
-  {#if menuPost}
-    <PostMenu post={menuPost} onClose={() => (menuPost = null)} />
+  {#if menuAnchor}
+    <PostMenu
+      post={menuAnchor.post}
+      x={menuAnchor.x}
+      y={menuAnchor.y}
+      onClose={() => (menuAnchor = null)}
+    />
   {/if}
 </div>
 

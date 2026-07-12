@@ -10,10 +10,12 @@
   import { timelineStore } from "@/stores/timeline.svelte";
   import { t } from "@/lib/i18n/index.svelte";
 
-  // Compact context menu for one post: a small bottom sheet on phones, a
-  // centered card on desktop. Actions the caller wires up stay thin here —
-  // reply focuses the thread, copy-link builds the permalink and confirms.
-  let { post, onClose }: { post: Post; onClose: () => void } = $props();
+  // A small inline popup anchored at the tap point (WhatsApp-reactions style):
+  // a quick-emoji row over a compact action row, grown out of the anchor with a
+  // scale-in. No dimmed backdrop — a transparent full-viewport click-catcher
+  // and Escape dismiss it.
+  let { post, x, y, onClose }: { post: Post; x: number; y: number; onClose: () => void } =
+    $props();
 
   let copied = $state(false);
   let error = $state("");
@@ -25,6 +27,22 @@
   // delete (any own post).
   const isOwn = $derived(post.pubkey === authStore.session?.pubkeyHex);
   const canRecompose = $derived(isOwn && post.kind === NOSTR_KINDS.message);
+
+  // Measured popup box, clamped to the viewport: grow down-right from the tap,
+  // flip above/left when the box would overflow, and pin the transform-origin
+  // to the anchored corner so the scale-in radiates from the tap.
+  let width = $state(0);
+  let height = $state(0);
+  const MARGIN = 8;
+  const placement = $derived.by(() => {
+    const vw = typeof window === "undefined" ? 0 : window.innerWidth;
+    const vh = typeof window === "undefined" ? 0 : window.innerHeight;
+    const flipX = x + width + MARGIN > vw;
+    const flipY = y + height + MARGIN > vh;
+    const left = Math.max(MARGIN, Math.min(flipX ? x - width : x, vw - width - MARGIN));
+    const top = Math.max(MARGIN, Math.min(flipY ? y - height : y, vh - height - MARGIN));
+    return { left, top, origin: `${flipY ? "bottom" : "top"} ${flipX ? "right" : "left"}` };
+  });
 
   function reply() {
     filterStore.focusThread(post.id);
@@ -74,187 +92,186 @@
       error = t("postmenu.copyFailed");
     }
   }
+
+  function onKeydown(event: KeyboardEvent) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onClose();
+    }
+  }
 </script>
 
+<svelte:window onkeydown={onKeydown} />
+
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="backdrop" onclick={onClose}></div>
-<div class="menu" data-testid="post-menu">
-  <div class="grip"></div>
-  <button class="item" onclick={reply}>
-    <span class="glyph">↩</span>{t("postmenu.reply")}
-  </button>
-  <div class="emojis" data-testid="post-menu-react">
-    {#each quickEmojis as emoji (emoji)}
-      <button class="emoji" onclick={() => react(emoji)}>{emoji}</button>
-    {/each}
-  </div>
-  <button class="item" onclick={copyLink} data-testid="post-menu-copy">
-    <span class="glyph">🔗</span>{copied ? t("postmenu.copied") : t("postmenu.copyLink")}
-  </button>
-
-  {#if canRecompose}
-    {#if confirming === "recompose"}
-      <div class="confirm" data-testid="post-menu-recompose-confirm">
-        <p class="prompt">{t("postmenu.recomposeConfirm")}</p>
-        <div class="actions">
-          <button class="cancel" onclick={() => (confirming = null)}>{t("common.cancel")}</button>
-          <button class="proceed" onclick={recompose}>{t("postmenu.recompose")}</button>
-        </div>
+<div class="catcher" onclick={onClose}></div>
+<div
+  class="popup"
+  data-testid="post-menu"
+  bind:clientWidth={width}
+  bind:clientHeight={height}
+  style:left="{placement.left}px"
+  style:top="{placement.top}px"
+  style:transform-origin={placement.origin}
+>
+  {#if confirming === "recompose"}
+    <div class="confirm" data-testid="post-menu-recompose-confirm">
+      <p class="prompt">{t("postmenu.recomposeConfirm")}</p>
+      <div class="confirm-actions">
+        <button class="cancel" onclick={() => (confirming = null)}>{t("common.cancel")}</button>
+        <button class="proceed" onclick={recompose}>{t("postmenu.recompose")}</button>
       </div>
-    {:else}
-      <button class="item" onclick={() => (confirming = "recompose")} data-testid="post-menu-recompose">
-        <span class="glyph">✎</span>{t("postmenu.recompose")}
-      </button>
-    {/if}
-  {/if}
-
-  {#if isOwn}
-    {#if confirming === "delete"}
-      <div class="confirm" data-testid="post-menu-delete-confirm">
-        <p class="prompt">{t("postmenu.deleteConfirm")}</p>
-        <div class="actions">
-          <button class="cancel" onclick={() => (confirming = null)}>{t("common.cancel")}</button>
-          <button class="danger" onclick={deletePost}>{t("postmenu.delete")}</button>
-        </div>
+    </div>
+  {:else if confirming === "delete"}
+    <div class="confirm" data-testid="post-menu-delete-confirm">
+      <p class="prompt">{t("postmenu.deleteConfirm")}</p>
+      <div class="confirm-actions">
+        <button class="cancel" onclick={() => (confirming = null)}>{t("common.cancel")}</button>
+        <button class="danger" onclick={deletePost}>{t("postmenu.delete")}</button>
       </div>
-    {:else}
-      <button class="item destructive" onclick={() => (confirming = "delete")} data-testid="post-menu-delete">
-        <span class="glyph">🗑</span>{t("postmenu.delete")}
+    </div>
+  {:else}
+    <div class="emojis" data-testid="post-menu-react">
+      {#each quickEmojis as emoji (emoji)}
+        <button class="emoji" onclick={() => react(emoji)}>{emoji}</button>
+      {/each}
+    </div>
+    <div class="actions">
+      <button class="action" onclick={reply}>
+        <span class="glyph">↩</span><span class="label">{t("postmenu.reply")}</span>
       </button>
+      <button class="action" onclick={copyLink} data-testid="post-menu-copy">
+        <span class="glyph">🔗</span>
+        <span class="label">{copied ? t("postmenu.copied") : t("postmenu.copyLink")}</span>
+      </button>
+      {#if canRecompose}
+        <button class="action" onclick={() => (confirming = "recompose")} data-testid="post-menu-recompose">
+          <span class="glyph">✎</span><span class="label">{t("postmenu.recompose")}</span>
+        </button>
+      {/if}
+      {#if isOwn}
+        <button class="action destructive" onclick={() => (confirming = "delete")} data-testid="post-menu-delete">
+          <span class="glyph">🗑</span><span class="label">{t("postmenu.delete")}</span>
+        </button>
+      {/if}
+    </div>
+    {#if error}
+      <p class="error">{error}</p>
     {/if}
-  {/if}
-
-  {#if error}
-    <p class="error">{error}</p>
   {/if}
 </div>
 
 <style>
-  .backdrop {
+  /* Transparent catcher: dismiss on any outside tap, no dimming. */
+  .catcher {
     position: fixed;
     inset: 0;
-    background: hsl(0 0% 0% / 0.4);
     z-index: 60;
   }
-  .menu {
+  .popup {
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    max-width: 24rem;
-    margin-inline: auto;
     z-index: 61;
+    max-width: min(20rem, calc(100vw - 2 * 8px));
     background: var(--surface);
-    border-radius: 1rem 1rem 0 0;
-    padding: 0.5rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom));
-    box-shadow: 0 -4px 24px hsl(0 0% 0% / 0.25);
-    animation: slide-up 180ms ease-out;
+    border: 1px solid var(--border);
+    border-radius: 0.9rem;
+    box-shadow: 0 6px 24px hsl(0 0% 0% / 0.28);
+    padding: 0.35rem;
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.2rem;
+    animation: pop-in 150ms ease-out;
   }
-  /* Desktop: a small centered card rather than a docked sheet. */
-  @media (min-width: 900px) {
-    .menu {
-      top: 50%;
-      bottom: auto;
-      transform: translateY(-50%);
-      border-radius: 1rem;
-      padding: 0.75rem;
-      animation: fade-in 140ms ease-out;
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.85);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
     }
   }
-  @keyframes slide-up {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-  }
-  @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  .grip {
-    width: 2.5rem;
-    height: 0.25rem;
-    border-radius: 999px;
-    background: var(--border);
-    margin: 0.25rem auto 0.35rem;
-  }
-  @media (min-width: 900px) {
-    .grip {
-      display: none;
-    }
-  }
-  .item {
+  .emojis {
     display: flex;
-    align-items: center;
-    gap: 0.7rem;
-    width: 100%;
-    padding: 0.7rem 0.6rem;
-    border-radius: 0.6rem;
-    font-size: 0.95rem;
-    text-align: left;
-    color: var(--text);
+    flex-wrap: wrap;
+    gap: 0.1rem;
+    justify-content: center;
   }
-  .item:hover {
+  .emoji {
+    font-size: 1.3rem;
+    line-height: 1;
+    padding: 0.3rem;
+    border-radius: 0.5rem;
+  }
+  .emoji:hover {
     background: var(--accent-muted);
   }
-  .item.destructive {
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.1rem;
+    border-top: 1px solid var(--border);
+    padding-top: 0.25rem;
+  }
+  .action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    min-width: 3.4rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.6rem;
+    color: var(--text);
+  }
+  .action:hover {
+    background: var(--accent-muted);
+  }
+  .action.destructive {
     color: var(--danger);
   }
-  .item.destructive:hover {
+  .action.destructive:hover {
     background: hsl(0 72% 48% / 0.12);
   }
+  .action .glyph {
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+  .action .label {
+    font-size: 0.7rem;
+  }
   .confirm {
-    padding: 0.5rem 0.6rem 0.35rem;
+    padding: 0.35rem 0.4rem 0.2rem;
+    max-width: 16rem;
   }
   .confirm .prompt {
     margin: 0 0 0.5rem;
     font-size: 0.85rem;
     color: var(--text-muted);
   }
-  .confirm .actions {
+  .confirm-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
   }
-  .confirm button {
+  .confirm-actions button {
     padding: 0.4rem 0.9rem;
     border-radius: 0.6rem;
     font-size: 0.9rem;
     font-weight: 500;
   }
-  .confirm .cancel {
+  .confirm-actions .cancel {
     color: var(--text-muted);
   }
-  .confirm .proceed {
+  .confirm-actions .proceed {
     color: var(--accent);
   }
-  .confirm .danger {
+  .confirm-actions .danger {
     background: var(--danger);
     color: #fff;
   }
-  .glyph {
-    width: 1.25rem;
-    text-align: center;
-    flex-shrink: 0;
-  }
-  .emojis {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.15rem;
-    padding: 0.15rem 0.35rem 0.35rem;
-  }
-  .emoji {
-    font-size: 1.35rem;
-    line-height: 1;
-    padding: 0.35rem;
-    border-radius: 0.5rem;
-  }
-  .emoji:hover {
-    background: var(--accent-muted);
-  }
   .error {
-    margin: 0.1rem 0.6rem 0;
+    margin: 0.1rem 0.4rem 0;
     color: var(--danger);
     font-size: 0.85rem;
   }

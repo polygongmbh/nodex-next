@@ -111,8 +111,11 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   anywhere on it to exit. Names, avatars, and @mentions open profile hover
   cards; card channel chips filter on click.
 - **Post context menu**: tapping a card body (not an inner control, and not
-  while selecting text) opens a compact menu for that post — a bottom sheet on
-  phones, a small centered card on desktop. **Reply** focuses the post's thread
+  while selecting text) opens a small inline popup anchored at the tap point
+  (same on phone and desktop) — a quick-emoji row over a compact action row,
+  scaled in from the tap and clamped to the viewport (it flips above/left near
+  an edge). There is no dimmed backdrop; a transparent full-viewport
+  click-catcher or Escape dismisses it. **Reply** focuses the post's thread
   (turning the bottom bar into a reply composer — this is how reply-less posts
   become repliable). **Copy link** copies the post's permalink
   (`origin/relayHost/eventId`, the relay host omitted when unknown) and shows a
