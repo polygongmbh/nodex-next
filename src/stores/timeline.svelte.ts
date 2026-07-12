@@ -287,7 +287,8 @@ export function buildTimeline(
     : null;
 
   // Shared across posts and calendar events (both carry relays/channels/pubkey);
-  // calendar events have no mentions and never belong to a focused thread.
+  // calendar events have no mentions; in a focused thread one shows only as
+  // the focused root (comments hang off its event id).
   const inScope = (item: {
     id: string;
     relays: string[];
@@ -327,7 +328,6 @@ export function buildTimeline(
       }
     }
     for (const event of Object.values(calendarEventsByAddress)) {
-      if (threadIds) continue;
       if (!inScope({ ...event, mentions: [], id: event.eventId })) continue;
       const haystack = `${event.title}\n${event.content}\n${event.location ?? ""}`.toLowerCase();
       if (query && !haystack.includes(query)) continue;

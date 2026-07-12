@@ -29,3 +29,18 @@ export function buildPostPermalink(
   const host = new URL(normalized).hostname;
   return `${base}/${encodeURIComponent(host)}/${postId}`;
 }
+
+/**
+ * Inverse of buildPostPermalink: a path whose LAST segment is a 64-hex event
+ * id is a permalink; the segment before it (when present) is the relay host.
+ * Anything else — including the bare app root — is not a permalink.
+ */
+export function parsePostPermalink(
+  pathname: string
+): { relayHost: string | null; postId: string } | null {
+  const segments = pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  const postId = segments[segments.length - 1] ?? "";
+  if (!/^[0-9a-f]{64}$/.test(postId)) return null;
+  const relayHost = segments.length > 1 ? segments[segments.length - 2] : null;
+  return { relayHost, postId };
+}

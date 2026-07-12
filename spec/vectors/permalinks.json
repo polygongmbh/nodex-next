@@ -36,5 +36,42 @@
       "activeRelayId": null,
       "expected": "https://app.example/m1"
     }
+  ],
+  "parsePostPermalink": [
+    {
+      "name": "relay host and event id",
+      "pathname": "/one.example/93ef2ebaaf9554661f33e79949007900bbc535d239a4c801c33a4d67d3e7f546",
+      "expected": { "relayHost": "one.example", "postId": "93ef2ebaaf9554661f33e79949007900bbc535d239a4c801c33a4d67d3e7f546" }
+    },
+    {
+      "name": "event id only",
+      "pathname": "/93ef2ebaaf9554661f33e79949007900bbc535d239a4c801c33a4d67d3e7f546",
+      "expected": { "relayHost": null, "postId": "93ef2ebaaf9554661f33e79949007900bbc535d239a4c801c33a4d67d3e7f546" }
+    },
+    {
+      "name": "trailing slash is tolerated",
+      "pathname": "/one.example/93ef2ebaaf9554661f33e79949007900bbc535d239a4c801c33a4d67d3e7f546/",
+      "expected": { "relayHost": "one.example", "postId": "93ef2ebaaf9554661f33e79949007900bbc535d239a4c801c33a4d67d3e7f546" }
+    },
+    {
+      "name": "percent-encoded relay host decodes",
+      "pathname": "/one.example%3A7777/93ef2ebaaf9554661f33e79949007900bbc535d239a4c801c33a4d67d3e7f546",
+      "expected": { "relayHost": "one.example:7777", "postId": "93ef2ebaaf9554661f33e79949007900bbc535d239a4c801c33a4d67d3e7f546" }
+    },
+    {
+      "name": "uppercase hex is not an event id",
+      "pathname": "/93EF2EBAAF9554661F33E79949007900BBC535D239A4C801C33A4D67D3E7F546",
+      "expected": null
+    },
+    {
+      "name": "non-hex last segment is not a permalink",
+      "pathname": "/one.example/about",
+      "expected": null
+    },
+    {
+      "name": "app root is not a permalink",
+      "pathname": "/",
+      "expected": null
+    }
   ]
 }

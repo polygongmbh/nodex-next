@@ -775,6 +775,85 @@
       },
       "relayIds": ["relay-a"],
       "expected": { "type": "ignored" }
+    },
+    {
+      "name": "kind 1111 comment threads under its lowercase e-tag parent",
+      "event": {
+        "id": "cm1",
+        "pubkey": "bob",
+        "kind": 1111,
+        "content": "looks good #dev",
+        "tags": [
+          ["E", "t1", "", "alice"],
+          ["K", "1621"],
+          ["P", "alice"],
+          ["e", "t1", "", "alice"],
+          ["k", "1621"],
+          ["p", "alice"]
+        ],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "post", "kind": 1111, "parentId": "t1", "channels": ["dev"], "relays": ["relay-a"] }
+    },
+    {
+      "name": "kind 1111 nested comment parents on the lowercase e, not the root E",
+      "event": {
+        "id": "cm2",
+        "pubkey": "carol",
+        "kind": 1111,
+        "content": "re #dev",
+        "tags": [
+          ["E", "t1", "", "alice"],
+          ["K", "1621"],
+          ["P", "alice"],
+          ["e", "cm1", "", "bob"],
+          ["k", "1111"],
+          ["p", "bob"]
+        ],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "post", "kind": 1111, "parentId": "cm1" }
+    },
+    {
+      "name": "kind 1111 comment on an addressable event still parents on its e-tag",
+      "event": {
+        "id": "cm3",
+        "pubkey": "bob",
+        "kind": 1111,
+        "content": "see you there #team",
+        "tags": [
+          ["A", "31922:alice:offsite", ""],
+          ["K", "31922"],
+          ["P", "alice"],
+          ["a", "31922:alice:offsite", ""],
+          ["e", "c1", "", "alice"],
+          ["k", "31922"],
+          ["p", "alice"]
+        ],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "post", "kind": 1111, "parentId": "c1" }
+    },
+    {
+      "name": "kind 1111 without a lowercase e-tag parent is ignored",
+      "event": {
+        "id": "cm4",
+        "pubkey": "bob",
+        "kind": 1111,
+        "content": "external scope",
+        "tags": [
+          ["I", "https://abc.example/article"],
+          ["K", "web"],
+          ["i", "https://abc.example/article"],
+          ["k", "web"]
+        ],
+        "created_at": 100
+      },
+      "relayIds": ["relay-a"],
+      "expected": { "type": "ignored" }
     }
   ]
 }

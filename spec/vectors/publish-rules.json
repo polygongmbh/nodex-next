@@ -63,6 +63,89 @@
     { "name": "included chips union typed hashtags", "content": "ship #Launch today", "included": ["general"], "expected": ["general", "launch"] },
     { "name": "uppercase hex color in draft is not a channel", "content": "color #FFF", "included": [], "expected": [] }
   ],
+  "buildReplyEvent": [
+    {
+      "name": "reply under a kind-1 root stays NIP-10 kind 1",
+      "channels": ["general"],
+      "reply": {
+        "parent": { "id": "root", "pubkey": "alice", "kind": 1, "mentions": [] },
+        "root": { "id": "root", "pubkey": "alice", "kind": 1 }
+      },
+      "expected": { "kind": 1, "tags": [["t", "general"], ["e", "root", "", "root", "alice"], ["p", "alice"]] }
+    },
+    {
+      "name": "top-level comment on a task is NIP-22 kind 1111",
+      "channels": ["dev"],
+      "reply": {
+        "parent": { "id": "t1", "pubkey": "alice", "kind": 1621 },
+        "root": { "id": "t1", "pubkey": "alice", "kind": 1621 },
+        "relayHint": "wss://one.example/"
+      },
+      "expected": {
+        "kind": 1111,
+        "tags": [
+          ["t", "dev"],
+          ["E", "t1", "wss://one.example/", "alice"],
+          ["K", "1621"],
+          ["P", "alice"],
+          ["e", "t1", "wss://one.example/", "alice"],
+          ["k", "1621"],
+          ["p", "alice"]
+        ]
+      }
+    },
+    {
+      "name": "top-level comment on an addressable calendar event carries A plus a and e",
+      "channels": ["team"],
+      "reply": {
+        "parent": { "id": "c1", "pubkey": "alice", "kind": 31922, "address": "31922:alice:offsite" },
+        "root": { "id": "c1", "pubkey": "alice", "kind": 31922, "address": "31922:alice:offsite" },
+        "relayHint": "wss://one.example/"
+      },
+      "expected": {
+        "kind": 1111,
+        "tags": [
+          ["t", "team"],
+          ["A", "31922:alice:offsite", "wss://one.example/"],
+          ["K", "31922"],
+          ["P", "alice"],
+          ["a", "31922:alice:offsite", "wss://one.example/"],
+          ["e", "c1", "wss://one.example/", "alice"],
+          ["k", "31922"],
+          ["p", "alice"]
+        ]
+      }
+    },
+    {
+      "name": "reply to a comment keeps the original root scope",
+      "channels": ["dev"],
+      "reply": {
+        "parent": { "id": "r1", "pubkey": "bob", "kind": 1111 },
+        "root": { "id": "t1", "pubkey": "alice", "kind": 1621 }
+      },
+      "expected": {
+        "kind": 1111,
+        "tags": [
+          ["t", "dev"],
+          ["E", "t1", "", "alice"],
+          ["K", "1621"],
+          ["P", "alice"],
+          ["e", "r1", "", "bob"],
+          ["k", "1111"],
+          ["p", "bob"]
+        ]
+      }
+    },
+    {
+      "name": "a comment still needs at least one channel",
+      "channels": [],
+      "reply": {
+        "parent": { "id": "t1", "pubkey": "alice", "kind": 1621 },
+        "root": { "id": "t1", "pubkey": "alice", "kind": 1621 }
+      },
+      "expected": { "error": "error.needChannel" }
+    }
+  ],
   "resolveTargetRelays": [
     {
       "name": "targets every connected space that delivered the post",

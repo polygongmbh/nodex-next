@@ -4,6 +4,7 @@
 
 import type { Post } from "./post";
 import { extractHashtagsFromContent } from "./hashtags";
+import { NOSTR_KINDS } from "./nostr-kinds";
 
 export class PublishRuleError extends Error {}
 
@@ -77,10 +78,21 @@ export function buildDeletionTags(targets: { id: string; kind: number }[]): stri
   return tags;
 }
 
+/** What a reply points at — a Post satisfies this; calendar events adapt to it. */
+export interface ReplyTarget {
+  id: string;
+  pubkey: string;
+  kind: number;
+  /** "kind:pubkey:d" for addressable targets — written as NIP-22 a/A tags. */
+  address?: string;
+  /** p-tagged pubkeys to notify (NIP-10 propagation; kind-1 threads only). */
+  mentions?: string[];
+}
+
 /** Immediate parent + thread root of a reply (root === parent for top-level). */
 export interface ReplyContext {
-  parent: Post;
-  root: Post;
+  parent: ReplyTarget;
+  root: ReplyTarget;
   /** Relay URL hint for the e-tags (NIP-10 recommends it; "" when unknown). */
   relayHint?: string;
 }
@@ -104,7 +116,7 @@ export function buildMessageTags(channels: string[], reply?: ReplyContext): stri
       tags.push(["e", parent.id, relayHint, "reply", parent.pubkey]);
     }
     const seen = new Set<string>();
-    for (const pubkey of [parent.pubkey, ...parent.mentions]) {
+    for (const pubkey of [parent.pubkey, ...(parent.mentions ?? [])]) {
       if (pubkey && !seen.has(pubkey)) {
         seen.add(pubkey);
         tags.push(["p", pubkey]);
@@ -112,4 +124,32 @@ export function buildMessageTags(channels: string[], reply?: ReplyContext): stri
     }
   }
   return tags;
+}
+
+/**
+ * The reply event for a thread: NIP-10 kind-1 replies under a kind-1 root
+ * (NIP-22 forbids commenting on kind 1), NIP-22 kind-1111 comments under
+ * everything else — tasks, calendar events, and other comments' roots.
+ * Channels are written as `t`-tags either way (≥1 required).
+ */
+export function buildReplyEvent(
+  channels: string[],
+  reply: ReplyContext
+): { kind: number; tags: string[][] } {
+  if (reply.root.kind === NOSTR_KINDS.message) {
+    return { kind: NOSTR_KINDS.message, tags: buildMessageTags(channels, reply) };
+  }
+  if (channels.length === 0) throw new PublishRuleError("error.needChannel");
+  const { parent, root, relayHint = "" } = reply;
+  const tags: string[][] = channels.map((channel) => ["t", channel.toLowerCase()]);
+  if (root.address) tags.push(["A", root.address, relayHint]);
+  else tags.push(["E", root.id, relayHint, root.pubkey]);
+  tags.push(["K", String(root.kind)], ["P", root.pubkey]);
+  if (parent.address) tags.push(["a", parent.address, relayHint]);
+  tags.push(
+    ["e", parent.id, relayHint, parent.pubkey],
+    ["k", String(parent.kind)],
+    ["p", parent.pubkey]
+  );
+  return { kind: NOSTR_KINDS.comment, tags };
 }

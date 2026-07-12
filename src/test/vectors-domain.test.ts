@@ -21,7 +21,7 @@ import { buildTopicEvent, parseTopicEvent, topicIdForChannels } from "@/domain/t
 import { classifyEvent, type RawNostrEvent } from "@/domain/event-to-post";
 import { personAbout, personDisplayName, personName, personNip05 } from "@/domain/person";
 import { buildCalendarEvent } from "@/domain/calendar-events";
-import { buildPostPermalink } from "@/domain/permalink";
+import { buildPostPermalink, parsePostPermalink } from "@/domain/permalink";
 
 describe("vectors: channels", () => {
   it.each(channels.extractHashtags)("$name", ({ content, expected }) => {
@@ -158,4 +158,7 @@ describe("vectors: permalinks", () => {
       ).toBe(expected);
     }
   );
+  it.each(permalinkVectors.parsePostPermalink)("$name", ({ pathname, expected }) => {
+    expect(parsePostPermalink(pathname)).toEqual(expected);
+  });
 });

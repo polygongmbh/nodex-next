@@ -72,7 +72,13 @@ function lastEventReference(tags: string[][]): string | undefined {
 }
 
 export function classifyEvent(event: RawNostrEvent, relayIds: string[]): ClassifiedEvent {
-  if (isPostKind(event.kind)) {
+  // NIP-22 comments thread like posts, but the parent is the lowercase e-tag
+  // (tags are case-sensitive: `E` is the root scope, not the parent). A
+  // comment without an e-tag parent (i-tag-only external scopes) is dropped.
+  const isComment = event.kind === NOSTR_KINDS.comment;
+  if (isPostKind(event.kind) || isComment) {
+    const parentId = isComment ? firstEventReference(event.tags) : resolveParentId(event.tags);
+    if (isComment && !parentId) return { type: "ignored" };
     return {
       type: "post",
       post: {
@@ -83,7 +89,7 @@ export function classifyEvent(event: RawNostrEvent, relayIds: string[]): Classif
         channels: deriveChannelTags(event.tags, event.content),
         relays: [...relayIds],
         timestamp: event.created_at,
-        parentId: resolveParentId(event.tags),
+        parentId,
         mentions: resolveMentions(event.tags),
         attachments: parseAttachments(event.tags),
         stateUpdates: [],

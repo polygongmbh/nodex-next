@@ -35,12 +35,12 @@ Conventions:
 | `timestamps.json` | timestamp bucket decision (time / yesterday / monthDay / shortDate) |
 | `topic-identity.json` | canonical channel-set topic ids, topic event build/parse (kind 30177) |
 | `classify-events.json` | raw event → post/person/topic/state/deletion classification |
-| `publish-rules.json` | single-relay publish targeting, reply pinning, message tags, draft channels, reaction/deletion tags, target-relay resolution for reactions and deletions |
-| `permalinks.json` | shareable post link derivation (`origin/relayHost/eventId`, active-space preference) |
+| `publish-rules.json` | single-relay publish targeting, reply pinning, message tags, reply event building (NIP-10 kind 1 under kind-1 roots, NIP-22 kind 1111 otherwise), draft channels, reaction/deletion tags, target-relay resolution for reactions and deletions |
+| `permalinks.json` | shareable post link derivation and parsing (`origin/relayHost/eventId`, active-space preference, 64-hex id rule) |
 | `noas.json` | credential splitting, sign-in response parsing (aliases, errors), NIP-49 decrypt, profile content merging, default display name from username |
 | `space-detection.json` | ordered wss:// space-probe candidates derived from a noas host (root-domain reduction, subdomain expansion) |
 | `ingest-scenarios.json` | store semantics: attribution union, fold preservation, tombstones, pending folds, newest-kind-0, topic replacement/deletion, reaction aggregation/toggle-by-deletion |
-| `timeline-scope.json` | visible timeline derivation: AND filters, excludes, pinned default scope, relay scope, search, thread focus, ordering |
+| `timeline-scope.json` | visible timeline derivation: AND filters, excludes, pinned default scope, relay scope, search, thread focus, ordering; `calendarThread` section covers comment threads under calendar events |
 
 ## Versioning
 

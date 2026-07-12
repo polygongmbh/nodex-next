@@ -11,10 +11,12 @@ import type { RawNostrEvent } from "@/domain/event-to-post";
 import {
   buildDeletionTags,
   buildMessageTags,
+  buildReplyEvent,
   PublishRuleError,
   resolveDraftChannels,
   resolvePublishRelay,
   resolveTargetRelays,
+  type ReplyContext,
 } from "@/domain/publish-rules";
 import { buildReactionTags } from "@/domain/reaction-events";
 
@@ -113,6 +115,35 @@ describe("vectors: timeline scope", () => {
   });
 });
 
+describe("vectors: calendar thread scope", () => {
+  beforeEach(() => {
+    runSteps(scopeVectors.relayUrls, scopeVectors.calendarThread.events as Step[]);
+  });
+
+  it.each(scopeVectors.calendarThread.scenarios)("$name", ({ scope, expected }) => {
+    const items = buildTimeline(timelineStore.postsById, timelineStore.calendarEventsByAddress, {
+      channelStates: {},
+      activeRelayId: null,
+      searchQuery: "",
+      pinnedChannels: [],
+      myPubkey: null,
+      focusedPostId: null,
+      ...(scope as Partial<TimelineScope>),
+    });
+    expect(
+      items.map((item) => ({
+        type: item.type,
+        id:
+          item.type === "post"
+            ? item.post.id
+            : item.type === "state"
+              ? item.update.id
+              : item.event.eventId,
+      }))
+    ).toEqual(expected);
+  });
+});
+
 describe("vectors: publish rules", () => {
   const allRelays = publishVectors.relays;
 
@@ -151,6 +182,17 @@ describe("vectors: publish rules", () => {
 
   it.each(publishVectors.resolveDraftChannels)("$name", ({ content, included, expected }) => {
     expect(resolveDraftChannels(content, included).sort()).toEqual([...expected].sort());
+  });
+
+  it.each(publishVectors.buildReplyEvent)("$name", (vector) => {
+    const reply = vector.reply as unknown as ReplyContext;
+    if ("error" in vector.expected) {
+      expect(() => buildReplyEvent(vector.channels, reply)).toThrowError(
+        new PublishRuleError(vector.expected.error!)
+      );
+    } else {
+      expect(buildReplyEvent(vector.channels, reply)).toEqual(vector.expected);
+    }
   });
 
   it.each(publishVectors.resolveTargetRelays)("$name", (vector) => {

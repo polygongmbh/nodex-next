@@ -113,5 +113,43 @@
       "scope": { "activeRelayId": "nonexistent-space", "searchQuery": "kickoff" },
       "expected": []
     }
-  ]
+  ],
+  "calendarThread": {
+    "events": [
+      { "event": { "id": "c1", "pubkey": "alice", "kind": 31922, "content": "#team", "tags": [["d", "offsite"], ["title", "Offsite"], ["start", "2026-08-01"]], "created_at": 100 }, "relayUrl": "wss://one.example/" },
+      { "event": { "id": "cm1", "pubkey": "bob", "kind": 1111, "content": "count me in #team", "tags": [["A", "31922:alice:offsite", ""], ["K", "31922"], ["P", "alice"], ["a", "31922:alice:offsite", ""], ["e", "c1", "", "alice"], ["k", "31922"], ["p", "alice"]], "created_at": 200 }, "relayUrl": "wss://one.example/" },
+      { "event": { "id": "cm2", "pubkey": "carol", "kind": 1111, "content": "same #team", "tags": [["A", "31922:alice:offsite", ""], ["K", "31922"], ["P", "alice"], ["e", "cm1", "", "bob"], ["k", "1111"], ["p", "bob"]], "created_at": 300 }, "relayUrl": "wss://one.example/" },
+      { "event": { "id": "m9", "pubkey": "alice", "kind": 1, "content": "noise #team", "tags": [], "created_at": 400 }, "relayUrl": "wss://one.example/" }
+    ],
+    "scenarios": [
+      {
+        "name": "focusing a calendar event shows it with its comment thread only",
+        "scope": { "focusedPostId": "c1" },
+        "expected": [
+          { "type": "calendarEvent", "id": "c1" },
+          { "type": "post", "id": "cm1" },
+          { "type": "post", "id": "cm2" }
+        ]
+      },
+      {
+        "name": "focusing a comment keeps the calendar event as ancestor context",
+        "scope": { "focusedPostId": "cm1" },
+        "expected": [
+          { "type": "calendarEvent", "id": "c1" },
+          { "type": "post", "id": "cm1" },
+          { "type": "post", "id": "cm2" }
+        ]
+      },
+      {
+        "name": "comments render as posts in the open feed",
+        "scope": {},
+        "expected": [
+          { "type": "calendarEvent", "id": "c1" },
+          { "type": "post", "id": "cm1" },
+          { "type": "post", "id": "cm2" },
+          { "type": "post", "id": "m9" }
+        ]
+      }
+    ]
+  }
 }

@@ -45,7 +45,8 @@ It must be event-compatible with nodex/mostr on the same relay.
 
 ## Nostr semantics
 
-- Kinds: 0 metadata, 1 message, 5 deletion, 1621 task, 1630–1633 task states
+- Kinds: 0 metadata, 1 message, 5 deletion, 7 reaction, 1111 comment,
+  1621 task, 1630–1633 task states
   (1631 done, 1632 closed, 1630/1633 open — or "active" when the state
   event's content is non-empty; the content doubles as a custom status
   label, e.g. "Review"), 30177 shared topics (see below).
@@ -54,7 +55,13 @@ It must be event-compatible with nodex/mostr on the same relay.
   runs of length 3/4/6/8 (#FEE, #123) — are not hashtags, lowercase #fee
   is. No NIP-28. **Spaces are relays**; empty space selection = "All
   spaces", never "no relays".
-- **Replies** link via `e` tag with marker `parent` (preferred) or `reply`.
+- **Replies** under a kind-1 root are NIP-10 kind-1 events linking via `e`
+  tag with marker `parent` (preferred) or `reply`. Replies under ANY other
+  root (tasks, calendar events) are NIP-22 kind-1111 comments: uppercase
+  `E`/`A`+`K`+`P` root scope, lowercase `e`(+`a`)+`k`+`p` parent; ingest
+  threads a comment on its lowercase `e`-tag and drops comments without one
+  (i-tag-only external scopes). Comments render as post cards and carry
+  channels as `t`-tags like any post.
 - **Publishing**: a post MUST carry ≥1 channel (written as lowercased `t`
   tags). New posts target exactly ONE relay: the active space, else the sole
   connected relay, else a readable error. Replies pin to the parent's origin
