@@ -104,6 +104,14 @@ describe("reply composition in a focused thread", () => {
     expect(timelineController.sendTarget).toEqual({ type: "resolved", relayId: "one-example" });
   });
 
+  it("a focus on an unknown id has no reply parent (composer stays plain)", () => {
+    // A deep link can focus an id before its event arrives; the bar must not
+    // treat it as a reply target — it becomes an ordinary composer.
+    filterStore.focusThread("f".repeat(64));
+    expect(timelineController.replyParent).toBeUndefined();
+    expect(replyParentId()).toBeUndefined();
+  });
+
   it("inherits the parent's channels so a reply needs no typed hashtag", () => {
     const parent = rawEvent({ content: "parent post", tags: [["t", "dev"], ["t", "ops"]] });
     timelineStore.ingestEvent(parent, RELAY_A);

@@ -208,6 +208,20 @@ describe("buildTimeline", () => {
     expect(postIds(items).sort()).toEqual([root.id, branch.id, branchChild.id].sort());
   });
 
+  it("a focus on an unknown id yields an empty thread feed (deep-link, not-yet-loaded)", () => {
+    // A shared link focuses a post id before its event streams in: the feed is
+    // empty (nothing matches the thread scope) but the back bar still lets the
+    // user out — that exit is a component concern, here we only assert the feed.
+    const unrelated = rawEvent({ tags: [["t", "dev"]] });
+    timelineStore.ingestEvent(unrelated, RELAY_A);
+    const items = buildTimeline(
+      timelineStore.postsById,
+      timelineStore.calendarEventsByAddress,
+      scope({ focusedPostId: "f".repeat(64) })
+    );
+    expect(items).toEqual([]);
+  });
+
   it("filters by search query, case-insensitively", () => {
     const hit = rawEvent({ content: "Deploy nocal #dev", tags: [] });
     const miss = rawEvent({ content: "lunch plans #dev", tags: [] });

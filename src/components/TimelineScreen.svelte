@@ -36,9 +36,20 @@
   let visibleCount = $state(WINDOW_STEP);
   const windowed = $derived(items.slice(Math.max(0, items.length - visibleCount)));
 
-  const focusedPost = $derived(
-    filterStore.focusedPostId ? timelineStore.postsById[filterStore.focusedPostId] : null
-  );
+  const focusedId = $derived(filterStore.focusedPostId);
+  // The thread's header label: a post's first line, a calendar event's title,
+  // or nothing when the focused event hasn't arrived yet (a deep link may focus
+  // an id before its event streams in). The back bar shows regardless, so a
+  // deep link never traps the user in an empty feed with no exit.
+  const focusedTitle = $derived.by(() => {
+    if (!focusedId) return null;
+    const post = timelineStore.postsById[focusedId];
+    if (post) return post.content.split("\n")[0];
+    const event = Object.values(timelineStore.calendarEventsByAddress).find(
+      (candidate) => candidate.eventId === focusedId
+    );
+    return event ? event.title : null;
+  });
 
   let relaySheetRelays = $state<string[] | null>(null);
   let menuOpen = $state(false);
@@ -118,7 +129,7 @@
     <!-- Focus a thread and the nav (hamburger / space / chips) gives way to a
          full-width back bar — channel scope is bypassed inside a thread, so the
          chips would only mislead, and the whole bar is one big exit target. -->
-    {#if !focusedPost}
+    {#if !focusedId}
       <header class="top">
         <!-- svelte-ignore a11y_consider_explicit_label -->
         <button class="menu" onclick={() => (menuOpen = true)} data-testid="menu-button">
@@ -139,7 +150,7 @@
         <svg class="back" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M15 5l-7 7 7 7" />
         </svg>
-        <span class="thread-title">{t("timeline.thread")} · {focusedPost.content.split("\n")[0]}</span>
+        <span class="thread-title">{t("timeline.thread")}{focusedTitle ? ` · ${focusedTitle}` : ""}</span>
       </button>
     {/if}
 

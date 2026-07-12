@@ -119,7 +119,13 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   (turning the bottom bar into a reply composer — this is how reply-less posts
   become repliable). **Copy link** copies the post's permalink
   (`origin/relayHost/eventId`, the relay host omitted when unknown) and shows a
-  brief "Link copied" confirmation.
+  brief "Link copied" confirmation. **Opening** such a link resolves it once on
+  boot (after sign-in restore): the thread is focused and the path is cleaned
+  with `replaceState` so a reload doesn't re-trigger it. If the link names a
+  relay host no session space matches, that host is added as a space (this
+  restarts the relay service — acceptable at startup); the thread's back bar
+  renders even before the post has streamed in (titled just "Thread"), so a
+  deep link to a not-yet-loaded post is never a trap.
 - **Reactions** (NIP-25, kind 7): the menu offers a quick-emoji row
   (👍 ❤️ 🎉 😄 🚀 👀 🙏 🙌 🛠️ 👎 — the original nodex registry); the thumbs
   normalize to `+`/`-` on the wire, other emojis pass through verbatim. A

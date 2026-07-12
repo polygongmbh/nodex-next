@@ -2,14 +2,49 @@
   import { onMount, untrack } from "svelte";
   import { dismissSplash } from "@/lib/splash";
   import { hasExistingProfileContent } from "@/domain/person";
+  import { parsePostPermalink } from "@/domain/permalink";
+  import { normalizeRelayUrl } from "@/domain/relay-identity";
   import { authStore } from "@/stores/auth.svelte";
+  import { filterStore } from "@/stores/filters.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
   import { timelineController } from "@/stores/timeline-controller.svelte";
+  import type { StoredSession } from "@/infrastructure/noas/session";
   import OnboardingFlow from "@/components/OnboardingFlow.svelte";
   import SignInScreen from "@/components/SignInScreen.svelte";
   import TimelineScreen from "@/components/TimelineScreen.svelte";
 
   let checkingProfile = $state(false);
+  // A shared permalink (`/relayHost/eventId`) is resolved exactly once per boot.
+  let permalinkChecked = false;
+
+  function relayHostOf(url: string): string | null {
+    const normalized = normalizeRelayUrl(url);
+    try {
+      return normalized ? new URL(normalized).hostname : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Open the thread named by the boot URL: focus the post, and drop the path so
+  // a reload doesn't re-trigger. If the link names a relay host no session space
+  // matches, add it as a space first (restarts the relay service — acceptable
+  // during startup, and it resets filter state, so focus the thread afterwards).
+  function resolvePermalink(session: StoredSession): void {
+    if (permalinkChecked) return;
+    permalinkChecked = true;
+    const parsed = parsePostPermalink(window.location.pathname);
+    if (!parsed) return;
+    if (parsed.relayHost) {
+      const known = session.relayUrls.some((url) => relayHostOf(url) === parsed.relayHost);
+      if (!known) {
+        const updated = authStore.addRelayUrl(`wss://${parsed.relayHost}`);
+        if (updated) timelineController.restart(updated);
+      }
+    }
+    filterStore.focusThread(parsed.postId);
+    window.history.replaceState(null, "", "/");
+  }
 
   onMount(() => {
     authStore.restoreSession();
@@ -67,6 +102,9 @@
         }
       });
       timelineController.start(authStore.session);
+      // why: a shared-link deep focus resolves once the session (and its spaces)
+      // are known — after start, so an added space's restart keeps the focus.
+      untrack(() => resolvePermalink(authStore.session!));
     } else if (authStore.status === "signedOut") {
       timelineController.stop();
       preferencesStore.reset();
