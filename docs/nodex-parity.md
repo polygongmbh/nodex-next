@@ -28,13 +28,23 @@ grouped by status. "Faithful" means behavior-compatible, not line-ported.
 - **Topics** per the brainstorm sketch, upgraded to shared relay events
   (kind 30177) with a NIP draft — beyond nodex, which has no topics yet.
 - **Thread participation**: focusing a thread (breadcrumbs, reply counts,
-  post-menu Reply) turns the bar into a reply composer with NIP-10 tags,
-  inherited parent channels, and origin-relay pinning.
-- **Post context menu** (tap a card): reply, NIP-25 reactions (quick-emoji
-  registry, +/- normalization, kind-5 toggle, count chips on cards),
-  permalink copy, and for own posts recompose (replace-then-delete,
-  kind-1 only) and NIP-09 delete — all publishing to the relays that
+  post-menu Reply) turns the bar into a reply composer with inherited parent
+  channels and origin-relay pinning. Replies under a kind-1 root are NIP-10
+  kind-1; under any other root (tasks, calendar events) they are NIP-22
+  kind-1111 comments.
+- **Post context menu** (tap a card — posts AND calendar events): a small
+  inline popup anchored at the tap point (quick-emoji row + action row,
+  scale-in, no dimmed backdrop, clamped/flipped at viewport edges) offering
+  reply, NIP-25 reactions (quick-emoji registry, +/- normalization, kind-5
+  toggle, count chips on post and calendar cards, `k` = target kind),
+  permalink copy, and for own items recompose (replace-then-delete, kinds 1
+  and 1111 — not calendar events) and NIP-09 delete (own calendar events add
+  the addressable `a` coordinate) — all publishing to the relays that
   delivered the target.
+- **Shared-link resolution**: opening `origin/relayHost/eventId` on boot
+  focuses the thread and cleans the path (replaceState); an unknown relay host
+  is added as a space. The thread back bar renders even before the target has
+  loaded, so a deep link is never a trap.
 
 ## Present but needs work
 
@@ -52,9 +62,9 @@ grouped by status. "Faithful" means behavior-compatible, not line-ported.
   nodex-next has none — auth-required relays will not deliver.
 - **Failed publishes**: nodex persists drafts and retries; here a failure
   is only an inline error.
-- **Hover popovers** don't flip at viewport edges; long feeds have no
-  date separators; topic kind 30177 is provisional pending upstream
-  discussion.
+- **Hover popovers** (profile cards) don't flip at viewport edges — unlike the
+  post-menu popup, which now clamps and flips; long feeds have no date
+  separators; topic kind 30177 is provisional pending upstream discussion.
 
 ## Missing (belongs in this app eventually)
 

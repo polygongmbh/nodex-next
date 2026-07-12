@@ -221,35 +221,55 @@ two-stroke N glyph, #4785FF on black.
     status name), author, task content one-line, time.
   - **Post context menu**: tapping a card body (never an inner control —
     ignore clicks on `button`/`a` descendants — nor during text selection;
-    state rows untouched) opens a compact menu: bottom sheet on mobile, small
-    centered card ≥900px. Items:
-    - **Reply** = focus the post's thread (the bar becomes the reply
-      composer) — the entry point for reply-less posts.
+    state rows untouched) opens a small inline popup anchored at the tap point
+    (same on phone and desktop): a quick-emoji row over a compact action row,
+    `scale(0.85→1)`+fade ~150ms out of the anchored corner, `position: fixed`
+    clamped to the viewport (flip above/left near an edge, `transform-origin`
+    at the anchor). NO dimmed backdrop — a transparent full-viewport
+    click-catcher (or Escape) dismisses it; z-index above the sheets. The menu
+    serves EVERY post kind, including calendar events (a calendar card gets the
+    same tap→popup). Items:
+    - **Reply** = focus the post's (or calendar event's) thread (the bar
+      becomes the reply composer) — the entry point for reply-less posts.
+      Replying to a calendar event focuses its `eventId`; the thread view shows
+      the event as root.
     - **React**: quick-emoji row 👍 ❤️ 🎉 😄 🚀 👀 🙏 🙌 🛠️ 👎 (nodex
       registry). Publishes NIP-25 kind 7 to EVERY connected relay that
       delivered the post (never a composer target), content `+`/`-` for
       👍/👎, else the emoji verbatim; `e` (id, relay hint, author) + `p` +
-      `k` tags. Same emoji again = toggle OFF via own kind-5 of the prior
-      reaction (`e` + `k 7`); different emoji just publishes anew
-      (newest-wins per reactor). Cards show per-emoji count chips (own
-      highlighted, tap = same toggle); no row when no reactions.
+      `k` tags — `k` is the TARGET's kind (7 stays kind-1 semantics for
+      posts, 31922/31923 for calendar events). Same emoji again = toggle OFF
+      via own kind-5 of the prior reaction (`e` + `k 7`); different emoji just
+      publishes anew (newest-wins per reactor). Post AND calendar cards show
+      per-emoji count chips (own highlighted, tap = same toggle); no row when
+      no reactions.
     - **Copy link**: permalink `origin/relayHost/eventId` — relay host from
-      the active space if it delivered the post, else the post's origin
-      relay, omitted when unknown — to the clipboard with a brief inline
-      confirmation.
-    - Own posts only — **Recompose…** (kind-1 messages only; tasks are
-      immutable) behind an inline confirm: prefills the composer with the
-      original's content and shows a cancelable bar chip (✕/Escape aborts,
-      clearing the draft). The replacement keeps the original's kind,
-      channels, NIP-10 thread (parent + root when the parent is still known,
-      none otherwise) and pins to the ORIGINAL's origin relay (recompose
-      precedence over reply); only AFTER it publishes is the original
-      deleted (kind 5 to the relays that delivered it) — a failed deletion
-      surfaces as an error, the replacement stays.
-    - Own posts only — **Delete** (destructive styling, any own post) behind
-      an inline confirm ("publishes a deletion event — spaces may keep a
-      copy"; no browser confirm()): kind 5 with `e` + `k` tags to every
-      connected relay that delivered the post; the echo tombstones locally.
+      the active space if it delivered the post, else the origin relay,
+      omitted when unknown — to the clipboard with a brief inline
+      confirmation. Opening such a link resolves it once on boot (after
+      sign-in restore): `parsePostPermalink(location.pathname)` → focus the
+      thread and `history.replaceState(null,"","/")` so a reload doesn't
+      re-trigger; if the link names a relay host no session space matches, add
+      `wss://<host>` as a space first (restarts the relay service — acceptable
+      at startup). The thread back bar renders whenever a thread is focused —
+      even before the post/event has streamed in (title falls back to
+      "Thread") — so a deep link to a not-yet-loaded post is never a trap; the
+      bar copes with the unknown id by staying a plain composer.
+    - Own posts only — **Recompose…** (kind-1 messages and kind-1111 comments;
+      tasks and calendar events are NOT recomposable) behind an inline confirm:
+      prefills the composer with the original's content and shows a cancelable
+      bar chip (✕/Escape aborts, clearing the draft). The replacement keeps
+      the original's kind, channels, thread (NIP-10 for a kind-1 root, NIP-22
+      for anything else — parent + root when the parent is still known, none
+      otherwise) and pins to the ORIGINAL's origin relay (recompose precedence
+      over reply); only AFTER it publishes is the original deleted (kind 5 to
+      the relays that delivered it) — a failed deletion surfaces as an error,
+      the replacement stays.
+    - Own posts only — **Delete** (destructive styling, any own post OR own
+      calendar event) behind an inline confirm ("publishes a deletion event —
+      spaces may keep a copy"; no browser confirm()): kind 5 with `e` + `k`
+      tags (plus the addressable `a` coordinate for a calendar event) to every
+      connected relay that delivered it; the echo tombstones locally.
 - **Filtering model**: channel chip tap = exclusive include (tap the sole
   included channel to clear); long-press (or right-click) any channel chip
   or sidebar entry pins/unpins. Pins are PER-SPACE (spec vector
@@ -276,9 +296,13 @@ two-stroke N glyph, #4785FF on black.
   ≥1 channel (chip, topic, or typed). Enter sends when possible; Escape
   clears. Inside a focused thread the bar becomes a reply: it shows a
   "replying to" chip, inherits the parent's channels (so no `#channel` is
-  required), writes NIP-10 threading tags (a single `root`-marked `e`-tag for
-  a top-level reply, `root`+`reply` for a nested one, plus participant
-  `p`-tags), and pins to the parent's origin relay.
+  required), and pins to the parent's origin relay. Threading form depends on
+  the thread ROOT: under a kind-1 message it is NIP-10 kind-1 (a single
+  `root`-marked `e`-tag for a top-level reply, `root`+`reply` for a nested one,
+  plus participant `p`-tags); under ANY other root (task, calendar event, or a
+  comment whose root is one of those) it is a NIP-22 kind-1111 comment —
+  uppercase `A`/`E` + `K` + `P` for the root scope (address for an addressable
+  root), lowercase `a`/`e` + `k` + `p` for the immediate parent.
 - **Topic manager sheet**: create (name, primary channel select, secondary
   channel toggles, free-text tag input — prefilled from current context,
   auto-pins on create) and manage (pin/unpin; delete only for own topics).

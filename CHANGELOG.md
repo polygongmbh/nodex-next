@@ -2,21 +2,44 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **WIRE CHANGE — replies to non-kind-1 posts are now NIP-22 kind-1111
+  comments** (previously kind-1 with parent markers). Replying to a task or a
+  calendar event publishes a kind-1111 comment carrying the root scope as
+  `A`/`E` + `K` + `P` and the immediate parent as `a`/`e` + `k` + `p`. Old
+  clients that only understand kind-1 parent markers will NOT thread these
+  replies. Replies under a kind-1 message root are unchanged (NIP-10 kind-1).
+
 ### Added
 
-- Post context menu: tap a card body to open a compact menu (bottom sheet on
-  phones, small centered card on desktop) with Reply (focuses the thread —
-  the entry point for reply-less posts), a quick-emoji React row, Copy link
-  (permalink `origin/relayHost/eventId`), and for own posts Recompose…
-  (kind-1 only: prefills the composer, replacement inherits kind/channels/
-  thread/origin relay, the original is deleted only after the replacement
-  publishes) and Delete (NIP-09 kind 5 with `e` + `k` tags), both behind
-  inline two-step confirms.
-- Reactions (NIP-25): posts show per-emoji count chips (own reaction
-  highlighted); tapping toggles/switches. 👍/👎 normalize to `+`/`-` on the
-  wire; reactions and deletions publish to every connected relay that
-  delivered the target (per-relay attribution). Same-emoji re-react deletes
-  the prior reaction; a different emoji replaces it newest-wins.
+- Post context menu: tap a card body to open a small inline popup anchored at
+  the tap point (same on phone and desktop) — a quick-emoji React row over a
+  compact action row, scaled in from the anchored corner, clamped/flipped at
+  viewport edges, with no dimmed backdrop (a transparent click-catcher or
+  Escape dismisses it). Actions: Reply (focuses the thread — the entry point
+  for reply-less posts), Copy link (permalink `origin/relayHost/eventId`), and
+  for own items Recompose… (kinds 1 and 1111: prefills the composer,
+  replacement inherits kind/channels/thread/origin relay, the original is
+  deleted only after the replacement publishes) and Delete (NIP-09 kind 5),
+  both behind inline two-step confirms.
+- The menu, replies, reactions and delete now work on EVERY post kind,
+  including calendar events (NIP-52). A calendar card gets the same tap→popup;
+  replying to a calendar event roots a NIP-22 comment at its addressable
+  `kind:pubkey:d` coordinate; deleting an own calendar event tombstones it by
+  `e` + `k` + `a`. Recompose stays kinds 1 and 1111 only.
+- Reactions (NIP-25): posts AND calendar cards show per-emoji count chips (own
+  reaction highlighted); tapping toggles/switches. 👍/👎 normalize to `+`/`-`
+  on the wire; the `k`-tag carries the target's kind. Reactions and deletions
+  publish to every connected relay that delivered the target (per-relay
+  attribution). Same-emoji re-react deletes the prior reaction; a different
+  emoji replaces it newest-wins.
+- Shared-link resolution: opening a permalink (`origin/relayHost/eventId`)
+  focuses the thread on boot and cleans the URL (`replaceState`) so a reload
+  doesn't re-trigger; an unknown relay host in the link is added as a space.
+  The thread back bar now renders whenever a thread is focused — even before
+  the post/event has streamed in (title falls back to "Thread") — so a deep
+  link to a not-yet-loaded post is never a trap.
 - Cross-client note: the `classify-events.json` "unknown kind ignored"
   sample kind changed 7 → 12345 (kind 7 is now a classified reaction; the
   vector's expectation is unchanged).
