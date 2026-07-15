@@ -12,7 +12,7 @@ export const NOSTR_KINDS = {
   stateDone: 1631,
   stateClosed: 1632,
   stateReopen: 1633,
-  /** Addressable shared topic definition — see docs/nip-topics.md. */
+  /** Addressable shared topic definition — see docs/protocol.md §Shared topics. */
   topic: 30177,
   /** NIP-52 date-based calendar event (start/end = YYYY-MM-DD). */
   calendarDate: 31922,

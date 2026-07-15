@@ -17,8 +17,7 @@ npm run test    # vitest
 - [docs/rebuild-prompt.md](docs/rebuild-prompt.md) — self-contained prompt to rebuild this app from scratch
 - [docs/mobile-app-prompt.md](docs/mobile-app-prompt.md) — prompt for the native mobile companion (supersedes nodex-talk/SPEC.md)
 - [docs/nodex-parity.md](docs/nodex-parity.md) — faithful / needs work / missing / out of scope vs. nodex
-- [docs/nip-topics.md](docs/nip-topics.md) — NIP draft for shared topics (kind 30177)
-- [docs/nostr-extensions.md](docs/nostr-extensions.md) — survey of all protocol conventions in use
+- [docs/protocol.md](docs/protocol.md) — single normative home for all wire/protocol semantics (kinds, channels, topics, attribution, noas discovery, …)
 - [spec/README.md](spec/README.md) — cross-client test vectors (shared with the mobile client); behavior changes land there first
 
 ## Framework decisions (vs. the React/Tailwind original)
@@ -159,7 +158,7 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
 - **Topics** are named, composable tag combinations (not sub-channels), each
   with a primary channel and secondary channels. They are **shared**: each
   topic is an addressable kind-30177 event on the relay (spec:
-  `docs/nip-topics.md`), visible to every user of the space; the newest
+  `docs/protocol.md` §Shared topics), visible to every user of the space; the newest
   definition per channel set wins across authors (a topic is identified by the channels it contains, not its name), and NIP-09 deletion removes your
   own. Selecting a topic scopes the feed to ALL its tags, drops any conflicting
   channel include, and hides channels the topic doesn't tag; the topic unfolds
@@ -168,7 +167,7 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
   switches over from a selected topic rather than stacking, and a channel only
   toggles off on a second tap when it is the sole active thing. Pinned state is personal, stored per
   account in localStorage next to pinned channels. All other protocol
-  conventions are surveyed in `docs/nostr-extensions.md`.
+  conventions are documented in `docs/protocol.md`.
 - **Chat orientation**: newest messages at the bottom with auto-scroll;
   long-press any channel chip to pin it — pins are per-space (the selected
   spaces with content in the channel at pin time). The feed renders a window over the

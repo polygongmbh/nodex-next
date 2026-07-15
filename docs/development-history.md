@@ -4,8 +4,9 @@ How nodex-next came to be, in order, with the reasoning that drove each
 step. Companion documents: [rebuild-prompt.md](./rebuild-prompt.md) (build
 this again from scratch), [mobile-app-prompt.md](./mobile-app-prompt.md)
 (native companion app), [nodex-parity.md](./nodex-parity.md) (what's
-faithful, missing, or out of scope), [nip-topics.md](./nip-topics.md) and
-[nostr-extensions.md](./nostr-extensions.md) (protocol).
+faithful, missing, or out of scope), and
+[protocol.md](./protocol.md) (the single home for all wire/protocol
+semantics).
 
 ## Origin and inputs
 

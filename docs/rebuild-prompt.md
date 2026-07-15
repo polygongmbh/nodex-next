@@ -45,41 +45,40 @@ It must be event-compatible with nodex/mostr on the same relay.
 
 ## Nostr semantics
 
-- Kinds: 0 metadata, 1 message, 5 deletion, 7 reaction, 1111 comment,
-  1621 task, 1630–1633 task states
-  (1631 done, 1632 closed, 1630/1633 open — or "active" when the state
-  event's content is non-empty; the content doubles as a custom status
-  label, e.g. "Review"), 30177 shared topics (see below).
-- **Channels are hashtags**: a post's channels = `t` tags ∪ in-content
-  `#hashtags`, lowercased; color tokens — UPPERCASE hex or digit-only
-  runs of length 3/4/6/8 (#FEE, #123) — are not hashtags, lowercase #fee
-  is. No NIP-28. **Spaces are relays**; empty space selection = "All
-  spaces", never "no relays".
-- **Replies** under a kind-1 root are NIP-10 kind-1 events linking via `e`
-  tag with marker `parent` (preferred) or `reply`. Replies under ANY other
-  root (tasks, calendar events) are NIP-22 kind-1111 comments: uppercase
-  `E`/`A`+`K`+`P` root scope, lowercase `e`(+`a`)+`k`+`p` parent; ingest
-  threads a comment on its lowercase `e`-tag and drops comments without one
-  (i-tag-only external scopes). Comments render as post cards and carry
-  channels as `t`-tags like any post.
-- **Publishing**: a post MUST carry ≥1 channel (written as lowercased `t`
-  tags). New posts target exactly ONE relay: the active space, else the sole
-  connected relay, else a readable error. Replies pin to the parent's origin
-  relay (first of its relays). Kind-0 profiles publish to ALL session relays
-  (or one relay for per-space profiles).
-- **Deletions** (kind 5): tombstone only the author's own events; deleted
-  ids never resurrect on re-ingest.
-- **State folding**: 1630–1633 reference the task via `e` tag; fold into the
-  task's `stateUpdates` newest-first (dedupe by event id); buffer folds that
-  arrive before their target (capped) and replay on landing. State events
-  render as compact timeline rows, never as post cards.
-- **Topics** (kind 30177, addressable — full spec `docs/nip-topics.md`):
-  identified by their CHANNEL SET, not their name — `d` = canonical
-  encoding of the set (deduped lowercase channels, sorted, `+`-joined);
-  `title` tag carries the display name; first `t` tag = primary channel
-  (navigation hint, not identity), rest secondary. Relay-communal: newest
-  `created_at` per channel set wins ACROSS authors (derive identity from
-  the `t` tags, not `d`). NIP-09 deletion for own definitions.
+All wire/protocol facts — the full kind list, channels-are-hashtags,
+reply threading, tasks/state folding, reactions, topics, presence, media,
+calendar, deletions, per-relay attribution — are normative in
+[protocol.md](./protocol.md).
+Build this app to that spec; the intent-level notes below only flag what the
+Timeline leans on hardest.
+
+- **Channels are hashtags, spaces are relays**
+  ([protocol.md §Channels are hashtags](./protocol.md#channels-are-hashtags--remark)):
+  every post carries ≥1 channel; empty space selection = "All spaces", never
+  "no relays".
+- **Replies** thread by root kind
+  ([protocol.md §Reply threading](./protocol.md#reply-threading--remark)):
+  NIP-10 kind-1 (`parent` marker preferred) under a message,
+  NIP-22 kind-1111 comment under anything else.
+- **Tasks and state folding**
+  ([protocol.md §Tasks and state updates](./protocol.md#tasks-and-state-updates--kinds-1621-16301633--remark-nip-34-divergence)):
+  1630–1633 reference the task via `e` tag and fold into the task's
+  `stateUpdates` newest-first (dedupe by event id);
+  buffer folds that arrive before their target (capped) and replay on
+  landing;
+  state events render as compact timeline rows, never as post cards.
+- **Topics** are kind-30177, relay-communal, identified by their channel set
+  ([protocol.md §Shared topics](./protocol.md#shared-topics--kind-30177--needs-nip-drafted)).
+- **Publishing and deletions**
+  ([protocol.md §Publishing targets](./protocol.md#publishing-targets--client-behavior),
+  [§Deletions](./protocol.md#deletions--kind-5-nip-09--remark)):
+  new posts target exactly ONE relay (active space, else the sole connected
+  relay, else a readable error); replies pin to the parent's origin relay;
+  kind-0 profiles publish to all session relays (or one for per-space
+  profiles); deletions tombstone only the author's own events and deleted ids
+  never resurrect on re-ingest.
+- **Per-relay attribution** is a hard requirement — see §Hard requirements
+  above and [protocol.md §Per-relay attribution](./protocol.md#per-relay-attribution--client-behavior-no-nip-needed).
 
 ## Noas auth
 
@@ -233,16 +232,16 @@ two-stroke N glyph, #4785FF on black.
       becomes the reply composer) — the entry point for reply-less posts.
       Replying to a calendar event focuses its `eventId`; the thread view shows
       the event as root.
-    - **React**: quick-emoji row 👍 ❤️ 🎉 😄 🚀 👀 🙏 🙌 🛠️ 👎 (nodex
-      registry). Publishes NIP-25 kind 7 to EVERY connected relay that
-      delivered the post (never a composer target), content `+`/`-` for
-      👍/👎, else the emoji verbatim; `e` (id, relay hint, author) + `p` +
-      `k` tags — `k` is the TARGET's kind (7 stays kind-1 semantics for
-      posts, 31922/31923 for calendar events). Same emoji again = toggle OFF
-      via own kind-5 of the prior reaction (`e` + `k 7`); different emoji just
-      publishes anew (newest-wins per reactor). Post AND calendar cards show
-      per-emoji count chips (own highlighted, tap = same toggle); no row when
-      no reactions.
+    - **React**: quick-emoji row 👍 ❤️ 🎉 😄 🚀 👀 🙏 🙌 🛠️ 👎 (nodex registry).
+      Publishes a reaction to EVERY connected relay that delivered the post
+      (never a composer target);
+      the same emoji again toggles it off,
+      a different emoji replaces it
+      (wire form, `+`/`-` content mapping, and the target-kind `k` tag
+      incl. calendar events: `protocol.md` §Reactions).
+      Post AND calendar cards show per-emoji count chips
+      (own highlighted, tap = same toggle);
+      no row when no reactions.
     - **Copy link**: permalink `origin/relayHost/eventId` — relay host from
       the active space if it delivered the post, else the origin relay,
       omitted when unknown — to the clipboard with a brief inline
@@ -258,18 +257,22 @@ two-stroke N glyph, #4785FF on black.
     - Own posts only — **Recompose…** (kind-1 messages and kind-1111 comments;
       tasks and calendar events are NOT recomposable) behind an inline confirm:
       prefills the composer with the original's content and shows a cancelable
-      bar chip (✕/Escape aborts, clearing the draft). The replacement keeps
-      the original's kind, channels, thread (NIP-10 for a kind-1 root, NIP-22
-      for anything else — parent + root when the parent is still known, none
-      otherwise) and pins to the ORIGINAL's origin relay (recompose precedence
-      over reply); only AFTER it publishes is the original deleted (kind 5 to
-      the relays that delivered it) — a failed deletion surfaces as an error,
-      the replacement stays.
-    - Own posts only — **Delete** (destructive styling, any own post OR own
-      calendar event) behind an inline confirm ("publishes a deletion event —
-      spaces may keep a copy"; no browser confirm()): kind 5 with `e` + `k`
-      tags (plus the addressable `a` coordinate for a calendar event) to every
-      connected relay that delivered it; the echo tombstones locally.
+      bar chip (✕/Escape aborts, clearing the draft).
+      The replacement keeps the original's kind, channels, and thread
+      (same threading form as a fresh reply — `protocol.md` §Reply threading —
+      reusing parent + root when the parent is still known, none otherwise)
+      and pins to the ORIGINAL's origin relay (recompose precedence over reply);
+      only AFTER it publishes is the original deleted
+      (kind 5 to the relays that delivered it) —
+      a failed deletion surfaces as an error, the replacement stays.
+    - Own posts only — **Delete**
+      (destructive styling, any own post OR own calendar event)
+      behind an inline confirm
+      ("publishes a deletion event — spaces may keep a copy"; no browser confirm()):
+      publishes a kind-5 deletion to every connected relay that delivered it
+      (tag form incl. the addressable `a` coordinate for calendar events:
+      `protocol.md` §Deletions);
+      the echo tombstones locally.
 - **Filtering model**: channel chip tap = exclusive include (tap the sole
   included channel to clear); long-press (or right-click) any channel chip
   or sidebar entry pins/unpins. Pins are PER-SPACE (spec vector
@@ -295,14 +298,13 @@ two-stroke N glyph, #4785FF on black.
   become the post's channels; the send button appears once the draft carries
   ≥1 channel (chip, topic, or typed). Enter sends when possible; Escape
   clears. Inside a focused thread the bar becomes a reply: it shows a
-  "replying to" chip, inherits the parent's channels (so no `#channel` is
-  required), and pins to the parent's origin relay. Threading form depends on
-  the thread ROOT: under a kind-1 message it is NIP-10 kind-1 (a single
-  `root`-marked `e`-tag for a top-level reply, `root`+`reply` for a nested one,
-  plus participant `p`-tags); under ANY other root (task, calendar event, or a
-  comment whose root is one of those) it is a NIP-22 kind-1111 comment —
-  uppercase `A`/`E` + `K` + `P` for the root scope (address for an addressable
-  root), lowercase `a`/`e` + `k` + `p` for the immediate parent.
+  "replying to" chip, inherits the parent's channels (so no `#channel` is required),
+  and pins to the parent's origin relay.
+  The threading form depends on the thread ROOT —
+  NIP-10 kind-1 under a message,
+  NIP-22 kind-1111 comment under any other root
+  (task, calendar event, or a comment on one) —
+  with the exact tag structure in `protocol.md` §Reply threading.
 - **Topic manager sheet**: create (name, primary channel select, secondary
   channel toggles, free-text tag input — prefilled from current context,
   auto-pins on create) and manage (pin/unpin; delete only for own topics).

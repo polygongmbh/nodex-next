@@ -22,7 +22,7 @@ purely additive.
   attachment. `Post.attachments` is populated at classify time. **Not rendered.**
 - nodex-talk `lib/infrastructure/nostr/event_converter.dart` — `extractImageUrls`
   (imeta + bare image URLs); rendered by `lib/ui/timeline/attachment_images.dart`.
-- The doc contract: `docs/nostr-extensions.md` §"Media attachments" — "on publish,
+- The doc contract: `docs/protocol.md` §"Media attachments" — "on publish,
   Nodex turns body media URLs into `imeta` tags."
 
 The reference implementation to port: `nodex/src/lib/attachments.ts`

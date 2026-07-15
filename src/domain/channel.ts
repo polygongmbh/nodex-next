@@ -11,7 +11,7 @@ export interface Channel {
  * A topic is a named, composable combination of tags — flexible contexts
  * instead of rigid sub-channels ("Nodex User Stories" = #design + #nodex).
  * Topics are SHARED: they live as addressable kind-30177 events on the relay
- * (see docs/nip-topics.md), visible to every user of that space. The primary
+ * (see docs/protocol.md §Shared topics), visible to every user of that space. The primary
  * channel decides auto-selection and the topic's home in the desktop
  * sidebar; secondary channels make it cross-disciplinary. Pinned state is
  * per-user (preferences), never part of the shared event.

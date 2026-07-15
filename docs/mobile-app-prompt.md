@@ -16,13 +16,17 @@ kinds, and conventions with nodex-next and mostr.
 
 ## Wire compatibility (non-negotiable)
 
-Implement exactly the semantics of rebuild-prompt.md §"Nostr semantics",
-§"Noas auth", and §"Subscriptions":
+Every wire/protocol fact is normative in [protocol.md](./protocol.md);
+implement it exactly, alongside rebuild-prompt.md §"Noas auth" and
+§"Subscriptions".
+The two clients MUST be indistinguishable on the wire.
 
-- Kinds 0 / 1 / 5 / 1621 / 1630–1633 / 30177 with identical channel,
-  reply-marker (`parent` preferred), publish-target, deletion, state-fold,
-  and topic rules (`docs/nip-topics.md`).
-- **Per-relay attribution.** Caveat specific to dart ndk: its
+- All kinds, channel rules, reply markers (`parent` preferred), publish
+  targets, deletion, state-fold, reactions, and topic rules per
+  [protocol.md](./protocol.md) — the shared spec vectors are the enforcement
+  gate.
+- **Per-relay attribution** ([protocol.md §Per-relay attribution](./protocol.md#per-relay-attribution--client-behavior-no-nip-needed)).
+  Caveat specific to dart ndk: its
   `StreamResponseCleaner` dedupes events by id across relays (first relay
   wins) and its cache overwrites instead of unioning. Therefore open ONE
   subscription PER RELAY (`explicitRelays: [thatRelayUrl]`) and union

@@ -1,5 +1,5 @@
 // Topic event encoding (kind 30177, addressable) — the wire format specified
-// in docs/nip-topics.md. A topic is IDENTIFIED by the set of channels it
+// in docs/protocol.md §Shared topics. A topic is IDENTIFIED by the set of channels it
 // contains: `d` is the canonical encoding of that set (sorted, deduped,
 // lowercase, `+`-joined), so renaming republishes the same address and two
 // definitions of the same combination converge. The FIRST `t` tag is the
