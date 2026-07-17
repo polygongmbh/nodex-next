@@ -81,6 +81,7 @@ class TimelineController {
   recomposeOf = $state<Post | null>(null);
   private service: NdkService | null = null;
   private batcher: IngestBatcher | null = null;
+  private session: StoredSession | null = null;
   private sessionPubkey: string | null = null;
   // Own kind-0 merge bases, keyed by scope: a relay id for a per-space profile,
   // or "*" for an all-spaces fetch/publish whose source relay is unknown. Fed
@@ -92,6 +93,7 @@ class TimelineController {
 
   start(session: StoredSession): void {
     if (this.service) return;
+    this.session = session;
     this.sessionPubkey = session.pubkeyHex;
     timelineStore.initRelays(session.relayUrls);
     // The hydration backfill streams thousands of events; batching keeps the
@@ -102,7 +104,11 @@ class TimelineController {
       timelineStore.ingestEvent(raw, relayUrl);
     });
     this.batcher = batcher;
-    this.service = startNdkService(session.relayUrls, session.privateKeyHex, {
+    this.service = this.startService(session, batcher);
+  }
+
+  private startService(session: StoredSession, batcher: IngestBatcher): NdkService {
+    return startNdkService(session.relayUrls, session.privateKeyHex, {
       onEvent: (event, relayUrl) => batcher.push(event, relayUrl),
       onRelayStatus: (relayUrl, connected) => timelineStore.setRelayConnected(relayUrl, connected),
       onEose: () => {
@@ -111,6 +117,19 @@ class TimelineController {
         void this.backfillMissingProfiles();
       },
     });
+  }
+
+  /**
+   * Rebuild the relay service on the same session after a sleep/offline gap.
+   * NDK cannot recover in place — reconnected relays never re-send the REQs of
+   * RUNNING subscriptions, and a FLAPPING relay refuses connect() — so tear the
+   * service down and start fresh. Stores stay intact: the new backfill covers
+   * the gap, and re-delivered events dedupe (relays union-merge) in ingest.
+   */
+  resync(): void {
+    if (!this.service || !this.session || !this.batcher) return;
+    this.service.stop();
+    this.service = this.startService(this.session, this.batcher);
   }
 
   /**
@@ -178,6 +197,7 @@ class TimelineController {
     this.batcher = null;
     this.service?.stop();
     this.service = null;
+    this.session = null;
     this.sessionPubkey = null;
     this.ownProfileBases.clear();
     timelineStore.reset();

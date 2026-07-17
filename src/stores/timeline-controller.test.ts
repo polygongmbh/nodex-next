@@ -492,3 +492,42 @@ describe("own-profile cache (fetchOwnProfile)", () => {
     expect(fetchProfileEvent).toHaveBeenCalledTimes(1);
   });
 });
+
+// A sleep/offline gap leaves NDK with dead subscriptions or stuck relays;
+// resync rebuilds the service on the same session while the stores keep the
+// already-ingested timeline (re-delivered backfill dedupes in ingest).
+describe("resync", () => {
+  it("rebuilds the relay service on the same session, keeping the timeline", () => {
+    timelineController.stop();
+    vi.mocked(startNdkService).mockClear();
+    const stopFirst = vi.fn();
+    const makeService = (stop: () => void): NdkService => ({
+      publish: vi.fn().mockResolvedValue(undefined),
+      fetchProfileEvent: vi.fn().mockResolvedValue(null),
+      fetchProfileEvents: vi.fn().mockResolvedValue([]),
+      stop,
+    });
+    vi.mocked(startNdkService)
+      .mockReturnValueOnce(makeService(stopFirst))
+      .mockReturnValueOnce(makeService(vi.fn()));
+    timelineController.start(SESSION);
+    const raw = rawEvent({ tags: [["t", "dev"]] });
+    timelineStore.ingestEvent(raw, RELAY_A);
+
+    timelineController.resync();
+
+    expect(stopFirst).toHaveBeenCalled();
+    expect(startNdkService).toHaveBeenCalledTimes(2);
+    const [relayUrls, privateKeyHex] = vi.mocked(startNdkService).mock.calls[1];
+    expect(relayUrls).toEqual(SESSION.relayUrls);
+    expect(privateKeyHex).toBe(SESSION.privateKeyHex);
+    expect(timelineStore.postsById[raw.id]).toBeDefined();
+  });
+
+  it("is a no-op while no session is running", () => {
+    timelineController.stop();
+    vi.mocked(startNdkService).mockClear();
+    timelineController.resync();
+    expect(startNdkService).not.toHaveBeenCalled();
+  });
+});

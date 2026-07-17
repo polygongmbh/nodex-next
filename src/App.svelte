@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
   import { dismissSplash } from "@/lib/splash";
+  import { startWakeWatcher } from "@/lib/wake-watcher";
   import { hasExistingProfileContent } from "@/domain/person";
   import { parsePostPermalink } from "@/domain/permalink";
   import { normalizeRelayUrl } from "@/domain/relay-identity";
@@ -8,6 +9,7 @@
   import { filterStore } from "@/stores/filters.svelte";
   import { preferencesStore } from "@/stores/preferences.svelte";
   import { timelineController } from "@/stores/timeline-controller.svelte";
+  import { timelineStore } from "@/stores/timeline.svelte";
   import type { StoredSession } from "@/infrastructure/noas/session";
   import OnboardingFlow from "@/components/OnboardingFlow.svelte";
   import SignInScreen from "@/components/SignInScreen.svelte";
@@ -48,7 +50,17 @@
 
   onMount(() => {
     authStore.restoreSession();
-    return () => timelineController.stop();
+    // System sleep / tab inactivity kills relay sockets in ways NDK doesn't
+    // recover from; the watcher rebuilds the relay service (a no-op while
+    // signed out) so relays reconnect and missed events are refetched.
+    const stopWakeWatcher = startWakeWatcher({
+      anyRelayOffline: () => timelineStore.relays.some((relay) => !relay.connected),
+      resync: () => timelineController.resync(),
+    });
+    return () => {
+      stopWakeWatcher();
+      timelineController.stop();
+    };
   });
 
   // why: the splash overlay stays until session restore has decided which

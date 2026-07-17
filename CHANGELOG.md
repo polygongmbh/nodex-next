@@ -11,6 +11,13 @@
   clients that only understand kind-1 parent markers will NOT thread these
   replies. Replies under a kind-1 message root are unchanged (NIP-10 kind-1).
 
+### Fixed
+
+- Relays no longer stay offline after system sleep, a long-hidden tab, or a
+  network drop: a wake watcher (visibility/online events plus a timer-gap
+  watchdog) rebuilds the relay service on the same session, reconnecting all
+  relays and re-fetching the events missed in between (deduped on ingest).
+
 ### Added
 
 - Post context menu: tap a card body to open a small inline popup anchored at

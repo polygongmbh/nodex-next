@@ -101,6 +101,15 @@ cache stays disabled; `autoConnectUserRelays` and the outbox model are off.
 - **Desktop (≥900px)** gets a persistent sidebar — spaces with connection
   dots, vertical channel list, user card — while phones keep the hamburger
   and chips row.
+- **Waking up reconnects**: after system sleep, a long-hidden tab, or a
+  network drop, the relay service is rebuilt on the same session — relays
+  reconnect and the subscriptions re-fetch the missed window (duplicates
+  dedupe in ingest, so the timeline just fills in). Triggers: the browser's
+  `online` event, the tab becoming visible (immediately if a relay shows
+  offline, always after ≥1 min hidden), and a timer-gap watchdog that catches
+  sleep without a tab switch. NDK's own recovery is not enough: it never
+  re-sends the REQs of running subscriptions after a reconnect, and relays it
+  marks "flapping" refuse to reconnect at all.
 - **Interactivity**: reply cards carry clickable breadcrumb ancestor chains;
   crumbs, reply indicators, and state rows focus the conversation scoped to
   the clicked post (its ancestors + its own replies) — focusing a nested reply
